@@ -183,6 +183,9 @@
 
     </div><!-- /app-main-wrapper -->
 
+    <!-- Print Layout Container (for Monitor Reports) -->
+    <div id="monitor-print-layout-container" style="display:none;"><div id="monitor-print-content-area"></div></div>
+
     <!-- ==================== SCRIPTS ==================== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -823,10 +826,51 @@
 
     function monitorPrintIframe() {
         var iframe = document.querySelector('#monitorPreviewBody iframe');
-        if (iframe) {
+        if (!iframe) return;
+
+        // Extract styles + body from iframe (Safari iOS can't print iframe content)
+        var iframeDoc;
+        try { iframeDoc = iframe.contentDocument; } catch(e) {}
+        if (!iframeDoc || !iframeDoc.body) {
+            // Fallback: try iframe print directly (works on desktop)
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
+            return;
         }
+
+        var bodyHTML = iframeDoc.body.innerHTML;
+        var styles = '';
+        var styleEls = iframeDoc.querySelectorAll('style, link[rel="stylesheet"]');
+        for (var i = 0; i < styleEls.length; i++) {
+            styles += styleEls[i].outerHTML;
+        }
+
+        // Close the preview modal
+        if (monitorPreviewModalInstance) monitorPreviewModalInstance.hide();
+
+        var printArea = document.getElementById('monitor-print-content-area');
+        var printContainer = document.getElementById('monitor-print-layout-container');
+        printArea.innerHTML = styles + bodyHTML;
+        printContainer.style.display = 'block';
+        document.getElementById('app-main-wrapper').style.display = 'none';
+
+        var ps = document.createElement('style');
+        ps.id = 'monitor-print-inject';
+        ps.textContent = '@media print { #app-main-wrapper, .modal, .modal-backdrop, .swal2-container { display:none!important; } #monitor-print-layout-container { display:block!important; } } #monitor-print-layout-container .no-print { display:none; }';
+        document.head.appendChild(ps);
+
+        setTimeout(function() { window.print(); }, 400);
+
+        var restoreFn = function() {
+            printContainer.style.display = 'none';
+            document.getElementById('app-main-wrapper').style.display = 'block';
+            var injected = document.getElementById('monitor-print-inject');
+            if (injected) injected.remove();
+            printArea.innerHTML = '';
+            window.removeEventListener('afterprint', restoreFn);
+        };
+        window.addEventListener('afterprint', restoreFn);
+        setTimeout(restoreFn, 15000);
     }
 
     // =============================================
