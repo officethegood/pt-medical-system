@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate PWA Icons</title></head>
+<body>
+<h2>Click to generate and download icons</h2>
+<button onclick="gen(192)">Download 192x192</button>
+<button onclick="gen(512)">Download 512x512</button>
+<canvas id="c"></canvas>
+<script>
+function gen(size) {
+  var c = document.getElementById('c');
+  c.width = c.height = size;
+  var ctx = c.getContext('2d');
+  var r = size / 512;
+
+  // Background
+  ctx.fillStyle = '#1e3a5f';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, 64 * r);
+  ctx.fill();
+
+  // PT text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + (160 * r) + 'px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('PT', size / 2, size * 0.35);
+
+  // Green cross
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.roundRect((196 * r), (240 * r), (120 * r), (24 * r), 12 * r);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect((244 * r), (192 * r), (24 * r), (120 * r), 12 * r);
+  ctx.fill();
+
+  // MEDICAL text
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '600 ' + (64 * r) + 'px Arial';
+  ctx.fillText('MEDICAL', size / 2, size * 0.82);
+
+  // Download
+  var a = document.createElement('a');
+  a.download = 'icon-' + size + '.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>

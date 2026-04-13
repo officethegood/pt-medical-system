@@ -1,0 +1,25 @@
+{
+  "name": "pt-medical-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/supwilaimedical/pt-medical-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/supwilaimedical/pt-medical-system/issues"
+  },
+  "homepage": "https://github.com/supwilaimedical/pt-medical-system#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
+    "csv-parse": "^6.2.1"
+  }
+}

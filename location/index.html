@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>PT-System | PT Location</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="PT Medical System — ระบบจัดการพิกัดสถานที่">
+  <meta name="theme-color" content="#1e3a5f">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../assets/icon-192.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+
+  <script src="../shared/config.js"></script>
+  <script src="../shared/auth.js"></script>
+  <script src="../shared/realtime.js"></script>
+  <script src="../shared/cloudinary.js"></script>
+
+  <!-- shared_splash.html — Splash/Loading Screen -->
+  <div id="splash-screen" style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); transition: opacity 0.4s ease;">
+    <div style="text-align:center;">
+      <div class="mb-3">
+        <div style="width:64px; height:64px; border:4px solid #dee2e6; border-top-color:#0d6efd; border-radius:50%; animation: splash-spin 0.8s linear infinite; margin:0 auto;"></div>
+      </div>
+      <h5 style="font-family:'Sarabun',sans-serif; font-weight:600; color:#495057; margin-bottom:4px;">PT-System</h5>
+      <p style="font-family:'Sarabun',sans-serif; font-size:0.85rem; color:#6c757d; margin:0;" id="splash-status">กำลังเชื่อมต่อระบบ...</p>
+    </div>
+  </div>
+  <style>@keyframes splash-spin { to { transform: rotate(360deg); } }</style>
+
+  <!-- ==================== MAIN APP ==================== -->
+  <div id="app-main-wrapper">
+
+    <!-- shared_nav.html — Navbar shared across all system pages -->
+    <nav class="navbar navbar-dark bg-modern-primary no-print sticky-top">
+      <div class="container-fluid px-3 px-md-4 py-1">
+        <a class="navbar-brand mb-0 h1 d-flex align-items-center gap-2" href="../">
+          <img id="navbar-logo" src="" alt="" style="height: 36px; display: none;" class="bg-white rounded-circle p-1 shadow-sm">
+          <i class="bi bi-grid-fill fs-5" id="navbar-icon"></i>
+          <span class="d-none d-sm-inline fw-semibold" style="font-size: 1rem;">PT-System</span>
+        </a>
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+          <div class="d-none d-lg-flex align-items-center text-light bg-white bg-opacity-10 px-3 py-1 rounded-pill">
+              <i class="bi bi-person-circle me-2"></i>
+              <span id="nav-user-display" class="small fw-medium"></span>
+          </div>
+          <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
+              <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
+          </button>
+          <div class="btn-group system-toggle" role="group" id="nav-system-toggle">
+            <button type="button" class="btn btn-sm rounded-pill-start sys-tog" id="sys-tog-transport" onclick="window.location.href='../transport/'" title="Patient Transport" style="min-width:40px;">
+              <i class="bi bi-truck-front-fill"></i><span class="d-none d-lg-inline ms-1">Transport</span>
+            </button>
+            <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="window.location.href='../firstaid/'" title="First Aid" style="min-width:40px;">
+              <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill-end sys-tog active" id="sys-tog-location" title="PT Location" style="min-width:40px;">
+              <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
+            </button>
+          </div>
+          <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
+              <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
+          </button>
+          <button class="btn btn-light btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-system-dashboard" onclick="loc_switchTab('dashboard')" title="กลับหน้า Dashboard ของระบบนี้">
+              <i class="bi bi-house-door-fill"></i><span class="d-none d-md-inline ms-1">Dashboard</span>
+          </button>
+          <button class="btn btn-outline-light btn-sm border-0 rounded-circle" onclick="handleLogout()" title="ออกจากระบบ" style="width:36px; height:36px;">
+              <i class="bi bi-box-arrow-right fs-5"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container py-4" style="max-width:1100px;">
+
+      <!-- Sub Navigation -->
+      <div id="loc-subnav" class="mb-3 mt-2">
+        <div class="d-flex flex-wrap gap-2 bg-white p-2 rounded-pill shadow-sm border">
+          <button class="btn btn-sm rounded-pill fw-medium px-3 loc-nav-btn active" id="loc-nav-dashboard" onclick="loc_switchTab('dashboard')">
+            <i class="bi bi-map me-1"></i><span class="d-none d-sm-inline">แดชบอร์ดพิกัด</span><span class="d-sm-none">แผนที่</span>
+          </button>
+          <button class="btn btn-sm rounded-pill fw-medium px-3 loc-nav-btn" id="loc-nav-customers" onclick="loc_switchTab('customers')">
+            <i class="bi bi-geo-alt me-1"></i><span class="d-none d-sm-inline">รายการสถานที่</span><span class="d-sm-none">รายการ</span>
+          </button>
+          <button class="btn btn-sm rounded-pill fw-medium px-3 loc-nav-btn" id="loc-nav-form" onclick="loc_openFormNew()">
+            <i class="bi bi-plus-lg me-1"></i><span class="d-none d-sm-inline">เพิ่มพิกัดใหม่</span><span class="d-sm-none">เพิ่ม</span>
+          </button>
+          <button class="btn btn-sm rounded-pill fw-medium px-3 loc-nav-btn" id="loc-nav-tokens" onclick="loc_switchTab('tokens')">
+            <i class="bi bi-link-45deg me-1"></i><span class="d-none d-sm-inline">จัดการลิงก์แชร์</span><span class="d-sm-none">แชร์</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAP DASHBOARD -->
+      <div id="loc-dashboard-view" class="view-section active">
+        <div class="d-flex justify-content-between align-items-end mb-3 mt-2">
+          <div>
+            <h3 class="dashboard-header mb-1"><i class="bi bi-map-fill text-success me-2"></i>ภาพรวมพิกัดสถานที่</h3>
+            <p class="text-muted small mb-0">แสดงพิกัดสถานที่บนแผนที่</p>
+          </div>
+          <span class="badge bg-success-subtle text-success border px-3 py-2 rounded-pill"><i class="bi bi-geo-alt me-1"></i><span id="loc-dash-total">0</span> จุด</span>
+        </div>
+        <div class="search-panel mb-3">
+          <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-1"><label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1"><i class="bi bi-funnel me-1"></i>กรอง</label></div>
+            <div class="col-4 col-md-3">
+              <select id="loc-dash-filter-type" class="form-select form-select-sm" onchange="loc_handleDashFilterChange()">
+                <option value="All">ทุกประเภท</option><option value="ลูกค้าทั่วไป">ลูกค้าทั่วไป</option><option value="ศูนย์ดูแล">ศูนย์ดูแล</option><option value="สถานพยาบาล">สถานพยาบาล</option><option value="โรงแรม">โรงแรม</option>
+              </select>
+            </div>
+            <div class="col-4 col-md-4"><select id="loc-dash-filter-province" class="form-select form-select-sm" onchange="loc_onDashProvinceChange()"><option value="All">ทุกจังหวัด</option></select></div>
+            <div class="col-4 col-md-4"><select id="loc-dash-filter-district" class="form-select form-select-sm" onchange="loc_handleDashFilterChange()"><option value="All">ทุกอำเภอ</option></select></div>
+          </div>
+        </div>
+        <div class="row g-3" style="min-height:500px;">
+          <div class="col-lg-8">
+            <div class="card island-card overflow-hidden h-100" style="min-height:450px;">
+              <div id="loc-map" style="width:100%;height:100%;min-height:450px;z-index:0;"></div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="card island-card p-3 h-100">
+              <h6 class="fw-bold mb-3"><i class="bi bi-clock-history text-success me-1"></i> เพิ่ม/แก้ไข ล่าสุด</h6>
+              <div id="loc-dash-recent" class="overflow-auto" style="max-height:400px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOMER LIST -->
+      <div id="loc-list-view" class="view-section">
+        <div class="d-flex justify-content-between align-items-end mb-3 mt-2">
+          <div>
+            <h3 class="dashboard-header mb-1"><i class="bi bi-geo-alt-fill text-success me-2"></i>ฐานข้อมูลพิกัดสถานที่</h3>
+            <p class="text-muted small mb-0">จัดการข้อมูลพิกัดสถานที่ผู้ป่วย/ลูกค้า</p>
+          </div>
+          <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-sm" onclick="loc_openFormNew()"><i class="bi bi-plus-lg me-1"></i> เพิ่มพิกัดใหม่</button>
+        </div>
+        <div class="search-panel mb-3">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">ค้นหา</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text rounded-start-pill ps-3"><i class="bi bi-search"></i></span>
+                <input type="text" id="loc-search" class="form-control rounded-end-pill py-2" placeholder="ค้นหาชื่อ, เบอร์โทร, รายละเอียด..." oninput="loc_handleFilterChange()">
+              </div>
+            </div>
+            <div class="col-6 col-md-2"><label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">ประเภท</label><select id="loc-filter-type" class="form-select form-select-sm" onchange="loc_handleFilterChange()"><option value="All">ทุกประเภท</option><option value="ลูกค้าทั่วไป">ลูกค้าทั่วไป</option><option value="ศูนย์ดูแล">ศูนย์ดูแล</option><option value="สถานพยาบาล">สถานพยาบาล</option><option value="โรงแรม">โรงแรม</option></select></div>
+            <div class="col-6 col-md-2"><label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">จังหวัด</label><select id="loc-filter-province" class="form-select form-select-sm" onchange="loc_onProvinceChange()"><option value="All">ทุกจังหวัด</option></select></div>
+            <div class="col-6 col-md-2"><label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">อำเภอ</label><select id="loc-filter-district" class="form-select form-select-sm" onchange="loc_handleFilterChange()"><option value="All">ทุกอำเภอ</option></select></div>
+          </div>
+        </div>
+        <div class="card island-card overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light"><tr class="small text-secondary"><th class="ps-3">ภาพ / ชื่อ</th><th class="d-none d-md-table-cell">เบอร์ติดต่อ</th><th>พื้นที่</th><th class="text-center">พิกัด</th><th class="text-end pe-3">จัดการ</th></tr></thead>
+              <tbody id="loc-table-body"><tr><td colspan="5" class="text-center text-muted py-5">กำลังโหลดข้อมูล...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-footer bg-light d-flex justify-content-between align-items-center small py-2">
+            <span id="loc-page-info" class="text-muted">แสดง 0 ถึง 0</span>
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-sm btn-outline-secondary" id="loc-btn-prev" onclick="loc_prevPage()"><i class="bi bi-chevron-left"></i></button>
+              <span id="loc-page-number" class="px-2 fw-medium">1 / 1</span>
+              <button class="btn btn-sm btn-outline-secondary" id="loc-btn-next" onclick="loc_nextPage()"><i class="bi bi-chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD/EDIT FORM -->
+      <div id="loc-form-view" class="view-section">
+        <div class="card island-card overflow-hidden" style="max-width:700px;margin:0 auto;">
+          <div class="card-header bg-success text-white py-3 border-0">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 fw-bold" id="loc-form-title"><i class="bi bi-plus-lg me-2"></i>เพิ่มพิกัดสถานที่ใหม่</h5>
+              <button class="btn btn-sm btn-outline-light rounded-pill px-3" onclick="loc_switchTab('customers')"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </div>
+          <div class="card-body p-4">
+            <form id="loc-customer-form" onsubmit="loc_saveCustomer(event)">
+              <input type="hidden" id="loc-form-id">
+              <div class="mb-3">
+                <label class="form-label fw-bold small">รูปถ่ายสถานที่ <span class="text-danger">*</span></label>
+                <div class="border rounded-3 bg-light text-center p-4 position-relative" style="cursor:pointer;min-height:180px;" onclick="document.getElementById('loc-form-photo').click();">
+                  <img id="loc-form-photo-preview" src="" class="d-none rounded-3" style="max-height:180px;max-width:100%;object-fit:cover;">
+                  <div id="loc-form-photo-placeholder"><i class="bi bi-image text-muted" style="font-size:2.5rem;"></i><p class="text-muted small mt-1 mb-0">คลิกเพื่ออัปโหลดรูปสถานที่</p></div>
+                  <input type="file" id="loc-form-photo" accept="image/*" class="d-none" onchange="loc_handlePhotoUpload(this)">
+                </div>
+                <input type="hidden" id="loc-form-photo-base64">
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-md-5"><label class="form-label fw-bold small">ชื่อลูกค้า / เจ้าของบ้าน <span class="text-danger">*</span></label><input type="text" id="loc-form-name" class="form-control" required></div>
+                <div class="col-md-3"><label class="form-label fw-bold small">ประเภทลูกค้า</label><select id="loc-form-customer-type" class="form-select"><option value="ลูกค้าทั่วไป" selected>ลูกค้าทั่วไป</option><option value="ศูนย์ดูแล">ศูนย์ดูแล</option><option value="สถานพยาบาล">สถานพยาบาล</option><option value="โรงแรม">โรงแรม</option></select></div>
+                <div class="col-md-4"><label class="form-label fw-bold small">เบอร์โทรศัพท์ติดต่อ</label><input type="tel" id="loc-form-phone" class="form-control"></div>
+              </div>
+              <div class="card p-3 mb-3 bg-primary bg-opacity-10 border-0">
+                <label class="form-label fw-bold small">พิกัดสถานที่ <span class="text-danger">*</span></label>
+                <div class="d-flex flex-column flex-md-row gap-2 mb-2">
+                  <button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="loc_getGPS()"><i class="bi bi-crosshair me-1"></i> ดึงพิกัดปัจจุบัน</button>
+                  <input type="text" id="loc-form-maplink" class="form-control form-control-sm" placeholder="วางลิงก์ Google Maps หรือพิกัด เช่น 13.756,100.501" oninput="loc_extractCoordsFromLink(this.value)" onpaste="setTimeout(()=>loc_extractCoordsFromLink(this.value),100)">
+                </div>
+                <div class="row g-2">
+                  <div class="col-6"><span class="small text-muted">Latitude</span><input type="text" id="loc-form-lat" class="form-control form-control-sm bg-white font-monospace" required readonly></div>
+                  <div class="col-6"><span class="small text-muted">Longitude</span><input type="text" id="loc-form-lng" class="form-control form-control-sm bg-white font-monospace" required readonly></div>
+                </div>
+                <p id="loc-form-gps-status" class="small fw-medium text-primary mt-1 mb-0"></p>
+                <div id="loc-form-geo-info" class="mt-2 align-items-center gap-2" style="display:none;">
+                  <span class="badge bg-light text-dark border px-2 py-1" id="loc-form-geo-label"><i class="bi bi-geo-alt me-1"></i><span id="loc-form-geo-text">—</span></span>
+                  <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" onclick="loc_reGeocode()" title="อัปเดตพื้นที่จากพิกัด" style="font-size:0.7rem;">
+                    <i class="bi bi-arrow-repeat me-1"></i>อัปเดตพื้นที่
+                  </button>
+                </div>
+              </div>
+              <div class="mb-3"><label class="form-label fw-bold small">รายละเอียด / จุดสังเกต</label><textarea id="loc-form-details" class="form-control" rows="3"></textarea></div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-light border flex-fill" onclick="loc_switchTab('customers')">ยกเลิก</button>
+                <button type="submit" class="btn btn-success flex-fill fw-bold" id="loc-form-submit-btn"><i class="bi bi-save me-1"></i> บันทึก</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOKEN MANAGEMENT -->
+      <div id="loc-tokens-view" class="view-section">
+        <div class="d-flex justify-content-between align-items-end mb-3 mt-2">
+          <div><h3 class="dashboard-header mb-1"><i class="bi bi-link-45deg text-success me-2"></i>จัดการลิงก์แชร์</h3><p class="text-muted small mb-0">ควบคุมและยกเลิกสิทธิ์ลิงก์แชร์</p></div>
+        </div>
+        <div class="card island-card overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light"><tr class="small text-secondary"><th class="ps-3">สถานที่</th><th>Token</th><th class="d-none d-md-table-cell">หมายเหตุ</th><th class="text-center">หมดอายุ</th><th class="text-center">สถานะ</th><th class="text-end pe-3">จัดการ</th></tr></thead>
+              <tbody id="loc-tokens-table-body"><tr><td colspan="6" class="text-center text-muted py-5">ไม่มีข้อมูล</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Customer Detail Modal -->
+  <div class="modal fade" id="locCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header bg-light border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-geo-alt-fill text-success me-2"></i>ข้อมูลสถานที่</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div id="loc-modal-view">
+            <div class="rounded-3 overflow-hidden mb-3 position-relative" style="height:200px;">
+              <img id="loc-modal-photo" src="" class="w-100 h-100" style="object-fit:cover;">
+              <div class="position-absolute bottom-0 start-0 end-0 p-3" style="background:linear-gradient(transparent,rgba(0,0,0,0.6));"><span id="loc-modal-district" class="text-white fw-medium small"></span></div>
+            </div>
+            <h5 id="loc-modal-name" class="fw-bold mb-1"></h5>
+            <span id="loc-modal-type" class="badge rounded-pill me-2 mb-3"></span>
+            <a id="loc-modal-phone" href="#" class="badge bg-success-subtle text-success border px-3 py-2 text-decoration-none mb-3 d-inline-block"></a>
+            <div class="mb-3"><p class="small fw-bold text-secondary text-uppercase mb-1">รายละเอียด / จุดสังเกต</p><div id="loc-modal-details" class="bg-light rounded-3 p-3 small"></div></div>
+            <div class="mb-3"><p class="small fw-bold text-secondary text-uppercase mb-1">ตำแหน่งพิกัด</p>
+              <div class="d-flex align-items-center justify-content-between bg-primary bg-opacity-10 p-3 rounded-3">
+                <span id="loc-modal-coords" class="font-monospace small"></span>
+                <a id="loc-modal-map-link" href="#" target="_blank" class="btn btn-primary btn-sm rounded-pill"><i class="bi bi-cursor-fill me-1"></i>นำทาง</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+          <div id="loc-modal-actions" class="d-flex gap-2 ms-auto">
+            <button class="btn btn-sm btn-outline-warning rounded-pill px-3" onclick="loc_editFromModal()"><i class="bi bi-pencil me-1"></i>แก้ไข</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LOCATION JS ==================== -->
+  <script>
+    // --- GLOBAL STATE ---
+    var loc_customers = [];
+    var loc_filteredCustomers = [];
+    var loc_dashFiltered = null;
+    var loc_sharedTokensData = [];
+    var loc_currentPage = 1;
+    var LOC_ITEMS_PER_PAGE = 20;
+    var loc_selectedCustomerId = null;
+    var loc_leafletMap = null;
+    var loc_markersCluster = null;
+
+    // --- INIT ---
+    function onLoginSuccess() {
+      // Hide splash screen
+      var splash = document.getElementById('splash-screen');
+      if (splash) { splash.style.opacity = '0'; setTimeout(function(){ splash.style.display = 'none'; }, 400); }
+
+      // Set user display
+      var userDisplay = document.getElementById('nav-user-display');
+      if (userDisplay) userDisplay.textContent = getUserName();
+
+      // Show admin/monitor buttons for Admin role
+      var role = getUserRole();
+      if (role === 'Admin' || role === 'admin') {
+        var adminBtn = document.getElementById('btn-admin-settings');
+        if (adminBtn) adminBtn.style.display = '';
+        var monitorBtn = document.getElementById('btn-monitor');
+        if (monitorBtn) monitorBtn.style.display = '';
+      }
+
+      // Load logo from settings
+      loadAppSettings();
+
+      // Init Realtime
+      RT.initStatusDot();
+      RT.subscribe('location-data', 'loc_customers', function() {
+          loc_fetchData();
+      });
+
+      loc_fetchData();
+    }
+
+    async function loadAppSettings() {
+      try {
+        var { data } = await _supabase.from('settings').select('value').eq('key', 'APP_LOGO_URL').single();
+        if (data && data.value) {
+          var logoUrl = typeof data.value === 'string' ? data.value : (data.value.url || '');
+          if (logoUrl) {
+            var logoEl = document.getElementById('navbar-logo');
+            if (logoEl) { logoEl.src = logoUrl; logoEl.style.display = ''; }
+            var iconEl = document.getElementById('navbar-icon');
+            if (iconEl) iconEl.style.display = 'none';
+          }
+        }
+      } catch(e) { /* ignore */ }
+    }
+
+    window.addEventListener('load', function() {
+      if (!requireAuth()) return;
+      onLoginSuccess();
+    });
+
+    // --- DATA FETCHING (Supabase) ---
+    async function loc_fetchData() {
+      Swal.fire({ title: 'กำลังโหลดข้อมูลพิกัด...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+      try {
+        const { data: customers, error: cErr } = await _supabase.from('loc_customers').select('*').order('date_added', { ascending: false });
+        if (cErr) throw cErr;
+        loc_customers = (customers || []).map(c => ({
+          id: c.id, name: c.name, phone: c.phone, lat: c.lat, lng: c.lng,
+          district: c.district, province: c.province, details: c.details,
+          photo: c.photo_url, customer_type: c.customer_type, date_added: c.date_added
+        }));
+
+        const { data: tokens, error: tErr } = await _supabase.from('loc_shared_tokens').select('*').order('created_at', { ascending: false });
+        if (!tErr) loc_sharedTokensData = tokens || [];
+
+        loc_populateFilters();
+        loc_switchTab('dashboard');
+        loc_renderTokensTable();
+        Swal.close();
+      } catch (err) {
+        Swal.close();
+        Swal.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้: ' + err.message, 'error');
+      }
+    }
+
+    // --- NAVIGATION ---
+    function loc_switchTab(tabId) {
+      document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.loc-nav-btn').forEach(b => b.classList.remove('active'));
+      if (tabId === 'dashboard') {
+        document.getElementById('loc-dashboard-view').classList.add('active');
+        document.getElementById('loc-nav-dashboard').classList.add('active');
+        loc_renderDashboard();
+      } else if (tabId === 'customers') {
+        document.getElementById('loc-list-view').classList.add('active');
+        document.getElementById('loc-nav-customers').classList.add('active');
+        loc_handleFilterChange();
+      } else if (tabId === 'form') {
+        document.getElementById('loc-form-view').classList.add('active');
+        document.getElementById('loc-nav-form').classList.add('active');
+      } else if (tabId === 'tokens') {
+        document.getElementById('loc-tokens-view').classList.add('active');
+        document.getElementById('loc-nav-tokens').classList.add('active');
+        loc_renderTokensTable();
+      }
+    }
+
+    // --- FILTERS ---
+    function loc_populateFilters() {
+      var provs = [];
+      loc_customers.forEach(c => { if (c.province && provs.indexOf(c.province) === -1 && c.province !== 'ไม่ระบุจังหวัด') provs.push(c.province); });
+      provs.sort();
+      var pHtml = '<option value="All">ทุกจังหวัด</option>';
+      provs.forEach(p => { pHtml += '<option value="' + p + '">จ.' + p + '</option>'; });
+      ['loc-filter-province','loc-dash-filter-province'].forEach(id => { var el = document.getElementById(id); if (el) el.innerHTML = pHtml; });
+      loc_onProvinceChange();
+      loc_onDashProvinceChange();
+    }
+
+    function loc_onProvinceChange() {
+      var selProv = (document.getElementById('loc-filter-province') || {}).value || 'All';
+      var dists = [];
+      loc_customers.forEach(c => { if ((selProv === 'All' || c.province === selProv) && c.district && dists.indexOf(c.district) === -1 && c.district !== 'ไม่ระบุอำเภอ') dists.push(c.district); });
+      dists.sort();
+      var dHtml = '<option value="All">ทุกอำเภอ</option>';
+      dists.forEach(d => { dHtml += '<option value="' + d + '">อ.' + d + '</option>'; });
+      var el = document.getElementById('loc-filter-district'); if (el) el.innerHTML = dHtml;
+      loc_handleFilterChange();
+    }
+
+    function loc_onDashProvinceChange() {
+      var selProv = (document.getElementById('loc-dash-filter-province') || {}).value || 'All';
+      var dists = [];
+      loc_customers.forEach(c => { if ((selProv === 'All' || c.province === selProv) && c.district && dists.indexOf(c.district) === -1 && c.district !== 'ไม่ระบุอำเภอ') dists.push(c.district); });
+      dists.sort();
+      var dHtml = '<option value="All">ทุกอำเภอ</option>';
+      dists.forEach(d => { dHtml += '<option value="' + d + '">อ.' + d + '</option>'; });
+      var el = document.getElementById('loc-dash-filter-district'); if (el) el.innerHTML = dHtml;
+      loc_handleDashFilterChange();
+    }
+
+    function loc_handleDashFilterChange() {
+      var prov = (document.getElementById('loc-dash-filter-province') || {}).value || 'All';
+      var dist = (document.getElementById('loc-dash-filter-district') || {}).value || 'All';
+      var type = (document.getElementById('loc-dash-filter-type') || {}).value || 'All';
+      loc_dashFiltered = loc_customers.filter(c => {
+        return (prov === 'All' || c.province === prov) && (dist === 'All' || c.district === dist) && (type === 'All' || (c.customer_type || 'ลูกค้าทั่วไป') === type);
+      });
+      loc_renderDashboard();
+    }
+
+    function loc_handleFilterChange() {
+      var raw = (document.getElementById('loc-search') || {}).value || '';
+      var search = raw.toLowerCase();
+      var numSearch = raw.replace(/\D/g, '');
+      var prov = (document.getElementById('loc-filter-province') || {}).value || 'All';
+      var dist = (document.getElementById('loc-filter-district') || {}).value || 'All';
+      var type = (document.getElementById('loc-filter-type') || {}).value || 'All';
+      loc_filteredCustomers = loc_customers.filter(c => {
+        var mp = prov === 'All' || c.province === prov;
+        var md = dist === 'All' || c.district === dist;
+        var mt = type === 'All' || (c.customer_type || 'ลูกค้าทั่วไป') === type;
+        var ms = !search || (c.name || '').toLowerCase().includes(search) || (numSearch && String(c.phone || '').replace(/\D/g, '').includes(numSearch)) || (c.details || '').toLowerCase().includes(search);
+        return mp && md && mt && ms;
+      });
+      loc_currentPage = 1;
+      loc_renderTable();
+    }
+
+    // --- TABLE ---
+    function loc_renderTable() {
+      var tbody = document.getElementById('loc-table-body');
+      if (!tbody) return;
+      var total = Math.ceil(loc_filteredCustomers.length / LOC_ITEMS_PER_PAGE) || 1;
+      if (loc_filteredCustomers.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">ไม่พบข้อมูลที่ค้นหา</td></tr>'; loc_updatePagination(0, 0, total); return; }
+      var start = (loc_currentPage - 1) * LOC_ITEMS_PER_PAGE;
+      var end = Math.min(start + LOC_ITEMS_PER_PAGE, loc_filteredCustomers.length);
+      var html = '';
+      loc_filteredCustomers.slice(start, end).forEach(c => {
+        var photo = c.photo || 'https://via.placeholder.com/150?text=No+Image';
+        var ct = c.customer_type || 'ลูกค้าทั่วไป';
+        var ctColors = {'ลูกค้าทั่วไป':'bg-primary-subtle text-primary','ศูนย์ดูแล':'bg-warning-subtle text-warning-emphasis','สถานพยาบาล':'bg-danger-subtle text-danger','โรงแรม':'bg-purple-subtle text-purple'};
+        var badge = '<span class="badge rounded-pill '+(ctColors[ct]||'bg-secondary-subtle text-secondary')+'" style="font-size:0.65rem;">'+escapeHtml(ct)+'</span>';
+        html += '<tr class="align-middle"><td class="ps-3" style="cursor:pointer;" onclick="loc_openModal(\''+c.id+'\')"><div class="d-flex align-items-center gap-3"><img src="'+photo+'" onerror="this.src=\'https://via.placeholder.com/150\'" class="rounded-3 border" style="width:70px;height:50px;object-fit:cover;"><div><div class="fw-medium">'+escapeHtml(c.name||'')+' '+badge+'</div></div></div></td><td class="d-none d-md-table-cell text-muted">'+escapeHtml(c.phone||'-')+'</td><td>อ.'+escapeHtml(c.district||'ไม่ระบุ')+'<br><span class="text-muted small">จ.'+escapeHtml(c.province||'ไม่ระบุ')+'</span></td><td class="text-center"><a href="https://www.google.com/maps/search/?api=1&query='+c.lat+','+c.lng+'" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-pin-map me-1"></i>Maps</a></td><td class="text-end pe-3"><div class="d-flex gap-1 justify-content-end"><button class="btn btn-sm btn-outline-success rounded-circle" onclick="loc_openModal(\''+c.id+'\')"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-outline-warning rounded-circle" onclick="loc_openFormEdit(\''+c.id+'\')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-danger rounded-circle" onclick="loc_deleteCustomer(\''+c.id+'\')"><i class="bi bi-trash"></i></button></div></td></tr>';
+      });
+      tbody.innerHTML = html;
+      loc_updatePagination(start + 1, end, total);
+    }
+
+    function loc_updatePagination(s, e, t) {
+      var info = document.getElementById('loc-page-info'); if (info) info.textContent = 'แสดง ' + s + ' ถึง ' + e + ' จากทั้งหมด ' + loc_filteredCustomers.length;
+      var pn = document.getElementById('loc-page-number'); if (pn) pn.textContent = loc_currentPage + ' / ' + t;
+      var bp = document.getElementById('loc-btn-prev'); if (bp) bp.disabled = loc_currentPage <= 1;
+      var bn = document.getElementById('loc-btn-next'); if (bn) bn.disabled = loc_currentPage >= t;
+    }
+    function loc_prevPage() { if (loc_currentPage > 1) { loc_currentPage--; loc_renderTable(); } }
+    function loc_nextPage() { var t = Math.ceil(loc_filteredCustomers.length / LOC_ITEMS_PER_PAGE); if (loc_currentPage < t) { loc_currentPage++; loc_renderTable(); } }
+
+    // --- DELETE ---
+    async function loc_deleteCustomer(id) {
+      var r = await Swal.fire({ title: 'ยืนยันการลบ?', text: 'ข้อมูลสถานที่นี้จะถูกลบถาวร', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ลบข้อมูล', cancelButtonText: 'ยกเลิก' });
+      if (!r.isConfirmed) return;
+      Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const { error } = await _supabase.from('loc_customers').delete().eq('id', id);
+      if (error) { Swal.fire('ผิดพลาด', error.message, 'error'); return; }
+      await loc_fetchData();
+    }
+
+    // --- FORM ---
+    function loc_openFormNew() {
+      loc_resetForm();
+      document.getElementById('loc-form-title').innerHTML = '<i class="bi bi-plus-lg me-2"></i>เพิ่มพิกัดสถานที่ใหม่';
+      document.getElementById('loc-form-submit-btn').innerHTML = '<i class="bi bi-save me-1"></i> บันทึกข้อมูลใหม่';
+      loc_switchTab('form');
+    }
+
+    function loc_openFormEdit(id) {
+      loc_resetForm();
+      var c = loc_customers.find(x => x.id === id);
+      if (!c) return;
+      var s = (id2, val) => { var el = document.getElementById(id2); if (el) el.value = val || ''; };
+      s('loc-form-id', c.id); s('loc-form-name', c.name); s('loc-form-customer-type', c.customer_type || 'ลูกค้าทั่วไป');
+      s('loc-form-phone', c.phone); s('loc-form-lat', c.lat); s('loc-form-lng', c.lng); s('loc-form-details', c.details);
+      if (c.photo) {
+        s('loc-form-photo-base64', c.photo);
+        var pvw = document.getElementById('loc-form-photo-preview');
+        if (pvw) { pvw.src = c.photo; pvw.onerror = function(){this.src='https://via.placeholder.com/400x300';}; pvw.classList.remove('d-none'); }
+        var ph = document.getElementById('loc-form-photo-placeholder'); if (ph) ph.classList.add('d-none');
+      }
+      document.getElementById('loc-form-title').innerHTML = '<i class="bi bi-pencil me-2"></i>แก้ไขพิกัดสถานที่';
+      document.getElementById('loc-form-submit-btn').innerHTML = '<i class="bi bi-save me-1"></i> อัปเดตข้อมูล';
+      loc_switchTab('form');
+
+      // Show current district/province and auto-geocode if missing
+      if (c.lat && c.lng) {
+        var hasMissing = !c.district || !c.province || c.district === 'ไม่ระบุอำเภอ' || c.province === 'ไม่ระบุจังหวัด' || c.district === 'ไม่ระบุ' || c.province === 'ไม่ระบุ';
+        loc_showGeoInfo(c.district, c.province);
+        if (hasMissing) {
+          // Auto reverse geocode for records missing district/province
+          loc_reGeocode();
+        }
+      }
+    }
+
+    // Show district/province info in the form
+    function loc_showGeoInfo(district, province) {
+      var wrap = document.getElementById('loc-form-geo-info');
+      var txt = document.getElementById('loc-form-geo-text');
+      if (!wrap || !txt) return;
+      var d = district || 'ไม่ระบุ';
+      var p = province || 'ไม่ระบุ';
+      txt.textContent = 'อ.' + d + ' จ.' + p;
+      wrap.style.display = 'flex';
+    }
+
+    // Re-geocode: update district/province from current lat/lng in form
+    async function loc_reGeocode() {
+      var lat = parseFloat(document.getElementById('loc-form-lat').value);
+      var lng = parseFloat(document.getElementById('loc-form-lng').value);
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      var txt = document.getElementById('loc-form-geo-text');
+      var wrap = document.getElementById('loc-form-geo-info');
+      if (txt) txt.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;"></span>กำลังหาพื้นที่...';
+      if (wrap) wrap.style.display = 'flex';
+
+      var geo = await loc_reverseGeocode(lat, lng);
+      if (txt) txt.textContent = 'อ.' + geo.district + ' จ.' + geo.province;
+
+      // Store in hidden fields so save function can use them
+      var geoCache = document.getElementById('loc-form-geo-cache');
+      if (!geoCache) {
+        geoCache = document.createElement('input');
+        geoCache.type = 'hidden'; geoCache.id = 'loc-form-geo-cache';
+        document.getElementById('loc-customer-form').appendChild(geoCache);
+      }
+      geoCache.value = JSON.stringify(geo);
+    }
+
+    function loc_resetForm() {
+      var f = document.getElementById('loc-customer-form'); if (f) f.reset();
+      var b = document.getElementById('loc-form-photo-base64'); if (b) b.value = '';
+      var p = document.getElementById('loc-form-photo-preview'); if (p) { p.src = ''; p.classList.add('d-none'); }
+      var ph = document.getElementById('loc-form-photo-placeholder'); if (ph) ph.classList.remove('d-none');
+      var st = document.getElementById('loc-form-gps-status'); if (st) st.textContent = '';
+      var gi = document.getElementById('loc-form-geo-info'); if (gi) gi.style.display = 'none';
+      var gc = document.getElementById('loc-form-geo-cache'); if (gc) gc.value = '';
+    }
+
+    // --- PHOTO ---
+    function loc_handlePhotoUpload(input) {
+      if (!input.files || !input.files[0]) return;
+      Swal.fire({ title: 'กำลังบีบอัดรูปภาพ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var MAX = 1024, w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+          var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL('image/jpeg', 0.7);
+          document.getElementById('loc-form-photo-base64').value = compressed;
+          var pvw = document.getElementById('loc-form-photo-preview'); if (pvw) { pvw.src = compressed; pvw.classList.remove('d-none'); }
+          document.getElementById('loc-form-photo-placeholder').classList.add('d-none');
+          Swal.close();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+
+    // --- GPS ---
+    function loc_getGPS() {
+      var st = document.getElementById('loc-form-gps-status');
+      st.textContent = 'กำลังร้องขอพิกัด GPS...'; st.className = 'small fw-medium text-primary mt-1 mb-0';
+      if (!navigator.geolocation) { st.textContent = 'อุปกรณ์ไม่รองรับ GPS'; st.className = 'small fw-medium text-danger mt-1 mb-0'; return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => { document.getElementById('loc-form-lat').value = pos.coords.latitude.toFixed(6); document.getElementById('loc-form-lng').value = pos.coords.longitude.toFixed(6); st.textContent = '[สำเร็จ] อัปเดตพิกัดเรียบร้อย'; st.className = 'small fw-medium text-success mt-1 mb-0'; loc_reGeocode(); },
+        err => { st.textContent = '[ผิดพลาด] ' + err.message; st.className = 'small fw-medium text-danger mt-1 mb-0'; },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
+    function loc_extractCoordsFromLink(url) {
+      if (!url || url.length < 10) return;
+      var st = document.getElementById('loc-form-gps-status');
+
+      // Check if it's a short URL that needs expanding first
+      if (/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|bit\.ly|shorturl)/i.test(url)) {
+        loc_expandShortUrl(url);
+        return;
+      }
+
+      // Try to extract coordinates from various Google Maps URL patterns
+      var coords = loc_parseGoogleMapsUrl(url);
+      if (coords) {
+        document.getElementById('loc-form-lat').value = coords.lat;
+        document.getElementById('loc-form-lng').value = coords.lng;
+        st.textContent = '[สำเร็จ] ดึงพิกัดจากลิงก์เรียบร้อย';
+        st.className = 'small fw-medium text-success mt-1 mb-0';
+        loc_reGeocode();
+      } else {
+        st.textContent = '[คำเตือน] ไม่พบพิกัดในลิงก์ — ลองใช้ลิงก์แบบเต็ม (ไม่ใช่ลิงก์ย่อ)';
+        st.className = 'small fw-medium text-danger mt-1 mb-0';
+      }
+    }
+
+    // Parse various Google Maps URL formats to extract lat/lng
+    function loc_parseGoogleMapsUrl(url) {
+      var patterns = [
+        // !3d(lat)!4d(lng) — pin/place data in Maps URL
+        /!3d([-]?[0-9]+\.[0-9]+)!4d([-]?[0-9]+\.[0-9]+)/,
+        // @lat,lng — viewport/center coordinate
+        /@([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // q=lat,lng — search query coordinate
+        /[?&]q=([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // ll=lat,lng — legacy Maps parameter
+        /[?&]ll=([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // center=lat,lng
+        /[?&]center=([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // sll=lat,lng — source lat/lng
+        /[?&]sll=([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // daddr=lat,lng or saddr=lat,lng — directions
+        /[?&][ds]addr=([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // /dir/lat,lng/ — directions URL
+        /\/dir\/([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,
+        // /search/lat,+lng or /search/lat,lng — Google Maps redirect from short URL
+        /\/search\/([-]?[0-9]+\.[0-9]+)[,+%20]+([-]?[0-9]+\.[0-9]+)/,
+        // Standalone lat,lng (must look like valid coordinates: lat -90~90, lng -180~180)
+        /([-]?[0-9]{1,2}\.[0-9]{4,8})[,%20+]+([-]?[0-9]{1,3}\.[0-9]{4,8})/
+      ];
+      for (var p of patterns) {
+        var m = url.match(p);
+        if (m) {
+          var lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+          // Validate coordinate range
+          if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return { lat: lat.toFixed(6), lng: lng.toFixed(6) };
+          }
+        }
+      }
+      return null;
+    }
+
+    // Expand short URLs (maps.app.goo.gl, goo.gl/maps) — follow redirect server-side
+    async function loc_expandShortUrl(shortUrl) {
+      var st = document.getElementById('loc-form-gps-status');
+      st.textContent = '[กำลังขยายลิงก์ย่อ...]';
+      st.className = 'small fw-medium text-info mt-1 mb-0';
+
+      // Helper: set coords and trigger geocode
+      function setCoords(coords) {
+        document.getElementById('loc-form-lat').value = coords.lat;
+        document.getElementById('loc-form-lng').value = coords.lng;
+        st.textContent = '[สำเร็จ] ดึงพิกัดจากลิงก์ย่อเรียบร้อย';
+        st.className = 'small fw-medium text-success mt-1 mb-0';
+        loc_reGeocode();
+      }
+
+      // Strategy 1: Supabase Database Function (follow redirects server-side, เหมือน GAS เดิม)
+      // ต้องเปิด http extension + รัน SQL ก่อน (ดู supabase/migrations/001_expand_maps_url.sql)
+      try {
+        var { data: rpcData, error: rpcErr } = await _supabase.rpc('expand_maps_url', { short_url: shortUrl });
+        if (!rpcErr && rpcData && rpcData.success) {
+          setCoords({ lat: rpcData.lat, lng: rpcData.lng });
+          return;
+        }
+        // RPC returned resolved URL but couldn't parse coords — try our local parser
+        if (rpcData && rpcData.resolved_url) {
+          var coords = loc_parseGoogleMapsUrl(rpcData.resolved_url);
+          if (coords) { setCoords(coords); return; }
+        }
+        if (rpcErr) console.warn('RPC expand_maps_url error:', rpcErr.message);
+      } catch (e) { console.warn('RPC failed:', e); }
+
+      // Strategy 2: Supabase Edge Function fallback
+      try {
+        var edgeRes = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/expand-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY },
+          body: JSON.stringify({ url: shortUrl }),
+          signal: AbortSignal.timeout(15000)
+        });
+        var edgeData = await edgeRes.json();
+        if (edgeData.success) {
+          setCoords({ lat: edgeData.lat, lng: edgeData.lng });
+          return;
+        }
+        if (edgeData.resolvedUrl) {
+          var coords = loc_parseGoogleMapsUrl(edgeData.resolvedUrl);
+          if (coords) { setCoords(coords); return; }
+        }
+      } catch (e) { console.warn('Edge Function failed:', e); }
+
+      // All strategies failed
+      st.innerHTML = '[ไม่สำเร็จ] ไม่สามารถขยายลิงก์ย่อได้ — <b>วิธีแก้:</b> เปิดลิงก์ใน Google Maps → คัดลอก URL แบบเต็มมาวาง';
+      st.className = 'small fw-medium text-danger mt-1 mb-0';
+    }
+
+    // --- SAVE (Supabase + Cloudinary) ---
+    // Reverse geocode: get district/province from lat/lng via Nominatim (free, no API key)
+    async function loc_reverseGeocode(lat, lng) {
+      var result = { district: '', province: '' };
+      try {
+        var res = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=th&zoom=10');
+        var data = await res.json();
+        if (data && data.address) {
+          var a = data.address;
+          // district: county or city_district or suburb
+          result.district = (a.county || a.city_district || a.suburb || a.town || a.city || '').replace('อำเภอ', '').replace('เขต', '').trim();
+          // province: state or province
+          result.province = (a.state || a.province || '').replace('จังหวัด', '').replace('จ.', '').trim();
+        }
+      } catch (e) { console.warn('Reverse geocode failed:', e); }
+      if (!result.district) result.district = 'ไม่ระบุอำเภอ';
+      if (!result.province) result.province = 'ไม่ระบุจังหวัด';
+      return result;
+    }
+
+    async function loc_saveCustomer(e) {
+      e.preventDefault();
+      var g = id => (document.getElementById(id) || {}).value || '';
+      var photoData = g('loc-form-photo-base64');
+      var id = g('loc-form-id');
+      if (!photoData) { Swal.fire('แจ้งเตือน', 'กรุณาอัปโหลดรูปภาพ', 'warning'); return; }
+      if (!g('loc-form-lat') || !g('loc-form-lng')) { Swal.fire('แจ้งเตือน', 'กรุณาระบุพิกัด', 'warning'); return; }
+
+      Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      try {
+        // Upload photo to Cloudinary if it's base64 (new upload)
+        var photoUrl = photoData;
+        if (photoData.startsWith('data:')) {
+          photoUrl = await uploadBase64ToCloudinary(photoData, 'location');
+        }
+
+        // Reverse geocode to get district/province from coordinates
+        var latVal = parseFloat(g('loc-form-lat'));
+        var lngVal = parseFloat(g('loc-form-lng'));
+        // Use cached geocode result if available (from edit form auto-geocode)
+        var geoCache = g('loc-form-geo-cache');
+        var geo = geoCache ? JSON.parse(geoCache) : await loc_reverseGeocode(latVal, lngVal);
+
+        var record = {
+          name: g('loc-form-name'),
+          customer_type: g('loc-form-customer-type') || 'ลูกค้าทั่วไป',
+          phone: g('loc-form-phone') || null,
+          lat: latVal,
+          lng: lngVal,
+          district: geo.district,
+          province: geo.province,
+          details: g('loc-form-details') || null,
+          photo_url: photoUrl
+        };
+
+        if (id) {
+          // Update
+          const { error } = await _supabase.from('loc_customers').update(record).eq('id', id);
+          if (error) throw error;
+        } else {
+          // Insert with generated ID
+          record.id = 'CUST_' + Date.now();
+          const { error } = await _supabase.from('loc_customers').insert(record);
+          if (error) throw error;
+        }
+
+        Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
+        await loc_fetchData();
+      } catch (err) {
+        Swal.fire('ผิดพลาด', err.message, 'error');
+      }
+    }
+
+    // --- MODAL ---
+    function loc_openModal(id) {
+      var c = loc_customers.find(x => x.id === id);
+      if (!c) return;
+      loc_selectedCustomerId = id;
+      var photo = document.getElementById('loc-modal-photo'); if (photo) { photo.src = c.photo || 'https://via.placeholder.com/400x300'; photo.onerror = function(){this.src='https://via.placeholder.com/400x300';}; }
+      document.getElementById('loc-modal-name').textContent = c.name || '';
+      var typeEl = document.getElementById('loc-modal-type'); var ct = c.customer_type || 'ลูกค้าทั่วไป';
+      var typeColors = {'ลูกค้าทั่วไป':'bg-primary','ศูนย์ดูแล':'bg-warning text-dark','สถานพยาบาล':'bg-danger','โรงแรม':'bg-purple'};
+      typeEl.textContent = ct; typeEl.className = 'badge rounded-pill me-2 mb-3 px-3 py-2 ' + (typeColors[ct] || 'bg-secondary');
+      document.getElementById('loc-modal-district').innerHTML = '<i class="bi bi-geo-alt me-1"></i>อ.' + escapeHtml(c.district || 'ไม่ระบุ') + ' จ.' + escapeHtml(c.province || 'ไม่ระบุ');
+      var phoneEl = document.getElementById('loc-modal-phone');
+      if (c.phone) { phoneEl.innerHTML = '<i class="bi bi-telephone me-1"></i>' + escapeHtml(c.phone); phoneEl.href = 'tel:' + String(c.phone).replace(/\D/g, ''); phoneEl.style.display = 'inline-block'; } else { phoneEl.style.display = 'none'; }
+      document.getElementById('loc-modal-details').textContent = c.details || 'ไม่มีข้อมูล';
+      document.getElementById('loc-modal-coords').textContent = c.lat + ', ' + c.lng;
+      document.getElementById('loc-modal-map-link').href = 'https://www.google.com/maps/search/?api=1&query=' + c.lat + ',' + c.lng;
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('locCustomerModal')).show();
+    }
+
+    function loc_editFromModal() {
+      bootstrap.Modal.getInstance(document.getElementById('locCustomerModal')).hide();
+      loc_openFormEdit(loc_selectedCustomerId);
+    }
+
+    // --- DASHBOARD + MAP ---
+    function loc_renderDashboard() {
+      var data = loc_dashFiltered !== null ? loc_dashFiltered : loc_customers;
+      var totalEl = document.getElementById('loc-dash-total'); if (totalEl) totalEl.textContent = data.length;
+
+      var recent = data.slice(0, 10);
+      var html = '';
+      recent.forEach(c => {
+        var photo = c.photo || 'https://via.placeholder.com/150?text=No+Image';
+        var ct = c.customer_type || 'ลูกค้าทั่วไป';
+        var ctColors = {'ลูกค้าทั่วไป':'bg-primary-subtle text-primary','ศูนย์ดูแล':'bg-warning-subtle text-warning-emphasis','สถานพยาบาล':'bg-danger-subtle text-danger','โรงแรม':'bg-purple-subtle text-purple'};
+        html += '<div class="d-flex align-items-center justify-content-between py-2 border-bottom" style="cursor:pointer;" onclick="loc_openModal(\''+c.id+'\')">' +
+          '<div class="d-flex align-items-center gap-2"><img src="'+photo+'" onerror="this.src=\'https://via.placeholder.com/150\'" class="rounded-2 border" style="width:56px;height:40px;object-fit:cover;"><div><div class="fw-medium small">'+escapeHtml(c.name||'')+'</div><div class="text-muted" style="font-size:0.7rem;"><span class="badge rounded-pill '+(ctColors[ct]||'bg-secondary-subtle text-secondary')+'" style="font-size:0.6rem;">'+escapeHtml(ct)+'</span> อ.'+escapeHtml(c.district||'ไม่ระบุ')+'</div></div></div>' +
+          '<span class="badge bg-success-subtle text-success rounded-pill small">ดู</span></div>';
+      });
+      if (!recent.length) html = '<div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>ยังไม่มีข้อมูล</div>';
+      document.getElementById('loc-dash-recent').innerHTML = html;
+      loc_initMap(data);
+    }
+
+    function loc_initMap(dataToRender) {
+      if (!dataToRender) dataToRender = loc_customers;
+      var mapEl = document.getElementById('loc-map'); if (!mapEl) return;
+      if (!loc_leafletMap) {
+        loc_leafletMap = L.map('loc-map').setView([15.7, 100.1], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(loc_leafletMap);
+      } else if (loc_markersCluster) { loc_leafletMap.removeLayer(loc_markersCluster); }
+      loc_markersCluster = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50 });
+      var bounds = [];
+      dataToRender.forEach(c => {
+        if (!c.lat || !c.lng) return;
+        var pct = c.customer_type || 'ลูกค้าทั่วไป';
+        var pinColors = {'ลูกค้าทั่วไป':'#0d6efd','ศูนย์ดูแล':'#fd7e14','สถานพยาบาล':'#dc3545','โรงแรม':'#6f42c1'};
+        var color = pinColors[pct] || '#6c757d';
+        var icon = L.divIcon({ className:'loc-marker-icon', html:'<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="'+color+'"/><circle cx="12" cy="11" r="5" fill="#fff"/></svg>', iconSize:[28,36], iconAnchor:[14,36], popupAnchor:[0,-36] });
+        var marker = L.marker([c.lat, c.lng], { icon: icon });
+        bounds.push([c.lat, c.lng]);
+        var photo = c.photo || 'https://via.placeholder.com/150';
+        marker.bindPopup('<div style="text-align:center;width:180px;font-family:Sarabun,sans-serif;"><img src="'+photo+'" onerror="this.src=\'https://via.placeholder.com/150\'" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:6px;"><div style="font-weight:600;font-size:0.85rem;">'+escapeHtml(c.name||'')+'</div><div style="font-size:0.65rem;margin-bottom:3px;"><span style="background:'+color+';color:#fff;padding:1px 8px;border-radius:10px;">'+escapeHtml(pct)+'</span></div><div style="font-size:0.7rem;color:#6c757d;margin-bottom:6px;">อ.'+escapeHtml(c.district||'ไม่ระบุ')+'</div><button onclick="loc_openModal(\''+c.id+'\')" style="background:#198754;color:#fff;border:none;padding:4px 12px;border-radius:20px;font-size:0.75rem;cursor:pointer;width:100%;">ดูข้อมูลเต็ม</button></div>');
+        loc_markersCluster.addLayer(marker);
+      });
+      loc_leafletMap.addLayer(loc_markersCluster);
+      if (bounds.length === 1) loc_leafletMap.setView(bounds[0], 12);
+      else if (bounds.length > 1) loc_leafletMap.fitBounds(bounds, { maxZoom: 12, padding: [40, 40] });
+      else loc_leafletMap.setView([15.7, 100.1], 8);
+      setTimeout(() => loc_leafletMap.invalidateSize(), 300);
+    }
+
+    // --- TOKEN TABLE ---
+    function loc_renderTokensTable() {
+      var tbody = document.getElementById('loc-tokens-table-body');
+      if (!tbody || !loc_sharedTokensData.length) { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">ไม่มีประวัติการสร้างลิงก์แชร์</td></tr>'; return; }
+      var now = Date.now();
+      var html = '';
+      loc_sharedTokensData.forEach(t => {
+        var exp = new Date(t.expiry_date).getTime();
+        var isExp = exp < now;
+        var statusText = 'ใช้งานได้', statusClass = 'bg-success-subtle text-success';
+        if (t.status === 'Revoked') { statusText = 'ถูกระงับ'; statusClass = 'bg-danger-subtle text-danger'; }
+        else if (isExp) { statusText = 'หมดอายุ'; statusClass = 'bg-secondary-subtle text-secondary'; }
+        var expText = t.expiry_date ? new Date(t.expiry_date).toLocaleString('th-TH', {dateStyle:'short',timeStyle:'short'}) : '-';
+        var revokeBtn = t.status !== 'Revoked' && !isExp ? '<button class="btn btn-sm btn-outline-danger rounded-pill" onclick="loc_revokeToken(\''+t.token+'\')">ยกเลิก</button>' : '-';
+        // Find customer name
+        var custName = '';
+        var cust = loc_customers.find(c => c.id === t.customer_id);
+        if (cust) custName = cust.name;
+        html += '<tr class="align-middle"><td class="ps-3"><div class="fw-medium small">'+escapeHtml(custName)+'</div><div class="text-muted" style="font-size:0.7rem;">โดย: '+escapeHtml(t.created_by||'')+'</div></td><td><code class="small">'+escapeHtml(t.token)+'</code></td><td class="d-none d-md-table-cell small text-muted">'+escapeHtml(t.note||'-')+'</td><td class="text-center small">'+expText+'</td><td class="text-center"><span class="badge '+statusClass+' rounded-pill">'+statusText+'</span></td><td class="text-end pe-3">'+revokeBtn+'</td></tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    async function loc_revokeToken(token) {
+      var r = await Swal.fire({ title: 'ยกเลิกลิงก์แชร์?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ยกเลิกสิทธิ์', cancelButtonText: 'ไม่ใช่' });
+      if (!r.isConfirmed) return;
+      const { error } = await _supabase.from('loc_shared_tokens').update({ status: 'Revoked' }).eq('token', token);
+      if (error) { Swal.fire('ผิดพลาด', error.message, 'error'); return; }
+      const { data } = await _supabase.from('loc_shared_tokens').select('*').order('created_at', { ascending: false });
+      loc_sharedTokensData = data || [];
+      loc_renderTokensTable();
+      Swal.fire({ icon: 'success', title: 'ยกเลิกสิทธิ์แล้ว', timer: 1200, showConfirmButton: false });
+    }
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('../sw.js', { scope: '/pt-medical-system/' }).catch(function(e) { console.warn('SW:', e); });
+  }
+  </script>
+</body>
+</html>
