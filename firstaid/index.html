@@ -1229,6 +1229,7 @@
                 };
             });
 
+            fa_currentRegistryRecords.sort(function(a, b) { return (a.timeIn || '').localeCompare(b.timeIn || ''); });
             fa_renderRegistryTable(fa_currentRegistryRecords);
             // Render dashboard stats
             if (typeof reg_renderStats === 'function') reg_renderStats(fa_currentRegistryRecords);
@@ -2526,6 +2527,9 @@
                     triage: p.triage || 'A'
                 };
             });
+
+            registry.sort(function(a, b) { return (a.timeIn || '').localeCompare(b.timeIn || ''); });
+            patients.sort(function(a, b) { return (a.timeIn || '').localeCompare(b.timeIn || ''); });
 
             Swal.close();
             fa_generatePrintWindow({

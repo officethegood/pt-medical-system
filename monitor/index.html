@@ -1501,7 +1501,8 @@
         // === MAIN RENDER ===
         h += 'function renderDash(res){';
         h += '_lastData=res;';
-        h += 'var reg=res.registry||[],ev=res.event,total=reg.length;';
+        h += 'var reg=res.registry||[];reg.sort(function(a,b){return(a.timeIn||"").localeCompare(b.timeIn||"");});';
+        h += 'var ev=res.event,total=reg.length;';
         h += 'var gM={},lM={},eM={},tM={},catM={},ccMed={},ccTra={},probM={},resM={},trxM={},timeH={},timeE={};';
         h += 'var medC=0,traC=0,pending=[];';
 
