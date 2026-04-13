@@ -3490,9 +3490,6 @@
         };
         var triage = triageMap[d.triageLevel] || triageMap['Non-Urgent'];
 
-        var pw = window.open('', '_blank');
-        if (!pw) { Swal.fire('Popup blocked', 'กรุณาอนุญาต Popup เพื่อพิมพ์เอกสาร', 'warning'); return; }
-
         var h = '';
         h += '<!DOCTYPE html><html><head><meta charset="UTF-8">';
         h += '<title>PT Record - ' + esc(d.id) + '</title>';
@@ -3502,7 +3499,7 @@
 
         h += '<div class="no-print ctrl-bar">';
         h += '<button onclick="window.print()" class="btn-p">&#128424; สั่งพิมพ์ / Save PDF</button>';
-        h += '<button onclick="window.close()" class="btn-c">&#10060; ปิด</button>';
+        h += '<button onclick="transport_closePrintView()" class="btn-c">&#10060; กลับ</button>';
         h += '</div>';
 
         h += '<div class="page">';
@@ -3626,10 +3623,28 @@
         h += '</div>';
         h += '</body></html>';
 
-        pw.document.open();
-        pw.document.write(h);
-        pw.document.close();
-        pw.focus();
+        // Show report full-page (Safari iOS blocks window.open from async)
+        var printArea = document.getElementById('print-content-area');
+        var printContainer = document.getElementById('print-layout-container');
+        printArea.innerHTML = h;
+        printContainer.style.display = 'block';
+        document.getElementById('app-main-wrapper').style.display = 'none';
+
+        var ps = document.createElement('style');
+        ps.id = 'transport-print-inject';
+        ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } .no-print { display:none!important; } }';
+        document.head.appendChild(ps);
+    }
+
+    function transport_closePrintView() {
+        var c = document.getElementById('print-layout-container');
+        if (c) c.style.display = 'none';
+        var w = document.getElementById('app-main-wrapper');
+        if (w) w.style.display = 'block';
+        var s = document.getElementById('transport-print-inject');
+        if (s) s.remove();
+        var a = document.getElementById('print-content-area');
+        if (a) a.innerHTML = '';
     }
 
     function buildArrestSection(title, a) {

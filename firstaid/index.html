@@ -2766,41 +2766,36 @@
         h += '</div>';
         h += '</div></body></html>';
 
-        // Use in-page print to avoid Safari iOS popup blocker
+        // Show report full-page with manual print button (works on all Safari iOS)
         var printArea = document.getElementById('print-content-area');
         var printContainer = document.getElementById('print-layout-container');
-        if (printArea && printContainer) {
-            printArea.innerHTML = h;
-            printContainer.style.display = 'block';
-            document.getElementById('app-main-wrapper').style.display = 'none';
-            // Add print styles
-            var ps = document.createElement('style');
-            ps.id = 'fa-print-inject';
-            ps.textContent = '@media print { #app-main-wrapper { display:none!important; } #print-layout-container { display:block!important; } }';
-            document.head.appendChild(ps);
-            setTimeout(function() { window.print(); }, 300);
-            // Restore after print
-            var restoreFn = function() {
-                printContainer.style.display = 'none';
-                document.getElementById('app-main-wrapper').style.display = 'block';
-                var injected = document.getElementById('fa-print-inject');
-                if (injected) injected.remove();
-                window.removeEventListener('afterprint', restoreFn);
-            };
-            window.addEventListener('afterprint', restoreFn);
-            // Fallback: restore after 10s if afterprint doesn't fire (some iOS)
-            setTimeout(restoreFn, 10000);
-        } else {
-            // Fallback: try window.open
-            var printWindow = window.open('', '_blank');
-            if (!printWindow || printWindow.closed) {
-                Swal.fire({ icon: 'warning', title: 'ไม่สามารถเปิดหน้าพิมพ์ได้', html: 'กรุณาอนุญาต Popup', confirmButtonText: 'ตกลง' });
-                return;
-            }
-            printWindow.document.open();
-            printWindow.document.write(h);
-            printWindow.document.close();
+        printArea.innerHTML = h;
+        printContainer.style.display = 'block';
+        document.getElementById('app-main-wrapper').style.display = 'none';
+
+        // Inject print styles
+        var ps = document.createElement('style');
+        ps.id = 'fa-print-inject';
+        ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } }';
+        document.head.appendChild(ps);
+
+        // Replace the no-print buttons to work in-page
+        var noPrintDiv = printArea.querySelector('.no-print');
+        if (noPrintDiv) {
+            noPrintDiv.innerHTML = '<button onclick="window.print()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#2563eb;color:#fff;">🖨️ สั่งพิมพ์ / Save PDF</button>' +
+                '<button onclick="fa_closePrintView()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#64748b;color:#fff;">✕ กลับ</button>';
         }
+    }
+
+    function fa_closePrintView() {
+        var printContainer = document.getElementById('print-layout-container');
+        if (printContainer) printContainer.style.display = 'none';
+        var wrapper = document.getElementById('app-main-wrapper');
+        if (wrapper) wrapper.style.display = 'block';
+        var injected = document.getElementById('fa-print-inject');
+        if (injected) injected.remove();
+        var printArea = document.getElementById('print-content-area');
+        if (printArea) printArea.innerHTML = '';
     }
 </script>
 
