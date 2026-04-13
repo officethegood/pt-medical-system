@@ -477,10 +477,12 @@ body {
 #print-layout-container { display: none; }
 
 @media print {
+  :root { color-scheme: light only !important; }
   @page { size: A4; margin: 10mm; }
-  body { background-color: white !important; font-size: 11pt; color: black !important; -webkit-print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
+  html { background: white !important; color-scheme: light only !important; }
+  body { background-color: white !important; font-size: 11pt; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
   #app-main-wrapper, .modal-backdrop, .modal, .fab-btn, #connection-alert { display: none !important; }
-  #print-layout-container { display: block !important; position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; background-color: white; z-index: 9999; }
+  #print-layout-container, #monitor-print-layout-container { display: block !important; position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; background-color: white !important; z-index: 9999; }
   .print-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10pt; }
   .print-table th, .print-table td { border: 1px solid #000; padding: 4px; vertical-align: top; }
   .print-table th { background-color: #eee !important; font-weight: bold; text-align: center; }
