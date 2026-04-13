@@ -2604,7 +2604,7 @@
 
         var h = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานปฐมพยาบาล - ' + esc(ev.name) + '</title>';
         h += "<style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');";
-        h += "* { margin:0; padding:0; box-sizing:border-box; } body { font-family:'Sarabun',sans-serif; font-size:10pt; color:#000; background:#fff; }";
+        h += ":root { color-scheme: light only; } * { margin:0; padding:0; box-sizing:border-box; } body { font-family:'Sarabun',sans-serif; font-size:10pt; color:#000!important; background:#fff!important; }";
         h += ".page { max-width:297mm; margin:0 auto; padding:14px 18px; }";
         h += "h2 { font-size:16pt; color:#dc3545; margin-bottom:4px; } h3 { font-size:11pt; margin:12px 0 6px; color:#333; border-bottom:2px solid #dc3545; padding-bottom:3px; }";
         h += "table { width:100%; border-collapse:collapse; margin-bottom:10px; } th,td { border:1px solid #ccc; padding:4px 6px; font-size:8.5pt; vertical-align:top; }";
@@ -2776,7 +2776,7 @@
         // Inject print styles
         var ps = document.createElement('style');
         ps.id = 'fa-print-inject';
-        ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } }';
+        ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; color-scheme:light; } @media print { #app-main-wrapper, .modal, .modal-backdrop { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } }';
         document.head.appendChild(ps);
 
         // Replace the no-print buttons to work in-page

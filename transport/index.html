@@ -3632,7 +3632,7 @@
 
         var ps = document.createElement('style');
         ps.id = 'transport-print-inject';
-        ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } .no-print { display:none!important; } }';
+        ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; color-scheme:light; } @media print { #app-main-wrapper, .modal, .modal-backdrop { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } .no-print { display:none!important; } }';
         document.head.appendChild(ps);
     }
 
@@ -3671,8 +3671,9 @@
     function buildPrintCSS() {
         return [
             "@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');",
+            ":root { color-scheme: light only; }",
             "* { margin:0; padding:0; box-sizing:border-box; }",
-            "body { font-family:'Sarabun',sans-serif; font-size:10pt; color:#000; background:#fff; }",
+            "body { font-family:'Sarabun',sans-serif; font-size:10pt; color:#000!important; background:#fff!important; }",
             ".ctrl-bar { background:#333; padding:10px; text-align:center; position:sticky; top:0; z-index:999; }",
             ".btn-p { background:#fff; color:#333; border:none; padding:8px 20px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit; font-weight:700; margin-right:8px; }",
             ".btn-c { background:#666; color:#fff; border:none; padding:8px 20px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit; font-weight:600; }",
