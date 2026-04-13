@@ -1525,7 +1525,9 @@
         h += 'document.getElementById("pending-count").textContent=pending.length;';
 
         // Time data
-        h += 'var allH=Object.keys(timeH).sort(),tLbl=allH.map(function(h){return h+":00"});';
+        h += 'var startHr=ev.startTime?parseInt(ev.startTime.split(":")[0]):0;';
+        h += 'var allH=Object.keys(timeH).sort(function(a,b){var na=(parseInt(a)-startHr+24)%24;var nb=(parseInt(b)-startHr+24)%24;return na-nb;});';
+        h += 'var tLbl=allH.map(function(h){return h+":00"});';
 
         // Triage config
         h += 'var triLvl=[{k:"A",l:"Alert",c:"#198754"},{k:"V",l:"Verbal",c:"#eab308"},{k:"P",l:"Pain",c:"#f97316"},{k:"U",l:"Unresponsive",c:"#dc2626"}];';
