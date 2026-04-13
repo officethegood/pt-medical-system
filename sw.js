@@ -1,5 +1,5 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v1';
+var CACHE_NAME = 'pt-medical-v2';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
@@ -38,7 +38,7 @@ self.addEventListener('activate', function(event) {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for static
+// Fetch: network-first for HTML + API, cache-fallback for assets
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
 
@@ -52,12 +52,29 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Cache-first for static assets
+  // Network-first for HTML pages (always get latest code)
+  if (event.request.mode === 'navigate' || url.indexOf('.html') > -1 || url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request).then(function(response) {
+        if (response.ok) {
+          var clone = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      }).catch(function() {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // Cache-first for static assets (CSS, JS, images)
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) return cached;
       return fetch(event.request).then(function(response) {
-        // Cache successful GET responses
         if (response.ok && event.request.method === 'GET') {
           var clone = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
