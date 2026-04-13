@@ -1214,7 +1214,7 @@
     function monitorBuildFAHtml(result, eventId) {
         var esc = escapeHtml;
         var ev = result.event;
-        var registry = result.registry || [];
+        var registry = (result.registry || []).slice().sort(function(a, b) { return (a.timeIn || '').localeCompare(b.timeIn || ''); });
         var config = result.config || {};
 
         var logoSrc = '';
