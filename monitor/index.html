@@ -1562,7 +1562,7 @@
         h += 'var pr=r.problem||"";if(pr){var di=pr.indexOf(" — ");if(di>0)pr=pr.substring(0,di);probM[pr]=(probM[pr]||0)+1;}';
         h += 'if(r.result){var rp=r.result.split(":");var rl="D/C";if(rp[0]==="dc"){var dl={dnf:"DNF",rtp:"Return to Play",finished:"D/C"};rl=dl[rp[1]]||"D/C";}else if(rp[0]==="transfer")rl="Transfer";resM[rl]=(resM[rl]||0)+1;}';
         h += 'if(r.timeIn){var hr=r.timeIn.split(":")[0];if(hr){timeH[hr]=(timeH[hr]||0)+1;var et=r.etiology||"Other";if(!timeE[et])timeE[et]={};timeE[et][hr]=(timeE[et][hr]||0)+1;}}';
-        h += 'if(r.treatment){r.treatment.split(",").forEach(function(t){t=t.trim();if(t)trxM[t]=(trxM[t]||0)+1;});}';
+        h += 'if(r.treatment){r.treatment.split(", ").forEach(function(t){t=t.trim();if(t)trxM[t]=(trxM[t]||0)+1;});}';
         h += 'if(!r.timeOut)pending.push(r);';
         h += '});';
 

@@ -2583,7 +2583,7 @@
             if (r.triage) triageMap[r.triage] = (triageMap[r.triage] || 0) + 1;
 
             if (r.treatment) {
-                r.treatment.split(',').forEach(function(t) {
+                r.treatment.split(', ').forEach(function(t) {
                     t = t.trim();
                     if (t) treatmentMap[t] = (treatmentMap[t] || 0) + 1;
                 });
