@@ -2583,10 +2583,17 @@
             if (r.triage) triageMap[r.triage] = (triageMap[r.triage] || 0) + 1;
 
             if (r.treatment) {
-                r.treatment.split(', ').forEach(function(t) {
-                    t = t.trim();
-                    if (t) treatmentMap[t] = (treatmentMap[t] || 0) + 1;
-                });
+                var txParts = r.treatment.split(', ');
+                for (var ti = 0; ti < txParts.length; ti++) {
+                    var t = txParts[ti].trim();
+                    if (!t) continue;
+                    // Merge standalone "จ่ายยา" with next item (medicine names)
+                    if (t === 'จ่ายยา' && ti + 1 < txParts.length && txParts[ti + 1].indexOf('/') === -1) {
+                        t = 'จ่ายยา (' + txParts[ti + 1].trim() + ')';
+                        ti++;
+                    }
+                    treatmentMap[t] = (treatmentMap[t] || 0) + 1;
+                }
             }
         });
 
