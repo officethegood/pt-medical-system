@@ -4122,8 +4122,8 @@
           var thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
           var pad = function(n) { return n < 10 ? '0' + n : n; };
           var label = 'ฉบับที่ ' + v.version + ' — ' + d.getDate() + ' ' + thM[d.getMonth()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-          if (v.status === 'active') label += ' (ปัจจุบัน)';
-          else label += ' (ยกเลิก)';
+          if (v.status === 'active') label += ' ✅ ฉบับปัจจุบัน';
+          else label += ' (ถูกแทนที่)';
           versionDropdown += '<option value="' + v.version + '"' + (v.status === 'active' ? ' selected' : '') + '>' + label + '</option>';
         });
         versionDropdown += '</select>';
@@ -4284,8 +4284,8 @@
           var thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
           var pad = function(n) { return n < 10 ? '0' + n : n; };
           var label = 'ฉบับที่ ' + v.version + ' — ' + d.getDate() + ' ' + thM[d.getMonth()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-          if (v.status === 'active') label += ' (ปัจจุบัน)';
-          else label += ' (ยกเลิก)';
+          if (v.status === 'active') label += ' ✅ ฉบับปัจจุบัน';
+          else label += ' (ถูกแทนที่)';
           versionDropdown += '<option value="' + v.version + '"' + (v.status === 'active' ? ' selected' : '') + '>' + label + '</option>';
         });
         versionDropdown += '</select>';
