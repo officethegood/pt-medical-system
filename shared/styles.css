@@ -48,8 +48,14 @@ body {
 #sys-tog-firstaid.active { background:#dc3545; border-color:#dc3545; }
 #sys-tog-location.active { background:#198754; border-color:#198754; }
 .system-toggle .sys-tog { border-radius:0; }
-.system-toggle .sys-tog.rounded-pill-start { border-radius:50rem 0 0 50rem; }
-.system-toggle .sys-tog.rounded-pill-end { border-radius:0 50rem 50rem 0; }
+.system-toggle .sys-tog.rounded-pill-start {
+  border-top-left-radius:50rem !important;
+  border-bottom-left-radius:50rem !important;
+}
+.system-toggle .sys-tog.rounded-pill-end {
+  border-top-right-radius:50rem !important;
+  border-bottom-right-radius:50rem !important;
+}
 .system-toggle .sys-tog:not(:first-child) { border-left:none; }
 
 /* --- LOGIN --- */
