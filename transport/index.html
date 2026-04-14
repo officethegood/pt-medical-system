@@ -53,6 +53,77 @@
     .status-completed { color:#0d6efd; }
     .status-cancelled { color:#dc3545; }
 
+    /* ── Consent Card ── */
+    .consent-card-step1 {
+      border: 2px dashed #ffc107;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    .consent-card-step1.signed {
+      border: 2px solid #198754;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+    .consent-card-step1 .consent-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .consent-card-step1:not(.signed) .consent-icon {
+      background: #fef08a; color: #a16207;
+    }
+    .consent-card-step1.signed .consent-icon {
+      background: #bbf7d0; color: #15803d;
+    }
+    /* Banner Consent Strip (Step 2/3) */
+    .ban-consent-strip {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 10px; padding: 7px 14px;
+      border-radius: 8px; cursor: pointer;
+      font-size: 0.78rem; transition: all 0.2s;
+    }
+    .ban-consent-strip.pending {
+      background: #fffbeb; border: 1px dashed #fbbf24; color: #92400e;
+    }
+    .ban-consent-strip.pending:hover { background: #fef3c7; border-color: #f59e0b; }
+    .ban-consent-strip.done {
+      background: #f0fdf4; border: 1px solid #86efac; color: #166534;
+    }
+    .ban-consent-strip.done:hover { background: #dcfce7; }
+
+    /* Consent Modal Fullscreen */
+    .consent-modal-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .consent-modal-overlay.show { display: flex; }
+    .consent-modal-content {
+      background: #fff; border-radius: 16px;
+      width: 100%; max-width: 800px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+      animation: consentSlideUp 0.3s ease;
+    }
+    @keyframes consentSlideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .consent-modal-header {
+      position: sticky; top: 0; z-index: 10;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: #fff; padding: 16px 24px;
+      border-radius: 16px 16px 0 0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .consent-modal-body { padding: 24px; }
+
     /* Banner triage stripe */
     .banner-triage-stripe { width:6px; border-radius:3px; min-height:40px; }
 
@@ -111,6 +182,9 @@
           <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
               <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
           </button>
+          <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
+              <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
+          </button>
           <div class="btn-group system-toggle" role="group" id="nav-system-toggle">
             <button type="button" class="btn btn-sm rounded-pill-start sys-tog active" id="sys-tog-transport" title="Patient Transport" style="min-width:40px;">
               <i class="bi bi-truck-front-fill"></i><span class="d-none d-lg-inline ms-1">Transport</span>
@@ -122,9 +196,6 @@
               <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
             </button>
           </div>
-          <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
-              <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
-          </button>
           <button class="btn btn-light btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-system-dashboard" onclick="showDashboard()" title="กลับหน้า Dashboard ของระบบนี้">
               <i class="bi bi-house-door-fill"></i><span class="d-none d-md-inline ms-1">Dashboard</span>
           </button>
@@ -220,17 +291,26 @@
                    <div class="col-md-4 text-md-end text-muted fs-7 mt-2 mt-md-0">
                        <i class="bi bi-geo-alt-fill text-primary"></i> <span id="ban-route">-</span>
                    </div>
-                   <div class="col-12 mt-2 pt-2 border-top">
-                       <span class="badge bg-light text-dark border me-2">Dx: <span id="ban-dx" class="fw-normal">-</span></span>
-                       <span class="badge bg-light text-dark border me-2">CC: <span id="ban-cc" class="fw-normal">-</span></span>
-                       <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">แพ้: <span id="ban-allergy" class="fw-normal">-</span></span>
-                       <span class="badge bg-info-subtle text-info border border-info-subtle">UD: <span id="ban-ud" class="fw-normal">-</span></span>
+                   <div class="col-12 mt-2 pt-2 border-top" style="overflow:hidden;">
+                     <div class="d-flex flex-wrap align-items-start gap-1" style="font-size:0.75rem;">
+                       <span class="badge bg-light text-dark border me-1 text-start" style="max-width:100%; white-space:normal;">Dx: <span id="ban-dx" class="fw-normal">-</span></span>
+                       <span class="badge bg-light text-dark border me-1 text-start" style="max-width:100%; white-space:normal;">CC: <span id="ban-cc" class="fw-normal">-</span></span>
+                       <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1">แพ้: <span id="ban-allergy" class="fw-normal">-</span></span>
+                       <span class="badge bg-info-subtle text-info border border-info-subtle me-1">UD: <span id="ban-ud" class="fw-normal">-</span></span>
+                     </div>
                    </div>
                  </div>
                </div>
                <div class="no-print ms-3 d-flex align-items-start">
                   <button class="btn btn-light text-primary rounded-circle shadow-sm" id="btn-edit-patient" onclick="openEditModal()"><i class="bi bi-pencil-square"></i></button>
                </div>
+            </div>
+            <!-- Consent Status Strip -->
+            <div id="ban-consent-card" class="ban-consent-strip pending no-print" onclick="openConsentModal()" title="คลิกเพื่อเปิดฟอร์ม Consent">
+              <i class="bi bi-file-earmark-check" id="ban-consent-icon-i"></i>
+              <span class="fw-bold">Consent:</span>
+              <span id="ban-consent-text">รอลงนาม</span>
+              <i class="bi bi-chevron-right ms-auto" style="font-size:0.7rem; opacity:0.5;"></i>
             </div>
           </div>
 
@@ -400,6 +480,26 @@
                 <div>
                   <label class="form-label fw-bold text-secondary fs-7" id="scene-detail-label"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> กลไกการบาดเจ็บ (MOI - Mechanism of Injury)</label>
                   <textarea class="form-control bg-light border-0 shadow-none" name="scene_detail" rows="3" id="scene-detail-textarea" placeholder="เช่น รถจยย.ชนท้ายรถกระบะ ความเร็วสูง ไม่สวม helmet ผู้ป่วยกระเด็นออกจากรถ ~5 เมตร"></textarea>
+                </div>
+              </div>
+
+              <!-- Consent Card (between Triage & Patient Info) -->
+              <div id="consent-card" class="consent-card-step1">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="consent-icon" id="consent-card-icon">
+                    <i class="bi bi-file-earmark-check"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="fw-bold text-dark mb-1" style="font-size:1.05rem;">
+                      <i class="bi bi-shield-check me-1"></i> หนังสือยินยอมรับบริการ (Consent)
+                    </div>
+                    <div id="consent-status-text" class="text-muted" style="font-size:0.85rem;">
+                      ยังไม่ได้ลงนาม — กรุณาให้ผู้ป่วย/ญาติลงนามก่อนเริ่มนำส่ง
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold shadow-sm no-print" id="btn-open-consent" onclick="openConsentModal()">
+                    <i class="bi bi-pen me-1"></i> เปิดฟอร์ม
+                  </button>
                 </div>
               </div>
 
@@ -1221,6 +1321,30 @@
                     allCases.push(rec);
                 });
 
+                // Load consent status for all visible cases
+                var caseIds = allCases.map(function(c) { return c.id; });
+                if (caseIds.length > 0) {
+                    try {
+                        var consentRes = await _supabase
+                            .from('transport_consents')
+                            .select('case_id, version, status')
+                            .in('case_id', caseIds)
+                            .neq('status', 'case_deleted')
+                            .order('version', { ascending: false });
+                        var consentMap = {};
+                        (consentRes.data || []).forEach(function(c) {
+                            if (!consentMap[c.case_id]) consentMap[c.case_id] = { hasActive: false, count: 0 };
+                            consentMap[c.case_id].count++;
+                            if (c.status === 'active') consentMap[c.case_id].hasActive = true;
+                        });
+                        allCases.forEach(function(rec) {
+                            var cm = consentMap[rec.id];
+                            rec.consentSigned = cm ? cm.hasActive : false;
+                            rec.consentCount = cm ? cm.count : 0;
+                        });
+                    } catch(e) { console.error('Consent status load error:', e); }
+                }
+
                 filteredCases = allCases;
                 renderPage();
                 renderBackendPagination(totalCases, totalPagesBackend, page);
@@ -1317,18 +1441,31 @@
         var ptDest = (rec.patientInfo && rec.patientInfo.destination) ? rec.patientInfo.destination : '?';
         var genderShort = ptGender === 'Male' ? 'ช' : (ptGender === 'Female' ? 'ญ' : (ptGender === 'Other' ? 'อื่นๆ' : '-'));
 
+        // Consent status from DB
+        var hasConsent = rec.consentSigned || false;
+        var consentCount = rec.consentCount || 0;
+        var consentBorderStyle = hasConsent
+            ? 'border-left: 4px solid #22c55e;'
+            : 'border-left: 4px solid #fbbf24;';
+
         var card = document.createElement('div');
         card.className = 'col-12 px-2';
         var hasActionBtns = isAdmin || (rec.status === 'Completed');
         var rightPad = isAdmin ? '134px' : (rec.status === 'Completed' ? '40px' : '');
+        var consentCountLabel = consentCount > 1 ? ' (' + consentCount + ')' : '';
+        var consentBadgeHtml = hasConsent
+            ? '<span class="badge rounded-pill px-2 py-0" style="font-size:0.6rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; cursor:pointer;" onclick="event.stopPropagation(); previewConsent(\'' + rec.id + '\')" title="ดู Consent (ลงนามแล้ว)"><i class="bi bi-check-circle-fill me-1"></i>Consent' + consentCountLabel + '</span>'
+            : '<span class="badge rounded-pill px-2 py-0" style="font-size:0.6rem; background:#fef9c3; color:#92400e; border:1px solid #fde68a; cursor:pointer;" onclick="event.stopPropagation(); previewConsent(\'' + rec.id + '\')" title="ดู Consent (รอลงนาม)"><i class="bi bi-file-earmark-check me-1"></i>Consent</span>';
+
         card.innerHTML =
             '<div class="card patient-card mb-2">' + actionBtnsHtml +
                '<div class="card-triage-indicator" style="background-color: ' + triageColor + '; border-top-left-radius: 10px; border-bottom-left-radius: 10px; width: 5px;"></div>' +
                '<div class="card-body py-2 px-3 ms-1" style="' + (rightPad ? 'padding-right: ' + rightPad + ' !important;' : '') + '">' +
                    '<div class="row align-items-center gx-3">' +
                        '<div class="col-12 col-md-4 mb-1 mb-md-0">' +
-                           '<div class="d-flex align-items-center gap-2 mb-1">' +
+                           '<div class="d-flex align-items-center gap-2 mb-1 flex-wrap">' +
                                '<span class="badge ' + statusBadgeClass + ' rounded-pill px-2 py-0" style="font-size: 0.65rem;">' + rec.status + '</span>' +
+                               consentBadgeHtml +
                                '<span class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-clock me-1"></i>' + dateStr + ' ' + timeStr + '</span>' +
                                (updatedStr ? ' <span class="text-muted" style="font-size: 0.62rem;" title="อัปเดตล่าสุด"><i class="bi bi-pencil-square me-1"></i>' + updatedStr + '</span>' : '') +
                            '</div>' +
@@ -1408,6 +1545,13 @@
          showLoaderOnConfirm: true,
          preConfirm: async function() {
              try {
+                 // Mark all consents for this case as 'case_deleted' (keep in DB for audit trail)
+                 var consentResp = await _supabase
+                   .from('transport_consents')
+                   .update({ status: 'case_deleted', superseded_at: new Date().toISOString(), superseded_reason: 'เคสถูกลบ' })
+                   .eq('case_id', id);
+                 if (consentResp.error) { console.warn('Mark consents deleted warning:', consentResp.error); }
+
                  var resp = await _supabase.from('cases').delete().eq('case_id', id);
                  if (resp.error) { Swal.showValidationMessage(resp.error.message); return { status: 'error' }; }
                  await logActivity('DELETE_CASE', id, 'ลบเคส');
@@ -1533,6 +1677,12 @@
        resetFormState();
        loadedCaseStatus = "Active";
        refreshInitVitalsDisplay();
+
+       // Reset consent state for new case
+       consentSigned = false;
+       consentData = null;
+       consentVersions = [];
+       consentActiveVersion = null;
 
        var loggedUser = getUserName();
        if (loggedUser) {
@@ -1757,6 +1907,13 @@
             var isCompleted = (data.status === 'Completed');
             setReadOnlyMode(isCompleted);
 
+            // Load consent versions from DB
+            consentVersions = await loadConsentsFromDB(data.id);
+            consentActiveVersion = consentVersions.find(function(v) { return v.status === 'active'; });
+            consentSigned = !!consentActiveVersion;
+            consentData = consentActiveVersion ? { data: consentActiveVersion.consent_data, signedAt: null, caseId: data.id } : null;
+            updateConsentUI();
+
             isPopulating = false;
             formDirty = false;
             showForm();
@@ -1907,7 +2064,7 @@
        for (var i = 0; i < elements.length; i++) {
           var el = elements[i];
 
-          if (el.id === 'btn-step1-next' || el.id === 'btn-step2-next' || el.id === 'btn-print') {
+          if (el.id === 'btn-step1-next' || el.id === 'btn-step2-next' || el.id === 'btn-print' || el.id === 'btn-open-consent') {
               el.disabled = false;
               el.classList.remove('disabled');
               continue;
@@ -1971,6 +2128,21 @@
            } else {
                reopenBanner.classList.add('d-none');
                reopenBanner.classList.remove('d-flex');
+           }
+       }
+
+       // Consent Card: always clickable but adjust label
+       var consentBtn = document.getElementById('btn-open-consent');
+       if (consentBtn) {
+           consentBtn.disabled = false;
+           consentBtn.classList.remove('disabled');
+           if (isReadOnly && !consentSigned) {
+               // Completed case but no consent → show "ดูฟอร์ม"
+               consentBtn.className = 'btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold no-print';
+               consentBtn.innerHTML = '<i class="bi bi-eye me-1"></i> ดูฟอร์ม';
+           } else if (isReadOnly && consentSigned) {
+               consentBtn.className = 'btn btn-outline-success btn-sm rounded-pill px-3 fw-bold no-print';
+               consentBtn.innerHTML = '<i class="bi bi-eye me-1"></i> ดู Consent';
            }
        }
     }
@@ -3554,7 +3726,14 @@
         h += '<td style="text-align:right;vertical-align:top;width:180px;">';
         h += '<div class="doc-no">Doc No: <b>' + esc(d.id) + '</b></div>';
         h += '<div class="doc-no">NR Status: <b>' + esc(d.nrStatus || '-') + '</b></div>';
-        h += '<div style="margin-top:4px;"><span class="triage-tag" style="background:' + triage.c + ';">' + esc(triage.l) + '</span></div>';
+        h += '<div style="margin-top:4px;">';
+        h += '<span class="triage-tag" style="background:' + triage.c + ';">' + esc(triage.l) + '</span> ';
+        if (consentSigned) {
+            h += '<span style="display:inline-block;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:4px;padding:1px 6px;font-size:8pt;">&#9745; Consent</span>';
+        } else {
+            h += '<span style="display:inline-block;background:#fef9c3;color:#92400e;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;font-size:8pt;">&#9744; Consent</span>';
+        }
+        h += '</div>';
         h += '</td>';
         h += '</tr></table>';
         h += '<div class="hdr-line"></div>';
@@ -3818,6 +3997,471 @@
         }
     });
   </script>
+  <!-- ═══ Consent Modal ═══ -->
+  <div class="consent-modal-overlay" id="consent-modal">
+    <div class="consent-modal-content">
+      <div class="consent-modal-header">
+        <div>
+          <div class="fw-bold" style="font-size:1.1rem;"><i class="bi bi-shield-check me-2"></i>หนังสือยินยอมรับบริการ</div>
+          <div style="font-size:0.78rem; opacity:0.8;">Consent for Emergency Ambulance Services</div>
+        </div>
+        <button class="btn btn-outline-light btn-sm rounded-circle" onclick="closeConsentModal()" style="width:36px;height:36px;">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="consent-modal-body">
+        <iframe id="consent-iframe" src="" style="width:100%; border:none; min-height:70vh;" onload="resizeConsentIframe()"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Consent State ──
+    var consentSigned = false;
+    var consentData = null;
+    var consentVersions = []; // all versions from DB
+    var consentActiveVersion = null; // current active version
+
+    // Save consent to Supabase (creates new version, marks old as superseded)
+    async function saveConsentToDB(caseId, formData) {
+      try {
+        // 1) Mark existing active consent as superseded
+        var existing = await _supabase
+          .from('transport_consents')
+          .select('id, version')
+          .eq('case_id', caseId)
+          .eq('status', 'active')
+          .order('version', { ascending: false })
+          .limit(1);
+
+        var nextVersion = 1;
+        if (existing.data && existing.data.length > 0) {
+          nextVersion = existing.data[0].version + 1;
+          await _supabase
+            .from('transport_consents')
+            .update({ status: 'superseded', superseded_at: new Date().toISOString() })
+            .eq('id', existing.data[0].id);
+        }
+
+        // 2) Insert new version
+        var row = {
+          case_id: caseId,
+          version: nextVersion,
+          signed_at: formData.data.signatureTimestamp || new Date().toISOString(),
+          signed_by: formData.data.consenterName || '',
+          relationship: formData.data.relationship || '',
+          consent_data: formData.data,
+          signature_image: formData.data.signatureDataUrl || '',
+          witness_name: formData.data.witnessName || '',
+          status: 'active'
+        };
+
+        var res = await _supabase.from('transport_consents').insert(row);
+        if (res.error) { console.error('Save consent error:', res.error); return null; }
+
+        console.log('[Consent] Saved version ' + nextVersion + ' for ' + caseId);
+        return nextVersion;
+      } catch(e) {
+        console.error('Save consent exception:', e);
+        return null;
+      }
+    }
+
+    // Load all consent versions for a case
+    async function loadConsentsFromDB(caseId) {
+      try {
+        var res = await _supabase
+          .from('transport_consents')
+          .select('*')
+          .eq('case_id', caseId)
+          .neq('status', 'case_deleted')
+          .order('version', { ascending: false });
+
+        if (res.error) { console.error('Load consents error:', res.error); return []; }
+        return res.data || [];
+      } catch(e) {
+        console.error('Load consents exception:', e);
+        return [];
+      }
+    }
+
+    // Preview Consent in Print Layout (from Dashboard)
+    var _previewConsentVersions = [];
+    var _previewConsentCaseId = '';
+
+    async function previewConsent(caseId) {
+      Swal.fire({ title: 'กำลังโหลด Consent...', didOpen: function() { Swal.showLoading(); }, allowOutsideClick: false });
+
+      // Load patient data + consent versions in parallel
+      var ptName = '', ptAge = '', ptId = '', routeFrom = '', routeTo = '';
+      try {
+        var results = await Promise.all([
+          _supabase.from('cases').select('patient_info').eq('case_id', caseId).single(),
+          loadConsentsFromDB(caseId)
+        ]);
+        Swal.close();
+
+        if (results[0].data && results[0].data.patient_info) {
+          var pi = results[0].data.patient_info;
+          ptName = pi.name || '';
+          ptAge = pi.age || '';
+          ptId = pi.idCard || '';
+          routeFrom = pi.origin || '';
+          routeTo = pi.destination || '';
+        }
+        _previewConsentVersions = results[1] || [];
+        _previewConsentCaseId = caseId;
+      } catch(e) { Swal.close(); _previewConsentVersions = []; }
+
+      // Build version dropdown if multiple versions
+      var versionDropdown = '';
+      if (_previewConsentVersions.length > 1) {
+        versionDropdown = '<select id="consent-version-select" onchange="switchConsentVersion()" style="padding:8px 12px;font-size:14px;border-radius:6px;border:1px solid #cbd5e1;font-family:Sarabun,sans-serif;margin:0 8px;min-width:200px;">';
+        _previewConsentVersions.forEach(function(v) {
+          var d = new Date(v.signed_at);
+          var thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+          var pad = function(n) { return n < 10 ? '0' + n : n; };
+          var label = 'ฉบับที่ ' + v.version + ' — ' + d.getDate() + ' ' + thM[d.getMonth()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+          if (v.status === 'active') label += ' (ปัจจุบัน)';
+          else label += ' (ยกเลิก)';
+          versionDropdown += '<option value="' + v.version + '"' + (v.status === 'active' ? ' selected' : '') + '>' + label + '</option>';
+        });
+        versionDropdown += '</select>';
+      } else if (_previewConsentVersions.length === 1) {
+        versionDropdown = '<span style="font-size:14px;color:#64748b;margin:0 8px;">ฉบับที่ 1</span>';
+      }
+
+      // Dashboard = Print Preview (has print button)
+      var src = 'consent-prototype.html?embed=1&mode=print-preview';
+      src += '&case_id=' + encodeURIComponent(caseId);
+      if (ptName) src += '&pt_name=' + encodeURIComponent(ptName);
+      if (ptId) src += '&pt_id=' + encodeURIComponent(ptId);
+      if (ptAge) src += '&pt_age=' + encodeURIComponent(ptAge);
+      if (routeFrom) src += '&route_from=' + encodeURIComponent(routeFrom);
+      if (routeTo) src += '&route_to=' + encodeURIComponent(routeTo);
+
+      var printArea = document.getElementById('print-content-area');
+      var printContainer = document.getElementById('print-layout-container');
+
+      var toolbar = '<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;" class="no-print">' +
+          versionDropdown +
+          '<button onclick="printConsentIframe()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#2563eb;color:#fff;">🖨️ พิมพ์ Consent</button>' +
+          '<button onclick="transport_closePrintView()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#64748b;color:#fff;">✕ กลับ</button></div>';
+
+      printArea.innerHTML = toolbar + '<iframe id="consent-print-iframe" src="' + src + '" style="width:100%;border:none;min-height:calc(100vh - 60px);"></iframe>';
+      printContainer.style.display = 'block';
+      document.getElementById('app-main-wrapper').style.display = 'none';
+
+      // Send consent_data to iframe after it loads
+      var activeVer = _previewConsentVersions.find(function(v) { return v.status === 'active'; }) || _previewConsentVersions[0];
+      if (activeVer && activeVer.consent_data) {
+        var pIframe = document.getElementById('consent-print-iframe');
+        pIframe.addEventListener('load', function() {
+          sendConsentDataToIframe(pIframe, activeVer.consent_data);
+        });
+      }
+
+      var ps = document.createElement('style');
+      ps.id = 'transport-print-inject';
+      ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop, .swal2-container, .no-print { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } #consent-print-iframe { height:auto!important; min-height:0!important; } }';
+      document.head.appendChild(ps);
+    }
+
+    // Helper: restore consent data to iframe with retry
+    function sendConsentDataToIframe(iframe, consentData) {
+      if (!iframe || !consentData) return;
+      var attempts = 0;
+      var maxAttempts = 15;
+      function tryRestore() {
+        attempts++;
+        try {
+          if (iframe.contentWindow && iframe.contentWindow.restoreConsentData) {
+            iframe.contentWindow.restoreConsentData(consentData);
+            return;
+          }
+        } catch(e) {}
+        if (attempts < maxAttempts) {
+          setTimeout(tryRestore, 200);
+        }
+      }
+      // Start trying after initial delay for readonly mode to complete
+      setTimeout(tryRestore, 300);
+    }
+
+    function printConsentIframe() {
+      var iframe = document.getElementById('consent-print-iframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.print();
+      } else {
+        window.print();
+      }
+    }
+
+    // Switch consent version in Print Preview dropdown
+    function switchConsentVersion() {
+      var sel = document.getElementById('consent-version-select');
+      if (!sel) return;
+      var selectedVer = parseInt(sel.value);
+      var ver = _previewConsentVersions.find(function(v) { return v.version === selectedVer; });
+      if (!ver) return;
+
+      var iframe = document.getElementById('consent-print-iframe');
+      if (!iframe) return;
+
+      // Rebuild URL with consent_data from selected version
+      var cd = ver.consent_data || {};
+      var src = 'consent-prototype.html?embed=1&mode=print-preview';
+      src += '&case_id=' + encodeURIComponent(_previewConsentCaseId);
+      if (cd.patient) {
+        if (cd.patient.name) src += '&pt_name=' + encodeURIComponent(cd.patient.name);
+        if (cd.patient.idCard) src += '&pt_id=' + encodeURIComponent(cd.patient.idCard);
+        if (cd.patient.age) src += '&pt_age=' + encodeURIComponent(cd.patient.age);
+      }
+      if (cd.route) {
+        if (cd.route.from) src += '&route_from=' + encodeURIComponent(cd.route.from);
+        if (cd.route.to) src += '&route_to=' + encodeURIComponent(cd.route.to);
+      }
+      src += '&consent_version=' + selectedVer;
+
+      // Send consent_data after iframe reloads
+      iframe.addEventListener('load', function onLoad() {
+        iframe.removeEventListener('load', onLoad);
+        sendConsentDataToIframe(iframe, cd);
+      });
+      iframe.src = src;
+    }
+
+    function openConsentModal() {
+      // ────── Auto-save ก่อนถ้ายังไม่มี Case ID ──────
+      var caseIdCheck = document.getElementById('caseId').value || '';
+      if (!caseIdCheck) {
+        formDirty = true; // force save even if no input events triggered
+        saveData(false, false, function() {
+          openConsentModal(); // retry after save
+        });
+        return;
+      }
+
+      var f = document.forms['main-form'];
+      var caseId = caseIdCheck;
+      var ptName = f ? (f.pt_name?.value || '') : '';
+      var ptAge = f ? (f.pt_age?.value || '') : '';
+      var ptIdCard = '';
+      try {
+        ptIdCard = (f.pt_idcard?.value || f.pt_passport?.value || '').trim();
+      } catch(e) {}
+      var routeFrom = f ? (f.origin?.value || '') : '';
+      var routeTo = f ? (f.destination?.value || '') : '';
+      var isLocked = document.getElementById('formStatus').value === 'Completed';
+
+      // ────── ถ้ายังไม่เซ็น → เปิดฟอร์มแก้ไขเลย ──────
+      if (!consentSigned) {
+        var modal = document.getElementById('consent-modal');
+        var iframe = document.getElementById('consent-iframe');
+        var src = 'consent-prototype.html?embed=1';
+        if (caseId) src += '&case_id=' + encodeURIComponent(caseId);
+        if (ptName) src += '&pt_name=' + encodeURIComponent(ptName);
+        if (ptIdCard) src += '&pt_id=' + encodeURIComponent(ptIdCard);
+        if (ptAge) src += '&pt_age=' + encodeURIComponent(ptAge);
+        if (routeFrom) src += '&route_from=' + encodeURIComponent(routeFrom);
+        if (routeTo) src += '&route_to=' + encodeURIComponent(routeTo);
+        iframe.src = src;
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        return;
+      }
+
+      // ────── เซ็นแล้ว → เปิด Preview ก่อน (พร้อมปุ่มแก้ไขถ้า Active) ──────
+      _previewConsentVersions = consentVersions || [];
+      _previewConsentCaseId = caseId;
+
+      // Build version dropdown
+      var versionDropdown = '';
+      if (_previewConsentVersions.length > 1) {
+        versionDropdown = '<select id="consent-version-select" onchange="switchConsentVersion()" style="padding:8px 12px;font-size:14px;border-radius:6px;border:1px solid #cbd5e1;font-family:Sarabun,sans-serif;margin:0 8px;min-width:200px;">';
+        _previewConsentVersions.forEach(function(v) {
+          var d = new Date(v.signed_at);
+          var thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+          var pad = function(n) { return n < 10 ? '0' + n : n; };
+          var label = 'ฉบับที่ ' + v.version + ' — ' + d.getDate() + ' ' + thM[d.getMonth()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+          if (v.status === 'active') label += ' (ปัจจุบัน)';
+          else label += ' (ยกเลิก)';
+          versionDropdown += '<option value="' + v.version + '"' + (v.status === 'active' ? ' selected' : '') + '>' + label + '</option>';
+        });
+        versionDropdown += '</select>';
+      } else if (_previewConsentVersions.length === 1) {
+        versionDropdown = '<span style="font-size:14px;color:#64748b;margin:0 8px;">ฉบับที่ 1</span>';
+      }
+
+      // Build toolbar buttons
+      var editBtn = '';
+      if (!isLocked) {
+        editBtn = '<button onclick="openConsentEditMode()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#f59e0b;color:#fff;">✏️ แก้ไข Consent</button>';
+      }
+
+      var mode = isLocked ? 'preview' : 'print-preview';
+      var src = 'consent-prototype.html?embed=1&mode=' + mode;
+      src += '&case_id=' + encodeURIComponent(caseId);
+      if (ptName) src += '&pt_name=' + encodeURIComponent(ptName);
+      if (ptIdCard) src += '&pt_id=' + encodeURIComponent(ptIdCard);
+      if (ptAge) src += '&pt_age=' + encodeURIComponent(ptAge);
+      if (routeFrom) src += '&route_from=' + encodeURIComponent(routeFrom);
+      if (routeTo) src += '&route_to=' + encodeURIComponent(routeTo);
+
+      var printArea = document.getElementById('print-content-area');
+      var printContainer = document.getElementById('print-layout-container');
+
+      var toolbar = '<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;" class="no-print">' +
+          versionDropdown +
+          editBtn +
+          '<button onclick="printConsentIframe()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#2563eb;color:#fff;">🖨️ พิมพ์</button>' +
+          '<button onclick="transport_closePrintView()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#64748b;color:#fff;">✕ กลับ</button></div>';
+
+      printArea.innerHTML = toolbar + '<iframe id="consent-print-iframe" src="' + src + '" style="width:100%;border:none;min-height:calc(100vh - 60px);"></iframe>';
+      printContainer.style.display = 'block';
+      document.getElementById('app-main-wrapper').style.display = 'none';
+
+      // Send consent_data to iframe after it loads
+      var activeVer2 = _previewConsentVersions.find(function(v) { return v.status === 'active'; }) || _previewConsentVersions[0];
+      if (activeVer2 && activeVer2.consent_data) {
+        var pIframe2 = document.getElementById('consent-print-iframe');
+        pIframe2.addEventListener('load', function() {
+          sendConsentDataToIframe(pIframe2, activeVer2.consent_data);
+        });
+      }
+
+      var ps = document.createElement('style');
+      ps.id = 'transport-print-inject';
+      ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop, .swal2-container, .no-print { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } #consent-print-iframe { height:auto!important; min-height:0!important; } }';
+      document.head.appendChild(ps);
+    }
+
+    // ปุ่ม "แก้ไข Consent" → เปลี่ยนจาก Preview เป็น Editable
+    function openConsentEditMode() {
+      // Close print view first
+      transport_closePrintView();
+
+      // Open editable consent modal
+      var modal = document.getElementById('consent-modal');
+      var iframe = document.getElementById('consent-iframe');
+      var f = document.forms['main-form'];
+      var caseId = document.getElementById('caseId').value || '';
+      var ptName = f ? (f.pt_name?.value || '') : '';
+      var ptAge = f ? (f.pt_age?.value || '') : '';
+      var ptIdCard = '';
+      try { ptIdCard = (f.pt_idcard?.value || f.pt_passport?.value || '').trim(); } catch(e) {}
+      var routeFrom = f ? (f.origin?.value || '') : '';
+      var routeTo = f ? (f.destination?.value || '') : '';
+
+      var src = 'consent-prototype.html?embed=1';
+      if (caseId) src += '&case_id=' + encodeURIComponent(caseId);
+      if (ptName) src += '&pt_name=' + encodeURIComponent(ptName);
+      if (ptIdCard) src += '&pt_id=' + encodeURIComponent(ptIdCard);
+      if (ptAge) src += '&pt_age=' + encodeURIComponent(ptAge);
+      if (routeFrom) src += '&route_from=' + encodeURIComponent(routeFrom);
+      if (routeTo) src += '&route_to=' + encodeURIComponent(routeTo);
+
+      iframe.src = src;
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeConsentModal() {
+      var modal = document.getElementById('consent-modal');
+      modal.classList.remove('show');
+      document.body.style.overflow = '';
+      document.getElementById('consent-iframe').src = '';
+    }
+
+    function resizeConsentIframe() {
+      // Auto-resize iframe to content
+      try {
+        var iframe = document.getElementById('consent-iframe');
+        if (iframe.contentWindow && iframe.contentDocument) {
+          var h = iframe.contentDocument.body.scrollHeight;
+          if (h > 200) iframe.style.height = Math.min(h + 40, window.innerHeight * 0.78) + 'px';
+        }
+      } catch(e) {}
+    }
+
+    // Listen for messages from consent iframe
+    window.addEventListener('message', async function(e) {
+      if (e.data && e.data.type === 'consent-signed') {
+        consentSigned = true;
+        consentData = e.data.payload || {};
+        closeConsentModal();
+
+        // Save to Supabase
+        var caseId = consentData.caseId || document.getElementById('caseId').value;
+        if (caseId) {
+          Swal.fire({ title: 'กำลังบันทึก Consent...', didOpen: function() { Swal.showLoading(); }, allowOutsideClick: false });
+          var ver = await saveConsentToDB(caseId, consentData);
+          // Reload versions
+          consentVersions = await loadConsentsFromDB(caseId);
+          consentActiveVersion = consentVersions.find(function(v) { return v.status === 'active'; });
+          Swal.fire({
+            icon: 'success',
+            title: 'ลงนามสำเร็จ',
+            text: ver ? 'บันทึกฉบับที่ ' + ver + ' เรียบร้อยแล้ว' : 'บันทึกหนังสือยินยอมเรียบร้อยแล้ว',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          Swal.fire({ icon: 'success', title: 'ลงนามสำเร็จ', timer: 2000, showConfirmButton: false });
+        }
+
+        updateConsentUI();
+      }
+    });
+
+    function updateConsentUI() {
+      // Step 1 Card
+      var card = document.getElementById('consent-card');
+      var statusText = document.getElementById('consent-status-text');
+      var btn = document.getElementById('btn-open-consent');
+      // Banner (Step 2/3) Strip
+      var banStrip = document.getElementById('ban-consent-card');
+      var banIconI = document.getElementById('ban-consent-icon-i');
+      var banText = document.getElementById('ban-consent-text');
+
+      if (consentSigned) {
+        // Step 1 Card → Green
+        card.classList.add('signed');
+        document.getElementById('consent-card-icon').innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+
+        var versionCount = consentVersions.length || 1;
+        var versionLabel = versionCount > 1 ? ' (ฉบับที่ ' + versionCount + ')' : '';
+        statusText.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>ลงนามแล้ว' + versionLabel + '</span>';
+        if (consentData && consentData.signedAt) {
+          statusText.innerHTML += ' <span class="text-muted">— ' + consentData.signedAt + '</span>';
+        } else if (consentActiveVersion && consentActiveVersion.signed_at) {
+          var d = new Date(consentActiveVersion.signed_at);
+          var thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+          var pad2 = function(n) { return n < 10 ? '0' + n : n; };
+          statusText.innerHTML += ' <span class="text-muted">— ' + d.getDate() + ' ' + thM[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' เวลา ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + '</span>';
+        }
+
+        btn.className = 'btn btn-outline-success btn-sm rounded-pill px-3 fw-bold no-print';
+        btn.innerHTML = '<i class="bi bi-eye me-1"></i> ดู/แก้ไข';
+        // Banner Strip → Green
+        banStrip.className = 'ban-consent-strip done no-print';
+        banIconI.className = 'bi bi-check-circle-fill';
+        banText.textContent = 'ลงนามแล้ว' + versionLabel + ' ✓';
+      } else {
+        // Step 1 Card → Yellow
+        card.classList.remove('signed');
+        document.getElementById('consent-card-icon').innerHTML = '<i class="bi bi-file-earmark-check"></i>';
+        statusText.textContent = 'ยังไม่ได้ลงนาม — กรุณาให้ผู้ป่วย/ญาติลงนามก่อนเริ่มนำส่ง';
+        btn.className = 'btn btn-warning btn-sm rounded-pill px-3 fw-bold shadow-sm no-print';
+        btn.innerHTML = '<i class="bi bi-pen me-1"></i> เปิดฟอร์ม';
+        // Banner Strip → Yellow
+        banStrip.className = 'ban-consent-strip pending no-print';
+        banIconI.className = 'bi bi-file-earmark-check';
+        banText.textContent = 'รอลงนาม';
+      }
+    }
+  </script>
+
   <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('../sw.js', { scope: '/pt-medical-system/' }).catch(function(e) { console.warn('SW:', e); });
