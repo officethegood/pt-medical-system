@@ -4405,6 +4405,30 @@
         consentData = e.data.payload || {};
         closeConsentModal();
 
+        // Sync consent data back to Transport form (fill empty fields)
+        try {
+          var cd = consentData.data || {};
+          var f = document.forms['main-form'];
+          if (f) {
+            // Patient info: only fill if Transport field is empty
+            if (cd.patient) {
+              if (cd.patient.name && !f.pt_name.value) f.pt_name.value = cd.patient.name;
+              if (cd.patient.age && !f.pt_age.value) f.pt_age.value = cd.patient.age;
+              // ID card / passport
+              var idField = f.pt_idcard || f.pt_passport;
+              if (idField && cd.patient.idCard && !idField.value) idField.value = cd.patient.idCard;
+            }
+            // Route: only fill if Transport field is empty
+            if (cd.route) {
+              if (cd.route.from && f.origin && !f.origin.value) f.origin.value = cd.route.from;
+              if (cd.route.to && f.destination && !f.destination.value) f.destination.value = cd.route.to;
+            }
+            // Mark form dirty so it will save
+            formDirty = true;
+            updateBanner();
+          }
+        } catch(syncErr) { console.warn('Consent→Transport sync error:', syncErr); }
+
         // Save to Supabase
         var caseId = consentData.caseId || document.getElementById('caseId').value;
         if (caseId) {
