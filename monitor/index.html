@@ -100,7 +100,7 @@
                         <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="switchSystem('firstaid')" title="First Aid" style="min-width:40px;">
                             <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
                         </button>
-                        <button type="button" class="btn btn-sm sys-tog" id="sys-tog-location" onclick="switchSystem('location')" title="PT Location" style="min-width:40px;">
+                        <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-location" onclick="switchSystem('location')" title="PT Location" style="min-width:40px;">
                             <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
                         </button>
                         <button type="button" class="btn btn-sm rounded-pill-end sys-tog d-none" id="sys-tog-gps" onclick="switchSystem('gps')" title="GPS Tracking" style="min-width:40px;">
@@ -320,6 +320,8 @@
                     window._gpsEnabled = true;
                     var gpsBtn = document.getElementById('sys-tog-gps');
                     if (gpsBtn) gpsBtn.classList.remove('d-none');
+                    var locBtn = document.getElementById('sys-tog-location');
+                    if (locBtn) locBtn.classList.remove('rounded-pill-end');
                 }
             });
         } catch(e) { console.error(e); }

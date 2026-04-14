@@ -192,7 +192,7 @@
             <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="window.location.href='../firstaid/'" title="First Aid" style="min-width:40px;">
               <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
             </button>
-            <button type="button" class="btn btn-sm sys-tog" id="sys-tog-location" onclick="window.location.href='../location/'" title="PT Location" style="min-width:40px;">
+            <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-location" onclick="window.location.href='../location/'" title="PT Location" style="min-width:40px;">
               <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
             </button>
             <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px; display:none;">
@@ -1160,6 +1160,8 @@
                 if (settings['GPS_ENABLED'] === '1') {
                     var gpsBtn = document.getElementById('sys-tog-gps');
                     if (gpsBtn) gpsBtn.style.display = '';
+                    var locBtn = document.getElementById('sys-tog-location');
+                    if (locBtn) locBtn.classList.remove('rounded-pill-end');
                     loadGpsVehicleDropdown();
                 }
             }
