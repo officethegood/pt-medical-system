@@ -1914,7 +1914,17 @@
           }
           if (el.onclick && el.onclick.toString().indexOf('goToStep') > -1) continue;
           if (el.onclick && el.onclick.toString().indexOf('handlePrint') > -1) continue;
-          if (el.classList.contains('btn-secondary')) continue;
+          if (el.classList.contains('btn-secondary') && !el.closest('.iv-row')) continue;
+
+          // When enabling (reopen): skip inputs in locked IV rows — they stay disabled
+          if (!isReadOnly && el.closest && el.closest('.iv-row.row-locked')) {
+              // But re-enable unlock + delete buttons inside locked rows
+              if (el.classList.contains('iv-unlock-btn') || el.classList.contains('iv-delete-btn')) {
+                  el.disabled = false;
+                  el.classList.remove('disabled');
+              }
+              continue;
+          }
 
           el.disabled = isReadOnly;
           if (isReadOnly && el.tagName === 'BUTTON') {
@@ -1941,7 +1951,7 @@
            if (finishStep2Btn) finishStep2Btn.classList.remove('d-none');
        }
 
-       var editBtns = ['btn-edit-patient', 'btn-add-vital', 'btn-add-trans-iv'];
+       var editBtns = ['btn-edit-patient', 'btn-add-vital', 'btn-add-trans-iv', 'btn-add-init-iv'];
        editBtns.forEach(function(id) {
            var el = document.getElementById(id);
            if (el) {
@@ -2312,12 +2322,12 @@
          '<div class="col-2">' +
            '<input type="text" class="form-control form-control-sm iv-rate bg-light border-0" value="' + dRate + '" placeholder="Rate" ' + disabledAttr + ' oninput="updateIVSummaryCount()">' +
          '</div>' +
-         '<div class="col-2 text-end no-print">' +
+         '<div class="col-2 text-end no-print iv-action-btns">' +
            (isLocked ?
-               '<button type="button" class="btn btn-sm btn-secondary me-1 shadow-sm" disabled><i class="bi bi-check-lg"></i></button>' :
-               '<button type="button" class="btn btn-sm btn-primary me-1 shadow-sm" onclick="lockAndSaveIv(this)" title="Save"><i class="bi bi-check-lg"></i></button>'
+               '<button type="button" class="btn btn-sm btn-outline-warning me-1 shadow-sm iv-unlock-btn" onclick="unlockIvRow(this)" title="Unlock"><i class="bi bi-lock-fill"></i></button>' :
+               '<button type="button" class="btn btn-sm btn-primary me-1 shadow-sm iv-save-btn" onclick="lockAndSaveIv(this)" title="Save"><i class="bi bi-check-lg"></i></button>'
             ) +
-           '<button type="button" class="btn btn-sm btn-light text-danger shadow-sm" onclick="deleteIvRow(this)" title="Delete"><i class="bi bi-x-lg"></i></button>' +
+           '<button type="button" class="btn btn-sm btn-light text-danger shadow-sm iv-delete-btn" onclick="deleteIvRow(this)" title="Delete"><i class="bi bi-x-lg"></i></button>' +
          '</div>';
        var container = document.getElementById(containerId);
        if (container) {
@@ -2364,10 +2374,39 @@
       row.classList.add('row-locked');
       row.classList.remove('bg-white');
       row.querySelectorAll('input, select').forEach(function(el) { el.disabled = true; });
-      btn.disabled = true;
-      btn.innerHTML = '<i class="bi bi-check-lg"></i>';
-      btn.classList.remove('btn-primary');
-      btn.classList.add('btn-secondary');
+      // Replace save button with unlock button
+      var actionDiv = row.querySelector('.iv-action-btns');
+      var saveBtn = actionDiv.querySelector('.iv-save-btn');
+      if (saveBtn) {
+          var unlockBtn = document.createElement('button');
+          unlockBtn.type = 'button';
+          unlockBtn.className = 'btn btn-sm btn-outline-warning me-1 shadow-sm iv-unlock-btn';
+          unlockBtn.onclick = function() { unlockIvRow(unlockBtn); };
+          unlockBtn.title = 'Unlock';
+          unlockBtn.innerHTML = '<i class="bi bi-lock-fill"></i>';
+          saveBtn.parentNode.replaceChild(unlockBtn, saveBtn);
+      }
+      formDirty = true;
+      saveData(false, true);
+    }
+
+    function unlockIvRow(btn) {
+      var row = btn.closest('.iv-row');
+      row.classList.remove('row-locked');
+      row.classList.add('bg-white');
+      row.querySelectorAll('input, select').forEach(function(el) { el.disabled = false; });
+      // Replace unlock button with save button
+      var actionDiv = row.querySelector('.iv-action-btns');
+      var unlockBtn = actionDiv.querySelector('.iv-unlock-btn');
+      if (unlockBtn) {
+          var saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.className = 'btn btn-sm btn-primary me-1 shadow-sm iv-save-btn';
+          saveBtn.onclick = function() { lockAndSaveIv(saveBtn); };
+          saveBtn.title = 'Save';
+          saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+          unlockBtn.parentNode.replaceChild(saveBtn, unlockBtn);
+      }
       formDirty = true;
       saveData(false, true);
     }
