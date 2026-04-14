@@ -60,6 +60,9 @@
           <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
               <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
           </button>
+          <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
+              <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
+          </button>
           <div class="btn-group system-toggle" role="group" id="nav-system-toggle">
             <button type="button" class="btn btn-sm rounded-pill-start sys-tog" id="sys-tog-transport" onclick="window.location.href='../transport/'" title="Patient Transport" style="min-width:40px;">
               <i class="bi bi-truck-front-fill"></i><span class="d-none d-lg-inline ms-1">Transport</span>
@@ -74,9 +77,6 @@
               <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
             </button>
           </div>
-          <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
-              <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
-          </button>
           <button class="btn btn-light btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-system-dashboard" onclick="loc_switchTab('dashboard')" title="กลับหน้า Dashboard ของระบบนี้">
               <i class="bi bi-house-door-fill"></i><span class="d-none d-md-inline ms-1">Dashboard</span>
           </button>
