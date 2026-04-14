@@ -192,8 +192,11 @@
             <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="window.location.href='../firstaid/'" title="First Aid" style="min-width:40px;">
               <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
             </button>
-            <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-location" onclick="window.location.href='../location/'" title="PT Location" style="min-width:40px;">
+            <button type="button" class="btn btn-sm sys-tog" id="sys-tog-location" onclick="window.location.href='../location/'" title="PT Location" style="min-width:40px;">
               <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px; display:none;">
+              <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
             </button>
           </div>
           <button class="btn btn-light btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-system-dashboard" onclick="showDashboard()" title="กลับหน้า Dashboard ของระบบนี้">
@@ -400,8 +403,11 @@
                                 <input class="form-check-input" type="radio" name="op_level" id="op_als" value="ALS" onchange="updateOpUnitLogic()" checked>
                                 <label class="form-check-label fw-medium" for="op_als">ALS</label>
                             </div>
-                            <div class="input-group input-group-sm w-auto shadow-sm rounded">
+                            <div class="input-group input-group-sm w-auto shadow-sm rounded" id="vehicle-selector-group">
                                 <span class="input-group-text bg-light border-end-0 text-secondary">รหัสรถ</span>
+                                <select class="form-select border-start-0" id="vehicle-select" onchange="onVehicleSelect(this)" style="min-width:140px; display:none;">
+                                    <option value="">-- เลือกรถ --</option>
+                                </select>
                                 <input type="text" class="form-control border-start-0" name="op_unit_no" placeholder="Ex. 1">
                             </div>
                         </div>
@@ -1150,8 +1156,63 @@
                 var settings = {};
                 resp.data.forEach(function(row) { settings[row.key] = row.value; });
                 applySettingsToUI(settings);
+                // Show GPS nav button + vehicle dropdown if enabled
+                if (settings['GPS_ENABLED'] === '1') {
+                    var gpsBtn = document.getElementById('sys-tog-gps');
+                    if (gpsBtn) gpsBtn.style.display = '';
+                    loadGpsVehicleDropdown();
+                }
             }
         } catch(e) { console.warn('loadAppSettings error:', e); }
+    }
+
+    // =============================================
+    // GPS Vehicle Dropdown (Step 1 form)
+    // =============================================
+    async function loadGpsVehicleDropdown() {
+        try {
+            var res = await _supabase.from('gps_vehicles').select('device_id, device_name, nickname, provider')
+                .eq('is_active', true).order('nickname');
+            var vehicles = res.data || [];
+            if (vehicles.length === 0) return;
+
+            var sel = document.getElementById('vehicle-select');
+            var manualInput = document.querySelector('input[name="op_unit_no"]');
+            sel.innerHTML = '<option value="">-- เลือกรถ --</option>';
+            vehicles.forEach(function(v) {
+                var display = v.nickname || v.device_name || v.device_id;
+                var opt = document.createElement('option');
+                opt.value = display;
+                opt.setAttribute('data-device-id', v.device_id);
+                opt.setAttribute('data-provider', v.provider);
+                opt.textContent = display;
+                sel.appendChild(opt);
+            });
+            // Add manual option
+            var manualOpt = document.createElement('option');
+            manualOpt.value = '__manual__';
+            manualOpt.textContent = '[ พิมพ์เอง ]';
+            sel.appendChild(manualOpt);
+
+            // Show dropdown, hide text input by default
+            sel.style.display = '';
+            manualInput.style.display = 'none';
+        } catch(e) { console.warn('loadGpsVehicleDropdown:', e); }
+    }
+
+    function onVehicleSelect(sel) {
+        var manualInput = document.querySelector('input[name="op_unit_no"]');
+        if (sel.value === '__manual__') {
+            manualInput.style.display = '';
+            manualInput.value = '';
+            manualInput.focus();
+        } else if (sel.value) {
+            manualInput.style.display = 'none';
+            manualInput.value = sel.value;
+        } else {
+            manualInput.style.display = 'none';
+            manualInput.value = '';
+        }
     }
   </script>
 

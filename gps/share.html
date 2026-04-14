@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>GPS Tracking — Shared View</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="ดูตำแหน่งรถแบบ real-time ผ่านลิงก์แชร์">
+  <meta name="theme-color" content="#1e3a5f">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { font-family: 'Sarabun', sans-serif; }
+    body { margin: 0; background: #f0f2f5; }
+
+    .share-header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: #fff; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .share-header h6 { margin: 0; font-weight: 700; font-size: 1rem; }
+    .share-header .sub { font-size: 0.75rem; opacity: 0.8; }
+
+    .info-bar {
+      background: #fff; padding: 10px 16px; border-bottom: 1px solid #e2e8f0;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    }
+    .info-bar .vehicle-name { font-weight: 700; font-size: 1rem; color: #1e293b; }
+    .info-bar .info-item { font-size: 0.8rem; color: #64748b; }
+    .info-bar .speed-badge { font-size: 1.1rem; font-weight: 700; color: #f59e0b; }
+    .info-bar .status-badge { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .status-badge.on { background: #dcfce7; color: #16a34a; }
+    .status-badge.off { background: #fee2e2; color: #dc2626; }
+
+    #map { width: 100%; height: calc(100vh - 110px); min-height: 300px; }
+
+    .expire-bar {
+      position: absolute; bottom: 12px; left: 12px; z-index: 999;
+      background: rgba(0,0,0,0.75); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 0.75rem;
+    }
+
+    .error-page {
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+      flex-direction: column; text-align: center; padding: 40px;
+    }
+    .error-page i { font-size: 4rem; color: #94a3b8; margin-bottom: 16px; }
+    .error-page h4 { color: #475569; font-weight: 700; }
+    .error-page p { color: #94a3b8; max-width: 400px; }
+  </style>
+</head>
+<body>
+
+  <!-- Error Page (hidden by default) -->
+  <div id="errorPage" class="error-page" style="display:none;">
+    <i class="bi bi-shield-lock"></i>
+    <h4 id="errorTitle">ลิงก์ไม่ถูกต้อง</h4>
+    <p id="errorMsg">ลิงก์แชร์นี้ไม่ถูกต้อง หมดอายุ หรือถูกยกเลิกแล้ว</p>
+  </div>
+
+  <!-- Main View (hidden by default) -->
+  <div id="mainView" style="display:none;">
+    <div class="share-header">
+      <div>
+        <h6><i class="bi bi-broadcast me-2"></i>GPS Tracking — Shared View</h6>
+        <div class="sub" id="headerReason"></div>
+      </div>
+      <div class="text-end">
+        <div class="sub" id="headerExpiry"></div>
+      </div>
+    </div>
+
+    <div class="info-bar">
+      <div>
+        <div class="vehicle-name" id="vehicleName">--</div>
+        <div class="info-item" id="vehicleAddr">--</div>
+      </div>
+      <div class="text-end">
+        <span class="status-badge off" id="statusBadge">OFFLINE</span><br>
+        <span class="speed-badge" id="speedDisplay">-- km/h</span>
+      </div>
+    </div>
+
+    <div style="position:relative;">
+      <div id="map"></div>
+      <div class="expire-bar" id="expireBar">
+        <i class="bi bi-clock me-1"></i> <span id="expireText">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadingView" class="error-page">
+    <div class="spinner-border text-primary mb-3" style="width:48px; height:48px;"></div>
+    <h5 class="text-muted">กำลังโหลด...</h5>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../shared/config.js"></script>
+  <script src="../shared/gps-providers.js"></script>
+  <script>
+    var _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    var _tokenData = null;
+    var _providerData = null;
+    var _marker = null;
+    var _map = null;
+    var _refreshInterval = null;
+
+    async function init() {
+      var params = new URLSearchParams(window.location.search);
+      var token = params.get('token');
+
+      if (!token) return showError('ลิงก์ไม่ถูกต้อง', 'ไม่พบ token ใน URL');
+
+      try {
+        // Fetch token
+        var res = await _supabase.from('gps_shared_tokens').select('*')
+          .eq('token', token).eq('status', 'Active').single();
+
+        if (res.error || !res.data) return showError('ลิงก์ไม่ถูกต้อง', 'ลิงก์แชร์นี้ไม่ถูกต้องหรือถูกยกเลิกแล้ว');
+
+        _tokenData = res.data;
+
+        // Check expiry
+        if (new Date(_tokenData.expires_at) < new Date()) {
+          return showError('ลิงก์หมดอายุ', 'ลิงก์แชร์นี้หมดอายุแล้ว กรุณาขอลิงก์ใหม่');
+        }
+
+        // Fetch provider
+        var pRes = await _supabase.from('gps_providers').select('*')
+          .eq('id', _tokenData.provider).eq('is_active', true).single();
+
+        if (pRes.error || !pRes.data) return showError('ไม่พบ Provider', 'GPS Provider ถูกปิดหรือลบแล้ว');
+
+        _providerData = pRes.data;
+
+        // Show main view
+        document.getElementById('loadingView').style.display = 'none';
+        document.getElementById('mainView').style.display = '';
+
+        // Set header info
+        document.getElementById('headerReason').textContent = _tokenData.reason || '';
+        var expStr = new Date(_tokenData.expires_at).toLocaleString('th-TH');
+        document.getElementById('headerExpiry').textContent = 'หมดอายุ: ' + expStr;
+
+        // Init map
+        _map = L.map('map').setView([15.87, 100.99], 6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CartoDB', maxZoom: 19
+        }).addTo(_map);
+
+        // Fetch GPS status
+        await fetchStatus();
+
+        // Auto refresh every 10 seconds
+        _refreshInterval = setInterval(fetchStatus, 10000);
+
+        // Update expire countdown
+        updateExpireCountdown();
+        setInterval(updateExpireCountdown, 1000);
+
+      } catch(e) {
+        console.error(e);
+        showError('เกิดข้อผิดพลาด', e.message);
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        var statuses = await gpsGetStatus(_providerData, _tokenData.device_id);
+        if (statuses.length === 0) {
+          document.getElementById('vehicleName').textContent = 'Device: ' + _tokenData.device_id;
+          document.getElementById('vehicleAddr').textContent = 'ไม่พบข้อมูลสถานะ';
+          return;
+        }
+
+        var s = statuses[0];
+        document.getElementById('vehicleName').textContent = 'Device: ' + _tokenData.device_id;
+        document.getElementById('vehicleAddr').textContent = s.address || '--';
+        document.getElementById('speedDisplay').textContent = s.speed.toFixed(1) + ' km/h';
+
+        var badge = document.getElementById('statusBadge');
+        if (s.online) {
+          badge.textContent = 'ONLINE';
+          badge.className = 'status-badge on';
+        } else {
+          badge.textContent = 'OFFLINE';
+          badge.className = 'status-badge off';
+        }
+
+        if (s.lat && s.lng && !(s.lat === 0 && s.lng === 0)) {
+          var color = !s.online ? '#ef4444' : s.speed > 1 ? '#22c55e' : '#f59e0b';
+          var icon = L.divIcon({
+            className: '',
+            html: '<div style="width:40px;height:40px;background:' + color + ';border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 10px rgba(0,0,0,0.3);">&#x1F691;</div>',
+            iconSize: [40, 40], iconAnchor: [20, 20]
+          });
+
+          if (_marker) {
+            _marker.setLatLng([s.lat, s.lng]);
+            _marker.setIcon(icon);
+          } else {
+            _marker = L.marker([s.lat, s.lng], { icon: icon }).addTo(_map);
+            _map.setView([s.lat, s.lng], 14);
+          }
+        }
+
+      } catch(e) {
+        console.warn('fetchStatus error:', e.message);
+      }
+    }
+
+    function updateExpireCountdown() {
+      if (!_tokenData) return;
+      var now = new Date();
+      var exp = new Date(_tokenData.expires_at);
+      var diff = exp - now;
+
+      if (diff <= 0) {
+        document.getElementById('expireText').textContent = 'ลิงก์หมดอายุแล้ว';
+        if (_refreshInterval) { clearInterval(_refreshInterval); _refreshInterval = null; }
+        return;
+      }
+
+      var h = Math.floor(diff / 3600000);
+      var m = Math.floor((diff % 3600000) / 60000);
+      var s = Math.floor((diff % 60000) / 1000);
+      document.getElementById('expireText').textContent = 'เหลือ ' + h + ' ชม. ' + m + ' น. ' + s + ' วิ.';
+    }
+
+    function showError(title, msg) {
+      document.getElementById('loadingView').style.display = 'none';
+      document.getElementById('mainView').style.display = 'none';
+      document.getElementById('errorPage').style.display = '';
+      document.getElementById('errorTitle').textContent = title;
+      document.getElementById('errorMsg').textContent = msg;
+    }
+
+    // Need Supabase for share page
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+    script.onload = init;
+    document.head.appendChild(script);
+  </script>
+
+</body>
+</html>

@@ -108,6 +108,16 @@
                       <p class="text-muted small mb-0">ระบบจัดการพิกัดสถานที่</p>
                   </div>
               </div>
+              <!-- GPS Tracking -->
+              <div class="col-12 col-sm-6 col-lg-4" id="landing-gps-card" style="display:none;">
+                  <div class="landing-card" onclick="enterSystem('gps')">
+                      <div class="landing-card-icon bg-info bg-opacity-10 text-info">
+                          <i class="bi bi-broadcast"></i>
+                      </div>
+                      <h5 class="fw-bold mb-1">GPS Tracking</h5>
+                      <p class="text-muted small mb-0">ติดตามรถ Real-time</p>
+                  </div>
+              </div>
           </div>
           <div class="text-center mt-4 d-flex justify-content-center gap-2 flex-wrap">
               <button class="btn btn-info btn-sm rounded-pill px-4 fw-semibold shadow-sm text-white" id="landing-monitor-btn" style="display:none;" onclick="enterSystem('monitor')">
@@ -143,8 +153,11 @@
               <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="switchSystem('firstaid')" title="First Aid" style="min-width:40px;">
                 <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
               </button>
-              <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-location" onclick="switchSystem('location')" title="PT Location" style="min-width:40px;">
+              <button type="button" class="btn btn-sm sys-tog" id="sys-tog-location" onclick="switchSystem('location')" title="PT Location" style="min-width:40px;">
                 <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
+              </button>
+              <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-gps" onclick="switchSystem('gps')" title="GPS Tracking" style="min-width:40px; display:none;">
+                <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
               </button>
             </div>
             <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="enterSystem('monitor')" title="Monitor Dashboard">
@@ -256,6 +269,113 @@
                 </div>
               </div>
 
+              <!-- ===== หมวด: GPS Tracking ===== -->
+              <div class="card border-0 shadow-sm rounded-3 mb-3" id="admin-gps-section">
+                <div class="card-body p-4">
+                  <h5 class="fw-bold mb-1"><i class="bi bi-broadcast me-2 text-info"></i>GPS Tracking</h5>
+                  <p class="text-muted small mb-3">เชื่อมต่อระบบ GPS ติดตามรถ — รองรับหลาย Provider</p>
+
+                  <!-- Toggle -->
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="admin-gps-enabled"
+                      onchange="saveAdminSetting('GPS_ENABLED', this.checked ? '1' : '0'); toggleGpsConfig();">
+                    <label class="form-check-label fw-medium" for="admin-gps-enabled">เปิดใช้งาน GPS Tracking</label>
+                  </div>
+
+                  <!-- GPS Config (ซ่อนเมื่อปิด) -->
+                  <div id="admin-gps-config" style="display:none;">
+
+                    <!-- Proxy Status -->
+                    <h6 class="fw-bold text-secondary mt-2 mb-2"><i class="bi bi-shield-check me-1"></i> Proxy Status</h6>
+                    <div class="d-flex gap-2 mb-3 flex-wrap" id="admin-proxy-status">
+                      <div class="border rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="min-width:200px;">
+                        <span class="spinner-border spinner-border-sm text-muted" id="proxy-render-spinner"></span>
+                        <span class="badge rounded-pill" id="proxy-render-badge" style="display:none;">--</span>
+                        <div>
+                          <div class="small fw-bold">Render</div>
+                          <div class="text-muted" style="font-size:0.7rem;" id="proxy-render-ms">กำลังตรวจสอบ...</div>
+                        </div>
+                      </div>
+                      <div class="border rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="min-width:200px;">
+                        <span class="spinner-border spinner-border-sm text-muted" id="proxy-gas-spinner"></span>
+                        <span class="badge rounded-pill" id="proxy-gas-badge" style="display:none;">--</span>
+                        <div>
+                          <div class="small fw-bold">GAS (Fallback)</div>
+                          <div class="text-muted" style="font-size:0.7rem;" id="proxy-gas-ms">กำลังตรวจสอบ...</div>
+                        </div>
+                      </div>
+                      <button class="btn btn-outline-secondary btn-sm align-self-center" onclick="checkProxyStatus()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                      </button>
+                    </div>
+
+                    <!-- Providers -->
+                    <h6 class="fw-bold text-secondary mt-3 mb-2"><i class="bi bi-hdd-network me-1"></i> Providers</h6>
+                    <div id="admin-gps-providers-list" class="mb-2"></div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="showAddProviderModal()">
+                      <i class="bi bi-plus-lg me-1"></i> เพิ่ม Provider
+                    </button>
+
+                    <!-- Vehicles -->
+                    <h6 class="fw-bold text-secondary mt-4 mb-2"><i class="bi bi-truck me-1"></i> Vehicles</h6>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <button class="btn btn-outline-success btn-sm" onclick="syncAllVehicles()">
+                        <i class="bi bi-arrow-repeat me-1"></i> Sync ทุก Provider
+                      </button>
+                      <span class="text-muted small" id="admin-gps-last-sync"></span>
+                    </div>
+                    <div id="admin-gps-vehicles-list"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Add/Edit Provider Modal -->
+              <div class="modal fade" id="providerModal" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0">
+                      <h6 class="modal-title fw-bold" id="providerModalTitle">เพิ่ม GPS Provider</h6>
+                      <button class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <input type="hidden" id="prov-edit-id">
+                      <div class="mb-3">
+                        <label class="form-label small fw-medium">ชื่อ Provider</label>
+                        <input type="text" id="prov-name" class="form-control" placeholder="เช่น CMSV6 ทรัพย์วิไล">
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label small fw-medium">Software</label>
+                        <select id="prov-software" class="form-select"></select>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label small fw-medium">Server URL</label>
+                        <input type="text" id="prov-url" class="form-control" placeholder="http://203.170.193.90">
+                      </div>
+                      <div class="row g-2 mb-3">
+                        <div class="col-6">
+                          <label class="form-label small fw-medium">Account</label>
+                          <input type="text" id="prov-account" class="form-control">
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label small fw-medium">Password</label>
+                          <input type="password" id="prov-password" class="form-control">
+                        </div>
+                      </div>
+                      <button class="btn btn-outline-info btn-sm mb-2" onclick="testProviderConnection()">
+                        <i class="bi bi-wifi me-1"></i> ทดสอบการเชื่อมต่อ
+                      </button>
+                      <div id="prov-test-result"></div>
+                    </div>
+                    <div class="modal-footer border-0">
+                      <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                      <button class="btn btn-primary btn-sm" onclick="saveProvider()">
+                        <i class="bi bi-check-lg me-1"></i> บันทึก
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- ===== หมวด 3: ข้อมูลระบบ ===== -->
               <div class="card border-0 shadow-sm rounded-3 mb-3">
                 <div class="card-body p-4">
@@ -266,13 +386,20 @@
                     <li><strong>Frontend:</strong> HTML5 / JavaScript (Vanilla) / Bootstrap 5.3</li>
                     <li><strong>Backend:</strong> Supabase (PostgreSQL + REST API)</li>
                     <li><strong>Database:</strong> Supabase PostgreSQL</li>
-                    <li><strong>Architecture:</strong> Multi-Page — แต่ละระบบแยก HTML (transport, firstaid, location)</li>
+                    <li><strong>Architecture:</strong> Multi-Page — แต่ละระบบแยก HTML (transport, firstaid, location, gps)</li>
                   </ul>
-                  <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-grid-3x3-gap me-1 text-secondary"></i> ระบบที่รองรับ (3 ระบบ)</h6>
+                  <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-grid-3x3-gap me-1 text-secondary"></i> ระบบที่รองรับ (4 ระบบ)</h6>
                   <ul class="list-unstyled mb-3 text-muted small ps-3">
                     <li><i class="bi bi-truck-front-fill me-1 text-primary"></i> <strong>Patient Transport:</strong> บันทึกการนำส่งผู้ป่วย, Vitals, IV/Medication, Airway, ทีมนำส่ง, พิมพ์เอกสาร A4</li>
                     <li><i class="bi bi-bandaid me-1 text-danger"></i> <strong>First Aid:</strong> จัดการ Event ปฐมพยาบาล, บันทึกผู้ป่วยรายคน, Quick Dispense, Triage (AVPU), รายงานสรุป</li>
                     <li><i class="bi bi-geo-alt-fill me-1 text-success"></i> <strong>PT Location:</strong> ฐานข้อมูลตำแหน่งผู้ป่วย, แผนที่ Leaflet + MarkerCluster, แชร์ลิงก์สาธารณะ</li>
+                    <li><i class="bi bi-broadcast me-1 text-info"></i> <strong>GPS Tracking:</strong> ติดตามรถ Real-time, รองรับหลาย Provider (CMSV6), แชร์ลิงก์ติดตาม, Proxy Fallback (Render + GAS)</li>
+                  </ul>
+                  <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-hdd-network me-1 text-secondary"></i> GPS Proxy Architecture</h6>
+                  <ul class="list-unstyled mb-3 text-muted small ps-3">
+                    <li><strong>Primary:</strong> Render.com Node.js Proxy — HTTPS → HTTP (CMSV6), ~0.3s response</li>
+                    <li><strong>Fallback:</strong> Google Apps Script — สำรองเมื่อ Render cold start, timeout 5 วินาที</li>
+                    <li><strong>เหตุผล:</strong> GitHub Pages (HTTPS) ไม่สามารถเรียก CMSV6 API (HTTP) ตรงได้ (Mixed Content)</li>
                   </ul>
                   <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-shield-lock me-1 text-secondary"></i> ความปลอดภัยและ Session</h6>
                   <ul class="list-unstyled mb-3 text-muted small ps-3">
@@ -372,6 +499,7 @@
 
   <!-- ==================== JAVASCRIPT ==================== -->
   <script src="shared/config.js"></script>
+  <script src="shared/gps-providers.js"></script>
   <script>
     // =============================================
     // SUPABASE INIT
@@ -512,6 +640,17 @@
             document.getElementById('admin-print-header').value = settings['PRINT_HEADER'] || '';
             document.getElementById('admin-fa-company-name').value = settings['FA_COMPANY_NAME'] || '';
             document.getElementById('admin-fa-company-contact').value = settings['FA_COMPANY_CONTACT'] || '';
+
+            // GPS settings
+            document.getElementById('admin-gps-enabled').checked = settings['GPS_ENABLED'] === '1';
+            toggleGpsConfig();
+            if (settings['GPS_ENABLED'] === '1') {
+                loadGpsAdminData();
+                var gpsCard = document.getElementById('landing-gps-card');
+                if (gpsCard) gpsCard.style.display = '';
+                var gpsBtn = document.getElementById('sys-tog-gps');
+                if (gpsBtn) gpsBtn.style.display = '';
+            }
 
             var logoUrl = (settings['APP_LOGO_URL'] || '').trim();
             var previewEl = document.getElementById('admin-logo-img');
@@ -917,6 +1056,12 @@
                     document.getElementById('landing-company-name').textContent = s.value;
                 }
                 if (s.key === 'PRINT_HEADER') { window.PRINT_HEADER = s.value; }
+                if (s.key === 'GPS_ENABLED' && s.value === '1') {
+                    var gpsCard = document.getElementById('landing-gps-card');
+                    if (gpsCard) gpsCard.style.display = '';
+                    var gpsBtn = document.getElementById('sys-tog-gps');
+                    if (gpsBtn) gpsBtn.style.display = '';
+                }
             });
         } catch(e) {}
 
@@ -927,6 +1072,378 @@
                 showAdminFromLanding();
             }
         } catch(e) {}
+    }
+
+    // =============================================
+    // GPS ADMIN FUNCTIONS
+    // =============================================
+
+    function toggleGpsConfig() {
+        var enabled = document.getElementById('admin-gps-enabled').checked;
+        var cfg = document.getElementById('admin-gps-config');
+        if (cfg) cfg.style.display = enabled ? '' : 'none';
+    }
+
+    async function loadGpsAdminData() {
+        await loadGpsProviders();
+        await loadGpsVehicles();
+        checkProxyStatus();
+    }
+
+    // --- Proxy Status Check ---
+    async function checkProxyStatus() {
+        // ต้องมี provider อย่างน้อย 1 ตัวเพื่อเทส
+        if (!_gpsProviders || _gpsProviders.length === 0) {
+            ['render','gas'].forEach(function(n){
+                var s = document.getElementById('proxy-'+n+'-spinner');
+                var b = document.getElementById('proxy-'+n+'-badge');
+                var m = document.getElementById('proxy-'+n+'-ms');
+                if (s) s.style.display='none';
+                if (b) { b.style.display=''; b.textContent='— No Provider'; b.className='badge rounded-pill bg-secondary'; }
+                if (m) m.textContent='เพิ่ม Provider ก่อนเพื่อทดสอบ';
+            });
+            return;
+        }
+        var p = _gpsProviders[0];
+        var testUrl = p.base_url + '/StandardApiAction_login.action?account=' + encodeURIComponent(p.account||'') + '&password=' + encodeURIComponent(p.password||'');
+        checkOneProxy('render', CONFIG.GPS_PROXY_URL, testUrl);
+        checkOneProxy('gas', CONFIG.GPS_PROXY_FALLBACK, testUrl);
+    }
+
+    async function checkOneProxy(name, proxyBase, testUrl) {
+        var spinner = document.getElementById('proxy-' + name + '-spinner');
+        var badge = document.getElementById('proxy-' + name + '-badge');
+        var msEl = document.getElementById('proxy-' + name + '-ms');
+        if (!spinner || !badge || !msEl) return;
+
+        spinner.style.display = '';
+        badge.style.display = 'none';
+        msEl.textContent = 'กำลังตรวจสอบ...';
+
+        if (!proxyBase) {
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            badge.textContent = '— Not configured';
+            badge.className = 'badge rounded-pill bg-secondary';
+            msEl.textContent = 'ยังไม่ได้ตั้งค่า Proxy URL';
+            msEl.style.color = '';
+            return;
+        }
+
+        var start = Date.now();
+        try {
+            var controller = new AbortController();
+            var timer = setTimeout(function() { controller.abort(); }, 15000);
+            var resp = await fetch(proxyBase + '?url=' + encodeURIComponent(testUrl), { signal: controller.signal });
+            clearTimeout(timer);
+            var data = await resp.json();
+            var ms = Date.now() - start;
+
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            if (data.result === 0) {
+                badge.textContent = '✓ Online';
+                badge.className = 'badge rounded-pill bg-success';
+                msEl.textContent = ms + ' ms';
+                msEl.style.color = ms < 1000 ? '#16a34a' : ms < 3000 ? '#f59e0b' : '#dc2626';
+            } else {
+                badge.textContent = '⚠ Error';
+                badge.className = 'badge rounded-pill bg-warning text-dark';
+                msEl.textContent = 'API error (result: ' + data.result + ')';
+                msEl.style.color = '#dc2626';
+            }
+        } catch(e) {
+            var ms = Date.now() - start;
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            badge.textContent = '✗ Offline';
+            badge.className = 'badge rounded-pill bg-danger';
+            msEl.textContent = e.name === 'AbortError' ? 'Timeout (' + ms + ' ms)' : e.message;
+            msEl.style.color = '#dc2626';
+        }
+    }
+
+    // --- Providers ---
+    var _gpsProviders = [];
+
+    async function loadGpsProviders() {
+        try {
+            var res = await _supabase.from('gps_providers').select('*').order('created_at');
+            _gpsProviders = res.data || [];
+            renderGpsProviders();
+        } catch(e) { console.error('loadGpsProviders:', e); }
+    }
+
+    function renderGpsProviders() {
+        var el = document.getElementById('admin-gps-providers-list');
+        if (!el) return;
+        if (_gpsProviders.length === 0) {
+            el.innerHTML = '<p class="text-muted small">ยังไม่มี Provider — กดเพิ่มด้านล่าง</p>';
+            return;
+        }
+        var html = '<table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">';
+        html += '<thead class="table-light"><tr><th>ชื่อ</th><th>Software</th><th>URL</th><th style="width:100px;">สถานะ</th><th style="width:80px;"></th></tr></thead><tbody>';
+        _gpsProviders.forEach(function(p) {
+            html += '<tr>' +
+                '<td class="fw-medium">' + escapeHtml(p.name) + '</td>' +
+                '<td><span class="badge bg-info">' + escapeHtml(p.software) + '</span></td>' +
+                '<td class="text-muted">' + escapeHtml(p.base_url || '') + '</td>' +
+                '<td class="text-center">' + (p.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Off</span>') + '</td>' +
+                '<td class="text-center">' +
+                    '<button class="btn btn-outline-primary btn-sm py-0 px-1 me-1" onclick="editProvider(\'' + p.id + '\')"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="btn btn-outline-danger btn-sm py-0 px-1" onclick="deleteProvider(\'' + p.id + '\')"><i class="bi bi-trash"></i></button>' +
+                '</td></tr>';
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    function showAddProviderModal() {
+        document.getElementById('prov-edit-id').value = '';
+        document.getElementById('prov-name').value = '';
+        document.getElementById('prov-url').value = '';
+        document.getElementById('prov-account').value = '';
+        document.getElementById('prov-password').value = '';
+        document.getElementById('prov-test-result').innerHTML = '';
+        document.getElementById('providerModalTitle').textContent = 'เพิ่ม GPS Provider';
+
+        var sel = document.getElementById('prov-software');
+        sel.innerHTML = '';
+        getGpsSoftwareList().forEach(function(sw) {
+            sel.innerHTML += '<option value="' + sw.id + '">' + sw.name + '</option>';
+        });
+
+        new bootstrap.Modal(document.getElementById('providerModal')).show();
+    }
+
+    function editProvider(id) {
+        var p = _gpsProviders.find(function(x) { return x.id === id; });
+        if (!p) return;
+        document.getElementById('prov-edit-id').value = p.id;
+        document.getElementById('prov-name').value = p.name;
+        document.getElementById('prov-url').value = p.base_url || '';
+        document.getElementById('prov-account').value = p.account || '';
+        document.getElementById('prov-password').value = p.password || '';
+        document.getElementById('prov-test-result').innerHTML = '';
+        document.getElementById('providerModalTitle').textContent = 'แก้ไข Provider';
+
+        var sel = document.getElementById('prov-software');
+        sel.innerHTML = '';
+        getGpsSoftwareList().forEach(function(sw) {
+            var opt = '<option value="' + sw.id + '"' + (sw.id === p.software ? ' selected' : '') + '>' + sw.name + '</option>';
+            sel.innerHTML += opt;
+        });
+
+        new bootstrap.Modal(document.getElementById('providerModal')).show();
+    }
+
+    async function saveProvider() {
+        var editId = document.getElementById('prov-edit-id').value;
+        var name = document.getElementById('prov-name').value.trim();
+        var software = document.getElementById('prov-software').value;
+        var baseUrl = document.getElementById('prov-url').value.trim();
+        var account = document.getElementById('prov-account').value.trim();
+        var password = document.getElementById('prov-password').value;
+
+        if (!name) { Swal.fire('กรุณากรอกชื่อ Provider', '', 'warning'); return; }
+        if (!baseUrl) { Swal.fire('กรุณากรอก URL', '', 'warning'); return; }
+
+        Swal.fire({ title: 'Saving...', didOpen: function() { Swal.showLoading(); }, allowOutsideClick: false });
+
+        try {
+            var data = { name: name, software: software, base_url: baseUrl, account: account, password: password, is_active: true };
+            var res;
+
+            if (editId) {
+                res = await _supabase.from('gps_providers').update(data).eq('id', editId);
+            } else {
+                var id = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').substring(0, 30);
+                data.id = id;
+                res = await _supabase.from('gps_providers').insert(data);
+            }
+
+            if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
+
+            await _supabase.from('activity_log').insert({
+                username: getUserName(), role: getUserRole(),
+                action: editId ? 'GPS_PROVIDER_UPDATE' : 'GPS_PROVIDER_CREATE',
+                target: name, details: software + ' - ' + baseUrl
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('providerModal')).hide();
+            Swal.fire({ icon: 'success', title: 'บันทึกแล้ว', timer: 1200, showConfirmButton: false });
+            await loadGpsProviders();
+        } catch(e) {
+            console.error('saveProvider error:', e);
+            Swal.fire('Error', e.message, 'error');
+        }
+    }
+
+    async function deleteProvider(id) {
+        var result = await Swal.fire({ title: 'ลบ Provider นี้?', text: 'Vehicles ที่เชื่อมอยู่จะถูกลบด้วย', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'ลบ' });
+        if (!result.isConfirmed) return;
+        try {
+            await _supabase.from('gps_providers').delete().eq('id', id);
+            await _supabase.from('activity_log').insert({
+                username: getUserName(), role: getUserRole(),
+                action: 'GPS_PROVIDER_DELETE', target: id
+            });
+            Swal.fire({ icon: 'success', title: 'ลบแล้ว', timer: 1000, showConfirmButton: false });
+            loadGpsProviders();
+            loadGpsVehicles();
+        } catch(e) { Swal.fire('Error', e.message, 'error'); }
+    }
+
+    async function testProviderConnection() {
+        var software = document.getElementById('prov-software').value;
+        var baseUrl = document.getElementById('prov-url').value.trim();
+        var account = document.getElementById('prov-account').value.trim();
+        var password = document.getElementById('prov-password').value;
+        var resultEl = document.getElementById('prov-test-result');
+
+        var adapter = getGpsAdapter(software);
+        if (!adapter) { resultEl.innerHTML = '<span class="text-danger">ไม่รองรับ software: ' + software + '</span>'; return; }
+
+        resultEl.innerHTML = '<span class="text-info"><i class="bi bi-hourglass-split me-1"></i>กำลังทดสอบ...</span>';
+
+        try {
+            var provider = { base_url: baseUrl, account: account, password: password };
+            var session = await adapter.login(provider);
+            var vehicles = await adapter.getVehicles(provider, session);
+            resultEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>เชื่อมต่อสำเร็จ! พบ ' + vehicles.length + ' อุปกรณ์</span>';
+        } catch(e) {
+            resultEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>เชื่อมต่อล้มเหลว: ' + e.message + '</span>';
+        }
+    }
+
+    // --- Vehicles ---
+    var _gpsVehicles = [];
+
+    async function loadGpsVehicles() {
+        try {
+            var res = await _supabase.from('gps_vehicles').select('*, gps_providers(name, software)').order('provider').order('device_name');
+            _gpsVehicles = res.data || [];
+            renderGpsVehicles();
+        } catch(e) { console.error('loadGpsVehicles:', e); }
+    }
+
+    function renderGpsVehicles() {
+        var el = document.getElementById('admin-gps-vehicles-list');
+        if (!el) return;
+        if (_gpsVehicles.length === 0) {
+            el.innerHTML = '<p class="text-muted small">ยังไม่มี Vehicles — กด Sync เพื่อดึงจาก Provider</p>';
+            return;
+        }
+        var html = '<table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">';
+        html += '<thead class="table-light"><tr><th>Device</th><th>Provider</th><th>ชื่อเล่น</th><th style="width:60px;">Active</th></tr></thead><tbody>';
+        _gpsVehicles.forEach(function(v) {
+            var provName = v.gps_providers ? v.gps_providers.name : v.provider;
+            html += '<tr>' +
+                '<td>' + escapeHtml(v.device_name || v.device_id) + '<br><span class="text-muted" style="font-size:0.7rem;">ID: ' + escapeHtml(v.device_id) + '</span></td>' +
+                '<td class="text-muted">' + escapeHtml(provName) + '</td>' +
+                '<td><input type="text" class="form-control form-control-sm" value="' + escapeHtml(v.nickname || '') + '" ' +
+                    'onchange="updateVehicleNickname(\'' + v.id + '\', this.value, this)" placeholder="ตั้งชื่อเล่น..."></td>' +
+                '<td class="text-center"><div class="form-check form-switch d-flex justify-content-center mb-0">' +
+                    '<input class="form-check-input" type="checkbox" ' + (v.is_active ? 'checked' : '') + ' onchange="toggleVehicleActive(\'' + v.id + '\', this.checked)">' +
+                '</div></td></tr>';
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    async function updateVehicleNickname(id, nickname, inputEl) {
+        try {
+            var res = await _supabase.from('gps_vehicles').update({ nickname: nickname.trim() }).eq('id', id);
+            if (res.error) throw new Error(res.error.message);
+            if (inputEl) {
+                inputEl.style.borderColor = '#22c55e';
+                inputEl.style.boxShadow = '0 0 0 2px rgba(34,197,94,0.25)';
+                setTimeout(function() { inputEl.style.borderColor = ''; inputEl.style.boxShadow = ''; }, 1500);
+            }
+        } catch(e) {
+            console.error(e);
+            if (inputEl) { inputEl.style.borderColor = '#ef4444'; inputEl.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.25)'; }
+            Swal.fire('Error', e.message, 'error');
+        }
+    }
+
+    async function toggleVehicleActive(id, active) {
+        try {
+            await _supabase.from('gps_vehicles').update({ is_active: active }).eq('id', id);
+        } catch(e) { console.error(e); }
+    }
+
+    async function syncAllVehicles() {
+        if (_gpsProviders.length === 0) {
+            Swal.fire('ไม่มี Provider', 'กรุณาเพิ่ม Provider ก่อน', 'info');
+            return;
+        }
+
+        Swal.fire({ title: 'Syncing...', didOpen: function() { Swal.showLoading(); } });
+
+        var totalNew = 0;
+        var totalUpdated = 0;
+        var errors = [];
+
+        for (var i = 0; i < _gpsProviders.length; i++) {
+            var p = _gpsProviders[i];
+            if (!p.is_active) continue;
+
+            var adapter = getGpsAdapter(p.software);
+            if (!adapter) { errors.push(p.name + ': no adapter'); continue; }
+
+            try {
+                var session = await adapter.login(p);
+                var apiVehicles = await adapter.getVehicles(p, session);
+
+                for (var j = 0; j < apiVehicles.length; j++) {
+                    var av = apiVehicles[j];
+                    var existing = await _supabase.from('gps_vehicles')
+                        .select('id')
+                        .eq('device_id', av.deviceId)
+                        .eq('provider', p.id)
+                        .maybeSingle();
+
+                    if (existing.data) {
+                        await _supabase.from('gps_vehicles').update({
+                            device_name: av.deviceName,
+                            synced_at: new Date().toISOString()
+                        }).eq('id', existing.data.id);
+                        totalUpdated++;
+                    } else {
+                        await _supabase.from('gps_vehicles').insert({
+                            device_id: av.deviceId,
+                            device_name: av.deviceName,
+                            nickname: av.deviceName,
+                            provider: p.id,
+                            is_active: true,
+                            synced_at: new Date().toISOString()
+                        });
+                        totalNew++;
+                    }
+                }
+            } catch(e) {
+                errors.push(p.name + ': ' + e.message);
+            }
+        }
+
+        await _supabase.from('activity_log').insert({
+            username: getUserName(), role: getUserRole(),
+            action: 'GPS_SYNC_VEHICLES',
+            details: 'New: ' + totalNew + ', Updated: ' + totalUpdated + (errors.length ? ', Errors: ' + errors.join('; ') : '')
+        });
+
+        document.getElementById('admin-gps-last-sync').textContent = 'Last sync: ' + new Date().toLocaleString('th-TH');
+
+        Swal.fire({
+            icon: errors.length ? 'warning' : 'success',
+            title: 'Sync เสร็จ',
+            html: 'ใหม่: ' + totalNew + ' คัน, อัปเดต: ' + totalUpdated + ' คัน' +
+                (errors.length ? '<br><span class="text-danger">Errors: ' + errors.join(', ') + '</span>' : ''),
+            timer: 3000
+        });
+
+        loadGpsVehicles();
     }
 
     // =============================================

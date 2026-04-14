@@ -100,8 +100,11 @@
                         <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="switchSystem('firstaid')" title="First Aid" style="min-width:40px;">
                             <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
                         </button>
-                        <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-location" onclick="switchSystem('location')" title="PT Location" style="min-width:40px;">
+                        <button type="button" class="btn btn-sm sys-tog" id="sys-tog-location" onclick="switchSystem('location')" title="PT Location" style="min-width:40px;">
                             <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
+                        </button>
+                        <button type="button" class="btn btn-sm rounded-pill-end sys-tog d-none" id="sys-tog-gps" onclick="switchSystem('gps')" title="GPS Tracking" style="min-width:40px;">
+                            <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
                         </button>
                     </div>
                     <button class="btn btn-light btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-system-dashboard" onclick="goToSystemDashboard()" title="กลับหน้า Dashboard ของระบบนี้">
@@ -312,6 +315,11 @@
                 }
                 if (s.key === 'PRINT_HEADER' && s.value) {
                     window.PRINT_HEADER = s.value;
+                }
+                if (s.key === 'GPS_ENABLED' && s.value === '1') {
+                    window._gpsEnabled = true;
+                    var gpsBtn = document.getElementById('sys-tog-gps');
+                    if (gpsBtn) gpsBtn.classList.remove('d-none');
                 }
             });
         } catch(e) { console.error(e); }
@@ -749,7 +757,9 @@
 
                   // Footer info
                   '<div class="d-flex justify-content-between align-items-center flex-wrap" style="font-size:0.72rem;">' +
-                    '<span class="text-muted"><i class="bi bi-truck me-1"></i>' + esc(transportType) + ' / ' + esc(opLevel) + ' (รถ: ' + esc(opUnit) + ')</span>' +
+                    '<span class="text-muted"><i class="bi bi-truck me-1"></i>' + esc(transportType) + ' / ' + esc(opLevel) + ' (รถ: ' + esc(opUnit) + ')' +
+                      (window._gpsEnabled && opUnit ? ' <button class="btn btn-sm py-0 px-1 ms-1" style="font-size:0.68rem;background:#6366f1;color:#fff;border:none;border-radius:4px;" onclick="event.stopPropagation(); openGpsModal(\'' + esc(opUnit).replace(/'/g, "\\'") + '\')"><i class="bi bi-broadcast me-1"></i>GPS</button>' : '') +
+                    '</span>' +
                     '<span class="text-muted"><i class="bi bi-clock me-1"></i>' + dateStr + '</span>' +
                   '</div>' +
                 '</div>' +
@@ -2020,6 +2030,147 @@
         }
     });
     </script>
+    <!-- ==================== GPS MODAL ==================== -->
+    <div class="modal fade" id="gpsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0" style="background:linear-gradient(135deg,#1e3a5f,#6366f1);color:#fff;">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-broadcast me-2"></i>GPS Tracking — <span id="gps-modal-vehicle">-</span></h6>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="gps-modal-info" class="px-3 py-2 border-bottom" style="font-size:0.82rem;">
+                        <span class="text-muted">กำลังโหลด...</span>
+                    </div>
+                    <div id="gps-modal-map" style="height:400px;"></div>
+                </div>
+                <div class="modal-footer border-0 py-2">
+                    <button class="btn btn-sm btn-outline-warning" onclick="gpsModalOpenCamera()"><i class="bi bi-camera-video-fill me-1"></i>Camera</button>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../shared/gps-providers.js"></script>
+    <script>
+    // =============================================
+    // GPS Modal Logic
+    // =============================================
+    var _gpsModalMap = null;
+    var _gpsModalMarker = null;
+    var _gpsModalProvider = null;
+    var _gpsModalDeviceId = null;
+    var _gpsModalInterval = null;
+
+    async function openGpsModal(vehicleName) {
+        if (!window._gpsEnabled) return;
+
+        document.getElementById('gps-modal-vehicle').textContent = vehicleName;
+        document.getElementById('gps-modal-info').innerHTML = '<span class="text-muted"><div class="spinner-border spinner-border-sm me-1"></div> กำลังค้นหารถ...</span>';
+
+        var modal = new bootstrap.Modal(document.getElementById('gpsModal'));
+        modal.show();
+
+        document.getElementById('gpsModal').addEventListener('shown.bs.modal', function initMap() {
+            document.getElementById('gpsModal').removeEventListener('shown.bs.modal', initMap);
+            if (!_gpsModalMap) {
+                _gpsModalMap = L.map('gps-modal-map').setView([15.87, 100.99], 6);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; CartoDB', maxZoom: 19
+                }).addTo(_gpsModalMap);
+            } else {
+                _gpsModalMap.invalidateSize();
+            }
+            findAndTrackVehicle(vehicleName);
+        });
+
+        document.getElementById('gpsModal').addEventListener('hidden.bs.modal', function cleanup() {
+            document.getElementById('gpsModal').removeEventListener('hidden.bs.modal', cleanup);
+            if (_gpsModalInterval) { clearInterval(_gpsModalInterval); _gpsModalInterval = null; }
+        });
+    }
+
+    async function findAndTrackVehicle(vehicleName) {
+        try {
+            var res = await _supabase.from('gps_vehicles')
+                .select('*, gps_providers(*)').eq('is_active', true);
+            var vehicles = res.data || [];
+
+            var match = vehicles.find(function(v) {
+                var nick = v.nickname || '';
+                var dname = v.device_name || '';
+                return nick === vehicleName || dname === vehicleName ||
+                       nick.indexOf(vehicleName) >= 0 || vehicleName.indexOf(nick) >= 0 ||
+                       dname.indexOf(vehicleName) >= 0 || vehicleName.indexOf(dname) >= 0;
+            });
+
+            if (!match || !match.gps_providers) {
+                document.getElementById('gps-modal-info').innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>ไม่พบรถ "' + escapeHtml(vehicleName) + '" ในระบบ GPS</span>';
+                return;
+            }
+
+            _gpsModalProvider = match.gps_providers;
+            _gpsModalDeviceId = match.device_id;
+
+            await gpsModalFetchStatus();
+            _gpsModalInterval = setInterval(gpsModalFetchStatus, 10000);
+
+        } catch(e) {
+            document.getElementById('gps-modal-info').innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>' + escapeHtml(e.message) + '</span>';
+        }
+    }
+
+    async function gpsModalFetchStatus() {
+        if (!_gpsModalProvider || !_gpsModalDeviceId) return;
+        try {
+            var statuses = await gpsGetStatus(_gpsModalProvider, _gpsModalDeviceId);
+            if (statuses.length === 0) {
+                document.getElementById('gps-modal-info').innerHTML = '<span class="text-muted">ไม่พบสถานะ GPS</span>';
+                return;
+            }
+            var s = statuses[0];
+            var online = s.online;
+            var statusHtml = online
+                ? '<span class="badge bg-success">ONLINE</span>'
+                : '<span class="badge bg-danger">OFFLINE</span>';
+
+            document.getElementById('gps-modal-info').innerHTML =
+                statusHtml + ' &nbsp; ' +
+                '<b>' + s.speed.toFixed(1) + ' km/h</b> &nbsp; ' +
+                '<span class="text-muted">' + escapeHtml(s.address || '-') + '</span>' +
+                '<span class="text-muted ms-2" style="font-size:0.72rem;">GPS: ' + escapeHtml(s.gpsTime || '-') + '</span>';
+
+            if (s.lat && s.lng && !(s.lat === 0 && s.lng === 0)) {
+                var color = !online ? '#ef4444' : s.speed > 1 ? '#22c55e' : '#f59e0b';
+                var icon = L.divIcon({
+                    className: '',
+                    html: '<div style="width:36px;height:36px;background:' + color + ';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">&#x1F691;</div>',
+                    iconSize: [36, 36], iconAnchor: [18, 18]
+                });
+
+                if (_gpsModalMarker) {
+                    _gpsModalMarker.setLatLng([s.lat, s.lng]);
+                    _gpsModalMarker.setIcon(icon);
+                } else {
+                    _gpsModalMarker = L.marker([s.lat, s.lng], { icon: icon }).addTo(_gpsModalMap);
+                }
+                _gpsModalMap.setView([s.lat, s.lng], 15);
+            }
+        } catch(e) {
+            console.warn('gpsModalFetchStatus:', e.message);
+        }
+    }
+
+    function gpsModalOpenCamera() {
+        if (_gpsModalProvider && _gpsModalDeviceId) {
+            var url = gpsGetCameraUrl(_gpsModalProvider, _gpsModalDeviceId);
+            if (url) window.open(url, 'gps_camera_' + _gpsModalDeviceId, 'width=1100,height=850,menubar=no,toolbar=no');
+        }
+    }
+    </script>
+
     <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('../sw.js', { scope: '/pt-medical-system/' }).catch(function(e) { console.warn('SW:', e); });

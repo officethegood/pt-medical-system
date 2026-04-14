@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS & Camera Test - CMSV6 API</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f172a; color: #e2e8f0; padding: 16px; }
+
+  h1 { font-size: 1.4rem; margin-bottom: 12px; color: #38bdf8; }
+  h2 { font-size: 1.1rem; margin: 16px 0 8px; color: #94a3b8; }
+
+  .config-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: end;
+    background: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 12px;
+  }
+  .config-bar label { font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 2px; }
+  .config-bar input {
+    background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
+    padding: 6px 10px; border-radius: 4px; font-size: 0.85rem; width: 200px;
+  }
+  .config-bar input.narrow { width: 120px; }
+
+  .btn {
+    padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+  }
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-success { background: #16a34a; color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-warning { background: #d97706; color: white; }
+  .btn-warning:hover { background: #b45309; }
+  .btn-danger { background: #dc2626; color: white; }
+  .btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .log-panel {
+    background: #1e293b; border-radius: 8px; padding: 12px;
+    max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.8rem;
+    margin-bottom: 12px; line-height: 1.6;
+  }
+  .log-ok { color: #4ade80; }
+  .log-err { color: #f87171; }
+  .log-info { color: #38bdf8; }
+  .log-warn { color: #fbbf24; }
+
+  .main-grid {
+    display: grid; grid-template-columns: 320px 1fr; gap: 12px; height: calc(100vh - 280px); min-height: 400px;
+  }
+  @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; height: auto; } }
+
+  .vehicle-list {
+    background: #1e293b; border-radius: 8px; padding: 12px; overflow-y: auto;
+  }
+  .vehicle-card {
+    background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+    padding: 10px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+  }
+  .vehicle-card:hover { border-color: #38bdf8; }
+  .vehicle-card.active { border-color: #2563eb; background: #1e3a5f; }
+  .vehicle-card.online { border-left: 3px solid #4ade80; }
+  .vehicle-card.offline { border-left: 3px solid #ef4444; }
+
+  .vehicle-name { font-weight: 600; font-size: 0.95rem; }
+  .vehicle-info { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+  .vehicle-speed { font-size: 1.2rem; font-weight: 700; color: #fbbf24; }
+  .vehicle-actions { margin-top: 6px; display: flex; gap: 6px; }
+
+  #map { border-radius: 8px; width: 100%; height: 100%; min-height: 400px; }
+
+  .status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600;
+  }
+  .status-online { background: #166534; color: #4ade80; }
+  .status-offline { background: #7f1d1d; color: #fca5a5; }
+
+  .detail-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>GPS & Camera Test - CMSV6 API Direct</h1>
+
+<!-- Config -->
+<div class="config-bar">
+  <div>
+    <label>CMSV6 Server</label>
+    <input id="cfgUrl" value="http://203.170.193.90" />
+  </div>
+  <div>
+    <label>Account</label>
+    <input id="cfgAccount" value="supwilai" class="narrow" />
+  </div>
+  <div>
+    <label>Password</label>
+    <input id="cfgPassword" type="password" value="1234" class="narrow" />
+  </div>
+  <div>
+    <button class="btn btn-primary" onclick="doLogin()">1. Login</button>
+  </div>
+  <div>
+    <button class="btn btn-success" id="btnVehicles" onclick="doGetVehicles()" disabled>2. Get Vehicles</button>
+  </div>
+  <div>
+    <button class="btn btn-warning" id="btnStatus" onclick="doGetStatus()" disabled>3. Get Status</button>
+  </div>
+  <div>
+    <button class="btn btn-danger" id="btnAuto" onclick="toggleAutoRefresh()" disabled>Auto Refresh: OFF</button>
+  </div>
+</div>
+
+<!-- Log -->
+<div class="log-panel" id="logPanel"></div>
+
+<!-- Main: Vehicle List + Map -->
+<div class="main-grid">
+  <div class="vehicle-list" id="vehicleList">
+    <h2>Vehicles</h2>
+    <p style="color:#64748b; font-size:0.8rem;">Login and Get Vehicles first...</p>
+  </div>
+  <div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ============ State ============
+let jsession = null;
+let vehicles = [];    // from queryUserVehicle
+let statuses = [];    // from getDeviceStatus
+let markers = {};     // deviceId -> L.marker
+let autoInterval = null;
+let selectedDevice = null;
+
+// ============ Map ============
+const map = L.map('map').setView([13.75, 100.5], 10);
+
+// CartoDB Dark
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; CartoDB',
+  maxZoom: 19
+}).addTo(map);
+
+// ============ Logging ============
+function log(msg, type = 'info') {
+  const el = document.getElementById('logPanel');
+  const time = new Date().toLocaleTimeString('th-TH');
+  el.innerHTML += `<div class="log-${type}">[${time}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ============ API Helpers ============
+function getBase() { return document.getElementById('cfgUrl').value.replace(/\/$/, ''); }
+
+async function apiCall(endpoint, params) {
+  const base = getBase();
+  const qs = Object.entries(params)
+    .filter(([k, v]) => v !== undefined && v !== null)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+
+  const url = `${base}/StandardApiAction_${endpoint}.action?${qs}`;
+  log(`API: ${endpoint} ...`, 'info');
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.result === 0) {
+      log(`${endpoint} OK`, 'ok');
+    } else {
+      log(`${endpoint} result=${data.result} ${data.error || ''}`, 'err');
+    }
+    return data;
+  } catch (e) {
+    log(`${endpoint} FAILED: ${e.message}`, 'err');
+    return { result: -1, error: e.message };
+  }
+}
+
+// ============ 1. Login ============
+async function doLogin() {
+  const account = document.getElementById('cfgAccount').value;
+  const password = document.getElementById('cfgPassword').value;
+
+  const data = await apiCall('login', { account, password });
+
+  if (data.result === 0 && data.jsession) {
+    jsession = data.jsession;
+    log(`Session: ${jsession.substring(0, 20)}...`, 'ok');
+    document.getElementById('btnVehicles').disabled = false;
+    document.getElementById('btnStatus').disabled = false;
+    document.getElementById('btnAuto').disabled = false;
+  }
+}
+
+// ============ 2. Get Vehicles ============
+async function doGetVehicles() {
+  if (!jsession) return;
+
+  const data = await apiCall('queryUserVehicle', { jsession });
+
+  if (data.result === 0 && data.vehicles) {
+    vehicles = [];
+    // Parse vehicle tree
+    data.vehicles.forEach(v => {
+      if (v.dl && v.dl.length > 0) {
+        v.dl.forEach(device => {
+          vehicles.push({
+            vehicleName: v.nm || v.pnm || 'Unknown',
+            deviceId: device.id || device.did,
+            deviceIdno: device.mdtid || device.id,
+            sim: device.sim || '',
+            groupName: v.pnm || ''
+          });
+        });
+      }
+    });
+
+    log(`Found ${vehicles.length} devices`, 'ok');
+    renderVehicleList();
+
+    // Auto get status
+    doGetStatus();
+  }
+}
+
+// ============ 3. Get Status ============
+async function doGetStatus() {
+  if (!jsession) return;
+
+  const data = await apiCall('getDeviceStatus', { jsession, toMap: 1, geoaddress: 1 });
+
+  if (data.result === 0 && data.status) {
+    statuses = data.status;
+    log(`Got status for ${statuses.length} devices`, 'ok');
+
+    updateVehicleCards();
+    updateMapMarkers();
+  }
+}
+
+// ============ Auto Refresh ============
+function toggleAutoRefresh() {
+  const btn = document.getElementById('btnAuto');
+  if (autoInterval) {
+    clearInterval(autoInterval);
+    autoInterval = null;
+    btn.textContent = 'Auto Refresh: OFF';
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-danger');
+    log('Auto refresh stopped', 'warn');
+  } else {
+    autoInterval = setInterval(doGetStatus, 5000);
+    btn.textContent = 'Auto Refresh: ON (5s)';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-success');
+    log('Auto refresh started (every 5s)', 'ok');
+  }
+}
+
+// ============ Render Vehicle List ============
+function renderVehicleList() {
+  const el = document.getElementById('vehicleList');
+  el.innerHTML = '<h2>Vehicles (' + vehicles.length + ')</h2>';
+
+  vehicles.forEach(v => {
+    const card = document.createElement('div');
+    card.className = 'vehicle-card offline';
+    card.id = `vcard-${v.deviceIdno}`;
+    card.innerHTML = `
+      <div class="vehicle-name">${v.vehicleName}</div>
+      <div class="vehicle-info">
+        Device: ${v.deviceIdno} | SIM: ${v.sim || '-'}
+      </div>
+      <div class="detail-row">
+        <span class="status-badge status-offline">--</span>
+        <span class="vehicle-speed">-- km/h</span>
+      </div>
+      <div class="vehicle-info" id="addr-${v.deviceIdno}">--</div>
+      <div class="vehicle-actions">
+        <button class="btn btn-primary btn-sm" onclick="focusDevice('${v.deviceIdno}')">Focus</button>
+        <button class="btn btn-warning btn-sm" onclick="openCamera('${v.deviceIdno}')">Camera</button>
+        <button class="btn btn-success btn-sm" onclick="openHLS('${v.deviceIdno}')">HLS</button>
+        <button class="btn btn-sm" style="background:#7c3aed;color:white" onclick="openRTSP('${v.deviceIdno}')">RTSP URL</button>
+      </div>
+    `;
+    card.onclick = (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      focusDevice(v.deviceIdno);
+    };
+    el.appendChild(card);
+  });
+}
+
+// ============ Update Cards with Status ============
+function updateVehicleCards() {
+  statuses.forEach(s => {
+    const id = s.id || s.did;
+    const card = document.getElementById(`vcard-${id}`);
+    if (!card) return;
+
+    const online = s.ol === 1;
+    const speed = (s.sp || 0) / 10;
+    const address = s.ps || '--';
+    const gpsTime = s.gt || '';
+
+    card.className = `vehicle-card ${online ? 'online' : 'offline'} ${selectedDevice === id ? 'active' : ''}`;
+
+    const badge = card.querySelector('.status-badge');
+    badge.className = `status-badge ${online ? 'status-online' : 'status-offline'}`;
+    badge.textContent = online ? 'ONLINE' : 'OFFLINE';
+
+    const speedEl = card.querySelector('.vehicle-speed');
+    speedEl.textContent = speed.toFixed(1) + ' km/h';
+
+    const addrEl = document.getElementById(`addr-${id}`);
+    if (addrEl) addrEl.textContent = address;
+  });
+}
+
+// ============ Update Map Markers ============
+function updateMapMarkers() {
+  const bounds = [];
+
+  statuses.forEach(s => {
+    const id = s.id || s.did;
+    // mlat/mlng = map lat/lng (already decimal)
+    // OR lat/lng divided by 1000000
+    let lat = s.mlat || (s.lat / 1000000);
+    let lng = s.mlng || (s.lng / 1000000);
+
+    if (!lat || !lng || (lat === 0 && lng === 0)) return;
+
+    const online = s.ol === 1;
+    const speed = (s.sp || 0) / 10;
+    const veh = vehicles.find(v => v.deviceIdno == id);
+    const name = veh ? veh.vehicleName : id;
+
+    const popupContent = `
+      <b>${name}</b><br/>
+      Device: ${id}<br/>
+      Speed: ${speed.toFixed(1)} km/h<br/>
+      Status: ${online ? '<span style="color:green">Online</span>' : '<span style="color:red">Offline</span>'}<br/>
+      ${s.ps || ''}<br/>
+      GPS: ${s.gt || ''}<br/>
+      <button onclick="openCamera('${id}')" style="margin-top:4px;padding:4px 8px;cursor:pointer">Camera</button>
+      <button onclick="openHLS('${id}')" style="margin-top:4px;padding:4px 8px;cursor:pointer">HLS</button>
+    `;
+
+    if (markers[id]) {
+      markers[id].setLatLng([lat, lng]);
+      markers[id].setPopupContent(popupContent);
+      // Update icon color
+      markers[id].setIcon(makeIcon(online, speed));
+    } else {
+      markers[id] = L.marker([lat, lng], { icon: makeIcon(online, speed) })
+        .addTo(map)
+        .bindPopup(popupContent);
+    }
+
+    bounds.push([lat, lng]);
+  });
+
+  // Fit bounds on first load
+  if (bounds.length > 0 && !selectedDevice) {
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }
+}
+
+function makeIcon(online, speed) {
+  const color = !online ? '#ef4444' : speed > 1 ? '#4ade80' : '#fbbf24';
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width: 32px; height: 32px;
+      background: ${color};
+      border: 2px solid white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    ">&#x1F691;</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -20]
+  });
+}
+
+// ============ Focus Device ============
+function focusDevice(deviceId) {
+  selectedDevice = deviceId;
+  const s = statuses.find(st => (st.id || st.did) == deviceId);
+  if (!s) return;
+
+  let lat = s.mlat || (s.lat / 1000000);
+  let lng = s.mlng || (s.lng / 1000000);
+  if (lat && lng) {
+    map.setView([lat, lng], 16);
+    if (markers[deviceId]) markers[deviceId].openPopup();
+  }
+
+  // Highlight card
+  document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById(`vcard-${deviceId}`);
+  if (card) card.classList.add('active');
+
+  log(`Focused on device ${deviceId}`, 'info');
+}
+
+// ============ Camera: Web Player (window.open) ============
+function openCamera(deviceId) {
+  const base = getBase();
+  const account = document.getElementById('cfgAccount').value;
+  const password = document.getElementById('cfgPassword').value;
+
+  // Method 1: Login with account/password directly (no jsession needed)
+  const url = `${base}/808gps/open/player/video.html?lang=en&devIdno=${deviceId}&account=${account}&password=${password}&channel=4&stream=1`;
+
+  log(`Opening camera (Web Player): ${deviceId}`, 'warn');
+  window.open(url, `camera_${deviceId}`, 'width=1100,height=850,menubar=no,toolbar=no');
+}
+
+// ============ Camera: HLS ============
+function openHLS(deviceId) {
+  const base = getBase();
+  const account = document.getElementById('cfgAccount').value;
+  const password = document.getElementById('cfgPassword').value;
+
+  const url = `${base}/808gps/open/hls/index.html?lang=en&devIdno=${deviceId}&account=${account}&password=${password}`;
+
+  log(`Opening camera (HLS): ${deviceId}`, 'warn');
+  window.open(url, `hls_${deviceId}`, 'width=900,height=600,menubar=no,toolbar=no');
+}
+
+// ============ RTSP URL (copy) ============
+function openRTSP(deviceId) {
+  if (!jsession) { log('Login first!', 'err'); return; }
+
+  const base = getBase().replace('http://', '').replace('https://', '');
+  const rtspUrl = `rtsp://${base}:6604/3/3?AVType=1&jsession=${jsession}&DevIDNO=${deviceId}&Channel=0&Stream=1`;
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(rtspUrl).then(() => {
+    log(`RTSP URL copied! Use in VLC: ${rtspUrl}`, 'ok');
+    alert('RTSP URL copied to clipboard!\n\nOpen in VLC Player:\n' + rtspUrl);
+  }).catch(() => {
+    log(`RTSP URL: ${rtspUrl}`, 'info');
+    prompt('Copy RTSP URL (for VLC):', rtspUrl);
+  });
+}
+
+// ============ Init ============
+log('Ready! Click "1. Login" to start.', 'info');
+log('Test: API direct from browser (no proxy)', 'warn');
+</script>
+
+</body>
+</html>

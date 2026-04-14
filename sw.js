@@ -1,10 +1,12 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v2';
+var CACHE_NAME = 'pt-medical-v3';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
   '/pt-medical-system/shared/styles.css',
   '/pt-medical-system/shared/auth.js',
+  '/pt-medical-system/shared/config.js',
+  '/pt-medical-system/shared/gps-providers.js',
   '/pt-medical-system/shared/realtime.js',
   '/pt-medical-system/assets/icon.svg',
   '/pt-medical-system/assets/icon-192.png',
@@ -12,7 +14,8 @@ var STATIC_ASSETS = [
   '/pt-medical-system/firstaid/index.html',
   '/pt-medical-system/transport/index.html',
   '/pt-medical-system/location/index.html',
-  '/pt-medical-system/monitor/index.html'
+  '/pt-medical-system/monitor/index.html',
+  '/pt-medical-system/gps/index.html'
 ];
 
 // Install: cache static assets
@@ -38,12 +41,14 @@ self.addEventListener('activate', function(event) {
   self.clients.claim();
 });
 
-// Fetch: network-first for HTML + API, cache-fallback for assets
+// Fetch: network-first for HTML + JS + API, cache-fallback for images/CSS
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
 
-  // Network-first for Supabase API and CDN resources
-  if (url.indexOf('supabase.co') > -1 || url.indexOf('cloudinary') > -1) {
+  // Network-first for Supabase API, Cloudinary, GPS API, GAS proxy
+  if (url.indexOf('supabase.co') > -1 || url.indexOf('cloudinary') > -1 ||
+      url.indexOf('googleapis.com') > -1 || url.indexOf('script.google.com') > -1 ||
+      url.indexOf('203.170.193') > -1) {
     event.respondWith(
       fetch(event.request).catch(function() {
         return caches.match(event.request);
@@ -52,8 +57,9 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Network-first for HTML pages (always get latest code)
-  if (event.request.mode === 'navigate' || url.indexOf('.html') > -1 || url.endsWith('/')) {
+  // Network-first for HTML pages AND JS files (always get latest code)
+  if (event.request.mode === 'navigate' || url.indexOf('.html') > -1 ||
+      url.indexOf('.js') > -1 || url.endsWith('/')) {
     event.respondWith(
       fetch(event.request).then(function(response) {
         if (response.ok) {
@@ -70,7 +76,7 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Cache-first for static assets (CSS, JS, images)
+  // Cache-first for static assets only (CSS, images, fonts)
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) return cached;

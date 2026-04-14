@@ -67,8 +67,11 @@
             <button type="button" class="btn btn-sm sys-tog" id="sys-tog-firstaid" onclick="window.location.href='../firstaid/'" title="First Aid" style="min-width:40px;">
               <i class="bi bi-bandaid-fill"></i><span class="d-none d-lg-inline ms-1">First Aid</span>
             </button>
-            <button type="button" class="btn btn-sm rounded-pill-end sys-tog active" id="sys-tog-location" title="PT Location" style="min-width:40px;">
+            <button type="button" class="btn btn-sm sys-tog active" id="sys-tog-location" title="PT Location" style="min-width:40px;">
               <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill-end sys-tog d-none" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px;">
+              <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
             </button>
           </div>
           <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
@@ -334,15 +337,23 @@
 
     async function loadAppSettings() {
       try {
-        var { data } = await _supabase.from('settings').select('value').eq('key', 'APP_LOGO_URL').single();
-        if (data && data.value) {
-          var logoUrl = typeof data.value === 'string' ? data.value : (data.value.url || '');
-          if (logoUrl) {
-            var logoEl = document.getElementById('navbar-logo');
-            if (logoEl) { logoEl.src = logoUrl; logoEl.style.display = ''; }
-            var iconEl = document.getElementById('navbar-icon');
-            if (iconEl) iconEl.style.display = 'none';
-          }
+        var { data } = await _supabase.from('settings').select('*');
+        if (data) {
+          data.forEach(function(s) {
+            if (s.key === 'APP_LOGO_URL' && s.value) {
+              var logoUrl = typeof s.value === 'string' ? s.value : (s.value.url || '');
+              if (logoUrl) {
+                var logoEl = document.getElementById('navbar-logo');
+                if (logoEl) { logoEl.src = logoUrl; logoEl.style.display = ''; }
+                var iconEl = document.getElementById('navbar-icon');
+                if (iconEl) iconEl.style.display = 'none';
+              }
+            }
+            if (s.key === 'GPS_ENABLED' && s.value === '1') {
+              var gpsBtn = document.getElementById('sys-tog-gps');
+              if (gpsBtn) gpsBtn.classList.remove('d-none');
+            }
+          });
         }
       } catch(e) { /* ignore */ }
     }
