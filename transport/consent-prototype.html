@@ -537,6 +537,42 @@
     .info-card .d-flex i { font-size: 9px !important; }
   }
 
+  /* Superseded Watermark */
+  .superseded-watermark {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 9999;
+    background: #dc2626;
+    color: #fff;
+    text-align: center;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.3);
+  }
+  .superseded-watermark.show { display: block; }
+  .superseded-diagonal {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    z-index: 9998;
+    font-size: 4rem;
+    font-weight: 900;
+    color: rgba(220, 38, 38, 0.08);
+    white-space: nowrap;
+    pointer-events: none;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+  }
+  .superseded-diagonal.show { display: block; }
+  @media print {
+    .superseded-watermark.show { display: block; position: fixed; }
+    .superseded-diagonal.show { display: block; position: fixed; }
+  }
+
   @media (max-width: 576px) {
     .consent-body { padding: 12px; }
     .dnr-grid { grid-template-columns: 1fr; }
@@ -576,6 +612,9 @@
 </style>
 </head>
 <body>
+<!-- Superseded Watermark (shown when viewing old version) -->
+<div class="superseded-watermark" id="superseded-bar">⚠️ เอกสารฉบับนี้ถูกแทนที่แล้ว — ไม่ใช่ฉบับปัจจุบัน</div>
+<div class="superseded-diagonal" id="superseded-diagonal">ถูกแทนที่แล้ว</div>
 
 <div class="consent-card my-3 mx-auto px-0">
   <!-- Header -->
@@ -1960,6 +1999,19 @@ function switchLang(lang) {
 // ===========================
 // Restore consent data from DB (via postMessage)
 // ===========================
+// Show watermark for superseded (replaced) consent versions
+function showSupersededWatermark(versionNum) {
+    var bar = document.getElementById('superseded-bar');
+    var diag = document.getElementById('superseded-diagonal');
+    if (bar) {
+        bar.textContent = '⚠️ เอกสารฉบับที่ ' + versionNum + ' — ถูกแทนที่แล้ว ไม่ใช่ฉบับปัจจุบัน';
+        bar.classList.add('show');
+    }
+    if (diag) diag.classList.add('show');
+    // Add top padding to body so content isn't hidden behind the bar
+    document.body.style.paddingTop = '40px';
+}
+
 function restoreConsentData(cd) {
     if (!cd) return;
 

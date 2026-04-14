@@ -4223,10 +4223,24 @@
       }
       src += '&consent_version=' + selectedVer;
 
-      // Send consent_data after iframe reloads
+      // Send consent_data after iframe reloads (include version status)
+      var versionStatus = ver.status || 'active';
       iframe.addEventListener('load', function onLoad() {
         iframe.removeEventListener('load', onLoad);
         sendConsentDataToIframe(iframe, cd);
+        // Show superseded watermark if not active
+        if (versionStatus === 'superseded') {
+          var tryMark = function(att) {
+            try {
+              if (iframe.contentWindow && iframe.contentWindow.showSupersededWatermark) {
+                iframe.contentWindow.showSupersededWatermark(selectedVer);
+                return;
+              }
+            } catch(e) {}
+            if (att < 15) setTimeout(function() { tryMark(att + 1); }, 200);
+          };
+          setTimeout(function() { tryMark(0); }, 500);
+        }
       });
       iframe.src = src;
     }
