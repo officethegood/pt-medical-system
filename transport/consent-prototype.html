@@ -1189,7 +1189,14 @@ function initPatientInfo() {
     if (patientData && patientData.caseId) {
         document.getElementById('consent-case-id').textContent = patientData.caseId;
     }
-    window._consentCreatedAt = new Date();
+    // Parse case date from Case ID (CASE-YYYYMMDD-XXX) or fallback to now
+    var caseIdVal = (patientData && patientData.caseId) ? patientData.caseId : '';
+    var caseMatch = caseIdVal.match(/CASE-(\d{4})(\d{2})(\d{2})/);
+    if (caseMatch) {
+        window._consentCreatedAt = new Date(parseInt(caseMatch[1]), parseInt(caseMatch[2]) - 1, parseInt(caseMatch[3]));
+    } else {
+        window._consentCreatedAt = new Date();
+    }
     updateHeaderDate();
 
     if (patientData && patientData.name) {
