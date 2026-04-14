@@ -4073,7 +4073,7 @@
         </button>
       </div>
       <div class="consent-modal-body">
-        <iframe id="consent-iframe" src="" style="width:100%; border:none; min-height:70vh;" onload="resizeConsentIframe()"></iframe>
+        <iframe id="consent-iframe" src="" style="width:100%; border:none; min-height:70vh;" onload="if(typeof resizeConsentIframe==='function')resizeConsentIframe()"></iframe>
       </div>
     </div>
   </div>
