@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>PT Medical System — Improvement Plan (Medical Director)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: 'Sarabun', sans-serif;
+    color: #1e293b; background: #f1f5f9;
+    margin: 0; font-size: 11.5pt; line-height: 1.55;
+  }
+  .page {
+    max-width: 210mm; margin: 14mm auto;
+    background: #fff; padding: 18mm 16mm;
+    box-shadow: 0 4px 20px rgba(15,36,68,0.08);
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1e3a5f; color: #fff;
+    padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .toolbar h6 { margin: 0; font-weight: 700; font-size: 0.95rem; }
+  .btn-print {
+    background: #dc2626; color: #fff; border: none;
+    padding: 7px 16px; border-radius: 6px; font-weight: 600;
+    cursor: pointer; font-size: 0.85rem; font-family: inherit;
+  }
+  .btn-print:hover { background: #b91c1c; }
+
+  .cover {
+    text-align: center;
+    padding: 25mm 0 15mm;
+    border-bottom: 4px solid #dc2626;
+    margin-bottom: 10mm;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #fff; padding: 2mm 5mm; border-radius: 100px;
+    font-size: 10pt; font-weight: 600; margin-bottom: 8mm;
+  }
+  .cover h1 {
+    font-size: 26pt; font-weight: 800;
+    margin: 0 0 4mm; color: #1e3a5f; letter-spacing: -0.02em;
+  }
+  .cover .sub { font-size: 13pt; color: #64748b; font-weight: 500; margin-bottom: 10mm; }
+  .cover .audience {
+    display: inline-block;
+    background: #fef2f2; color: #b91c1c;
+    padding: 2mm 6mm; border-radius: 2mm;
+    font-size: 11pt; font-weight: 600;
+  }
+
+  h1, h2, h3, h4 { color: #1e3a5f; font-weight: 700; }
+  h2 {
+    font-size: 16pt; margin: 12mm 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid #dc2626;
+    display: flex; align-items: center; gap: 3mm;
+  }
+  h2 .num {
+    background: #dc2626; color: #fff;
+    width: 9mm; height: 9mm; border-radius: 2mm;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11pt; font-weight: 700;
+  }
+  h3 { font-size: 13pt; margin: 6mm 0 2mm; }
+  h4 { font-size: 11.5pt; margin: 4mm 0 1.5mm; color: #475569; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 7mm; }
+  li { margin-bottom: 1mm; }
+
+  /* Exec summary */
+  .exec-summary {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    color: #fff; padding: 8mm 10mm; border-radius: 3mm;
+    margin: 5mm 0 10mm;
+    position: relative;
+  }
+  .exec-summary::before {
+    content: ''; position: absolute;
+    top: 0; right: 0; bottom: 0; width: 4px;
+    background: #dc2626;
+    border-radius: 0 3mm 3mm 0;
+  }
+  .exec-summary h3 { color: #fff; margin-top: 0; font-size: 14pt; }
+  .exec-summary p { margin-bottom: 2mm; font-size: 10.5pt; opacity: 0.95; }
+  .exec-summary strong { color: #fbbf24; }
+
+  /* Priority bar */
+  .priority {
+    display: inline-block; padding: 0.3mm 3mm;
+    border-radius: 100px; font-weight: 700;
+    font-size: 9pt; letter-spacing: 0.3px;
+    vertical-align: middle;
+  }
+  .priority.p0 { background: #7f1d1d; color: #fff; }
+  .priority.p1 { background: #dc2626; color: #fff; }
+  .priority.p2 { background: #f59e0b; color: #fff; }
+  .priority.p3 { background: #16a34a; color: #fff; }
+
+  /* Item card */
+  .item {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid;
+    border-radius: 2mm;
+    padding: 4mm 6mm;
+    margin: 3mm 0;
+    page-break-inside: avoid;
+  }
+  .item.p0 { border-left-color: #7f1d1d; }
+  .item.p1 { border-left-color: #dc2626; }
+  .item.p2 { border-left-color: #f59e0b; }
+  .item.p3 { border-left-color: #16a34a; }
+  .item .head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 3mm; margin-bottom: 2mm;
+  }
+  .item .title { font-weight: 700; color: #1e3a5f; font-size: 11.5pt; flex: 1; }
+  .item .meta { font-size: 9pt; color: #64748b; margin-bottom: 2mm; }
+  .item .meta b { color: #1e3a5f; }
+  .item .body { font-size: 10.5pt; }
+  .item .body .label { font-weight: 600; color: #475569; }
+
+  /* Phase box */
+  .phases {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm;
+    margin: 4mm 0 6mm;
+  }
+  .phase {
+    background: #f8fafc; border-radius: 2mm;
+    padding: 4mm 4mm; border-top: 3px solid;
+    font-size: 9.5pt;
+  }
+  .phase.q1 { border-color: #dc2626; }
+  .phase.q2 { border-color: #f59e0b; }
+  .phase.q3 { border-color: #2563eb; }
+  .phase.q4 { border-color: #16a34a; }
+  .phase .q { font-weight: 800; color: #1e3a5f; font-size: 12pt; margin-bottom: 1mm; }
+  .phase .theme { color: #64748b; font-weight: 600; margin-bottom: 2mm; font-size: 9pt; }
+  .phase ul { padding-left: 4mm; margin: 0; }
+  .phase li { margin-bottom: 0.5mm; font-size: 9pt; }
+
+  /* KPI */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm;
+    margin: 3mm 0 5mm;
+  }
+  .kpi {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 2mm; padding: 4mm;
+    text-align: center;
+  }
+  .kpi .icon { font-size: 20pt; margin-bottom: 2mm; }
+  .kpi .name { font-size: 10pt; font-weight: 700; color: #1e3a5f; margin-bottom: 1mm; }
+  .kpi .target { font-size: 9pt; color: #64748b; }
+
+  /* Callouts */
+  .callout {
+    padding: 3mm 5mm; border-radius: 2mm;
+    margin: 3mm 0; font-size: 10.5pt;
+    border-left: 4px solid;
+  }
+  .callout.info    { background: #eff6ff; border-color: #2563eb; }
+  .callout.warn    { background: #fffbeb; border-color: #f59e0b; }
+  .callout.danger  { background: #fef2f2; border-color: #dc2626; }
+  .callout.success { background: #f0fdf4; border-color: #16a34a; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 2mm 0 4mm; font-size: 10pt;
+  }
+  th { background: #1e3a5f; color: #fff; padding: 2mm 3mm; text-align: left; }
+  td { border: 1px solid #e2e8f0; padding: 2mm 3mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  .toc {
+    background: #f8fafc; padding: 5mm 7mm;
+    border-radius: 3mm; margin: 5mm 0 10mm;
+    border: 1px solid #e2e8f0;
+  }
+  .toc h3 { margin: 0 0 3mm; color: #1e3a5f; }
+  .toc ol { columns: 2; column-gap: 8mm; padding-left: 5mm; margin: 0; }
+  .toc li { margin-bottom: 1mm; break-inside: avoid; font-size: 10pt; }
+  .toc a { color: #1e3a5f; text-decoration: none; }
+
+  @media print {
+    .toolbar { display: none; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+    h2, .item, .phase { page-break-inside: avoid; }
+    .page-break { page-break-before: always; }
+  }
+  @page { size: A4; margin: 18mm 16mm; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h6>📋 แผนปรับปรุง PT Medical System — สำหรับ Medical Director</h6>
+  <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / Save as PDF</button>
+</div>
+
+<div class="page">
+
+  <div class="cover">
+    <div class="badge">STRATEGIC IMPROVEMENT PLAN</div>
+    <h1>PT Medical System<br><span style="font-size:18pt; color:#dc2626;">แผนยกระดับระบบ 2026</span></h1>
+    <div class="sub">ข้อเสนอปรับปรุงระบบ — ด้านคุณภาพการรักษา ความปลอดภัย การจัดการ</div>
+    <div class="audience">👨‍⚕️ เรียน: ผู้อำนวยการฝ่ายการแพทย์ / ผู้บริหาร</div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="exec-summary">
+    <h3>🎯 สรุปสำหรับผู้บริหาร</h3>
+    <p>
+      ระบบ PT Medical System ปัจจุบันครอบคลุม 5 โมดูลหลัก
+      (Transport / First Aid / GPS / Location / Monitor) และใช้งานจริงทั้งบนคอม แท็บเล็ต และมือถือ
+      โดยมี Real-time sync ข้ามอุปกรณ์ — เป็นพื้นฐานที่แข็งแรง
+    </p>
+    <p>
+      เอกสารนี้ร่างข้อเสนอ <strong>17 รายการ</strong> ใน <strong>5 ด้าน</strong>
+      (คุณภาพการรักษา / ความปลอดภัยผู้ป่วย / การจัดการ / เทคโนโลยี / บุคลากร)
+      จัดลำดับตาม <strong>ผลกระทบ × ความจำเป็น</strong> เพื่อวางแผน roadmap 12 เดือน
+    </p>
+    <p>
+      <strong>3 เรื่องเร่งด่วนสุด (P0):</strong> (1) ระบบสิทธิ์ผู้ใช้ระดับหน่วยงาน
+      (2) Audit trail แยกตาม user (3) Auto-backup + Disaster recovery plan
+    </p>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>📑 สารบัญ</h3>
+    <ol>
+      <li><a href="#s1">สถานะปัจจุบัน</a></li>
+      <li><a href="#s2">เกณฑ์จัดลำดับ</a></li>
+      <li><a href="#s3">ด้านที่ 1 คุณภาพการรักษา</a></li>
+      <li><a href="#s4">ด้านที่ 2 ความปลอดภัยผู้ป่วย</a></li>
+      <li><a href="#s5">ด้านที่ 3 การจัดการ/กำกับดูแล</a></li>
+      <li><a href="#s6">ด้านที่ 4 เทคโนโลยี/โครงสร้าง</a></li>
+      <li><a href="#s7">ด้านที่ 5 บุคลากร/การฝึกอบรม</a></li>
+      <li><a href="#s8">Roadmap 12 เดือน</a></li>
+      <li><a href="#s9">KPI วัดผล</a></li>
+      <li><a href="#s10">งบประมาณโดยประมาณ</a></li>
+      <li><a href="#s11">Risk & Mitigation</a></li>
+      <li><a href="#s12">ข้อเสนอแนะต่อผู้บริหาร</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 Current State -->
+  <h2 id="s1"><span class="num">1</span>สถานะปัจจุบัน (Current State)</h2>
+  <h3>จุดแข็ง</h3>
+  <ul>
+    <li>✅ <b>ครอบคลุมภารกิจหลัก</b> — Transport, First Aid, GPS, Location, Monitor</li>
+    <li>✅ <b>Real-time multi-device</b> — แพทย์ + พยาบาล + คนขับ ทำงานพร้อมกันได้</li>
+    <li>✅ <b>Consent 2 ขั้นตอน</b> — แยก device A (บันทึก) / B (เซ็นยินยอม) พร้อม witness</li>
+    <li>✅ <b>GPS + กล้อง</b> ที่แชร์ลิงก์สาธารณะได้ (มี expiry + สิทธิ์กล้อง)</li>
+    <li>✅ <b>ใช้งานฟรี</b> — Cloud-based, ไม่ต้องซื้อ server, ไม่ต้องติดตั้ง</li>
+  </ul>
+  <h3>ช่องว่างที่ตรวจพบ</h3>
+  <ul>
+    <li>⚠️ ผู้ใช้ทุกคนเห็นข้อมูลเคสได้ทั้งหมด — ไม่มีการจำกัดตามหน่วยงาน</li>
+    <li>⚠️ ไม่มี 2-Factor Authentication (2FA)</li>
+    <li>⚠️ Audit trail มีแต่ Activity log — ไม่มี version history ระดับ field</li>
+    <li>⚠️ ไม่มีระบบ alert อัตโนมัติเมื่อเคสวิกฤตเกินกำหนด</li>
+    <li>⚠️ รายงานต้อง export manual — ไม่มี scheduled report</li>
+    <li>⚠️ ไม่มี offline mode — ถ้า internet หลุด ทำงานไม่ได้</li>
+    <li>⚠️ ไม่มีการเชื่อมโยงกับ HIS / ระบบโรงพยาบาลปลายทาง</li>
+  </ul>
+
+  <!-- 2 Priority -->
+  <h2 id="s2"><span class="num">2</span>เกณฑ์จัดลำดับความสำคัญ</h2>
+  <table>
+    <tr><th>Priority</th><th>ความหมาย</th><th>ตัวอย่าง</th></tr>
+    <tr><td><span class="priority p0">P0</span></td><td>เร่งด่วนมาก — เสี่ยงทางกฎหมาย/ความปลอดภัยผู้ป่วย</td><td>Data leak, ข้อมูลหาย</td></tr>
+    <tr><td><span class="priority p1">P1</span></td><td>สำคัญ — กระทบการรักษาหรือการตัดสินใจ</td><td>Alert ผู้ป่วยวิกฤต, Audit trail</td></tr>
+    <tr><td><span class="priority p2">P2</span></td><td>เพิ่มประสิทธิภาพ — ลดภาระงาน เพิ่มคุณภาพ</td><td>Dashboard ผู้บริหาร, Auto-report</td></tr>
+    <tr><td><span class="priority p3">P3</span></td><td>ทำเพิ่มเมื่อมีเวลา — คุณภาพชีวิต user</td><td>Dark mode, Shortcut keys</td></tr>
+  </table>
+
+  <!-- 3 Clinical -->
+  <h2 id="s3"><span class="num">3</span>ด้านที่ 1 · คุณภาพการรักษา (Clinical Quality)</h2>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">3.1 ระบบ Alert ผู้ป่วยวิกฤตอัตโนมัติ</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัญหา:</span> ปัจจุบันไม่มีระบบเตือนเมื่อผู้ป่วย triage Resuscitation/Emergency เกิน 30 นาทียังไม่ถูกส่งต่อ</div>
+      <div><span class="label">ข้อเสนอ:</span> สร้าง background job ตรวจทุก 1 นาที → ถ้าเคสวิกฤตค้างเกิน threshold → ส่งแจ้งเตือนเข้า LINE/Email ผู้บริหาร + Monitor dashboard กระพริบ</div>
+      <div><span class="label">ประโยชน์:</span> ลดเวลา response, ป้องกันเคสหลุด</div>
+    </div>
+  </div>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">3.2 Clinical Decision Support (CDS) — แนะนำการรักษา</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 8 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> เพิ่ม rule-based popup เมื่อบันทึก V/S ผิดปกติ (BP &lt;90, SpO2 &lt;90, HR &gt;120) → แสดงคำแนะนำ</div>
+      <div><span class="label">ตัวอย่าง:</span> "BP 80/50 → พิจารณาให้ IV bolus, แจ้ง rp โรงพยาบาลปลายทาง"</div>
+      <div><span class="label">ข้อจำกัด:</span> ต้องมีแพทย์ปรึกษาออก protocol + review เป็นระยะ</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">3.3 แบบบันทึกมาตรฐาน ACS/Stroke/Trauma Protocol</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 4 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> เพิ่ม template สำหรับเคสเฉพาะ (STEMI checklist, FAST score, GCS) ในฟอร์ม Transport</div>
+      <div><span class="label">ประโยชน์:</span> รับรองว่าบันทึกครบตาม clinical guideline — ลด missing data</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">3.4 เชื่อมโยงกับโรงพยาบาลปลายทาง (Referral Notification)</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูงมาก · <b>ประมาณระยะเวลา:</b> 12 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> ส่งข้อมูลเคสไปยัง ER โรงพยาบาลปลายทางล่วงหน้าผ่าน API/LINE Notify เมื่อเปิดเคส</div>
+      <div><span class="label">ผลลัพธ์:</span> ER เตรียมทีม/ห้อง/เลือดล่วงหน้า ลด door-to-needle time</div>
+      <div><span class="label">ความท้าทาย:</span> ต้องเจรจากับแต่ละโรงพยาบาล — เริ่มจาก 1-2 แห่งก่อน</div>
+    </div>
+  </div>
+
+  <!-- 4 Patient Safety -->
+  <h2 id="s4"><span class="num">4</span>ด้านที่ 2 · ความปลอดภัยผู้ป่วย (Patient Safety & Privacy)</h2>
+
+  <div class="item p0">
+    <div class="head">
+      <div class="title">4.1 ระบบสิทธิ์ผู้ใช้ระดับหน่วยงาน (Role-Based Access Control)</div>
+      <span class="priority p0">P0</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูงมาก · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัญหา:</span> ปัจจุบัน user ทุกคนเห็นเคสทั้งหมดของทุกหน่วย ไม่เป็นไปตาม PDPA</div>
+      <div><span class="label">ข้อเสนอ:</span> เพิ่ม column <code>created_by</code>, <code>unit_id</code> ใน cases/fa_events → RLS filter ตาม unit ของ user</div>
+      <div><span class="label">กระทบใคร:</span> ต้องแก้ schema + frontend + ฝึกอบรมผู้ใช้ใหม่</div>
+    </div>
+  </div>
+
+  <div class="item p0">
+    <div class="head">
+      <div class="title">4.2 2-Factor Authentication (2FA) สำหรับ Admin</div>
+      <span class="priority p0">P0</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 2 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> เพิ่ม OTP ทาง SMS/Email สำหรับ role Admin อย่างน้อย</div>
+      <div><span class="label">เหตุผล:</span> Admin ดู/ลบข้อมูลผู้ป่วยทั้งระบบ — ต้องการ safeguard ขั้น 2</div>
+    </div>
+  </div>
+
+  <div class="item p0">
+    <div class="head">
+      <div class="title">4.3 Auto-Backup + Disaster Recovery Plan</div>
+      <span class="priority p0">P0</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูงมาก · <b>ประมาณระยะเวลา:</b> 2 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> ตั้ง scheduled backup ทุก 24 ชม. ไปยัง Google Drive อื่น + ทดสอบ restore ทุก 3 เดือน</div>
+      <div><span class="label">เหตุผล:</span> ถ้า Supabase ล่มหรือโดน hack — ต้องมีสำรอง กู้คืนได้ภายใน 4 ชม.</div>
+    </div>
+  </div>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">4.4 Audit Trail ระดับ Field (Change History)</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 4 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัจจุบัน:</span> log แค่ action (สร้าง/แก้/ลบ) ไม่รู้ว่าแก้ field ไหน ค่าเก่าเป็นอะไร</div>
+      <div><span class="label">ข้อเสนอ:</span> เก็บ snapshot ก่อน/หลัง ทุกการแก้ไขใน table <code>case_history</code></div>
+      <div><span class="label">ประโยชน์:</span> ถ้ามีข้อพิพาท ตรวจสอบย้อนหลังได้ครบ — ป้องกันการแก้ข้อมูลหลังเหตุการณ์</div>
+    </div>
+  </div>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">4.5 Session Timeout + Force Logout</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 1 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัจจุบัน:</span> localStorage ค้างไม่มีวันหมดอายุ — ถ้าเครื่องหาย เข้าถึงได้ตลอดไป</div>
+      <div><span class="label">ข้อเสนอ:</span> Timeout 8 ชม. + Admin "force logout all" ได้</div>
+    </div>
+  </div>
+
+  <!-- 5 Management -->
+  <h2 id="s5"><span class="num">5</span>ด้านที่ 3 · การจัดการ / กำกับดูแล (Management & Governance)</h2>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">5.1 Executive Dashboard สำหรับ Medical Director</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 4 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> หน้าจอรวม KPI ผู้บริหาร: จำนวนเคส/วัน, response time เฉลี่ย, top diagnosis, rate การทำ consent</div>
+      <div><span class="label">Export:</span> กราฟรายเดือน/ไตรมาส — ใช้ประชุม</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">5.2 รายงานอัตโนมัติรายเดือน (Scheduled Report)</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> cron job ส่ง report PDF เข้า email ผู้บริหารทุกต้นเดือน</div>
+      <div><span class="label">เนื้อหา:</span> จำนวนเคส, สถิติ triage, รายได้ (ถ้ามี), ปัญหาที่พบ</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">5.3 KPI Tracking ทีมงาน (Staff Performance)</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 4 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> แสดงจำนวนเคสต่อเจ้าหน้าที่, เวลาเฉลี่ยต่อเคส, ความครบถ้วนของข้อมูล</div>
+      <div><span class="label">ใช้เพื่อ:</span> feedback รายบุคคล, วาง training plan</div>
+      <div><span class="label">ระวัง:</span> ไม่ควรใช้เป็น punitive — ใช้เพื่อพัฒนาเท่านั้น</div>
+    </div>
+  </div>
+
+  <div class="item p3">
+    <div class="head">
+      <div class="title">5.4 Feedback System จากผู้ป่วย/ญาติ</div>
+      <span class="priority p3">P3</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> QR code ปลายเคส ให้ญาติประเมินบริการ 5 ดาว + comment</div>
+      <div><span class="label">ประโยชน์:</span> ข้อมูลคุณภาพจากผู้รับบริการ — input สำหรับ improvement loop</div>
+    </div>
+  </div>
+
+  <!-- 6 Technology -->
+  <h2 id="s6"><span class="num">6</span>ด้านที่ 4 · เทคโนโลยี / โครงสร้าง (Technology)</h2>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">6.1 Offline Mode + Sync-when-Online</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 6 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัญหา:</span> รถออกปฏิบัติงานในพื้นที่สัญญาณไม่ดี — บันทึกไม่ได้เลย</div>
+      <div><span class="label">ข้อเสนอ:</span> ใช้ IndexedDB เก็บข้อมูลใน browser ระหว่างออฟไลน์ → sync อัตโนมัติเมื่อต่อเน็ต</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">6.2 แอปมือถือ Native (PWA)</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 4 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> แปลงเป็น PWA (Progressive Web App) — ติดตั้งหน้าจอ home screen, push notification, offline</div>
+      <div><span class="label">ประโยชน์:</span> UX เหมือนแอป — ไม่ต้องเปิด browser</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">6.3 Migrate V/S + IV เป็น Table แยก</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัจจุบัน:</span> V/S เก็บใน <code>raw_data.vitalsJson</code> (JSONB array) — มี race condition กรณี 2 device edit พร้อมกัน</div>
+      <div><span class="label">ข้อเสนอ:</span> แยกเป็น <code>case_vitals_log</code>, <code>case_iv_log</code> — append-only ไม่มี race</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">6.4 ลด Vendor Lock-in — ย้าย GPS Proxy เป็น Supabase Edge Function</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ปัจจุบัน:</span> Render.com free tier หลับหลังไม่ใช้ 15 นาที → ชะลอ refresh</div>
+      <div><span class="label">ข้อเสนอ:</span> ย้ายไป Supabase Edge Function (Deno) — รวมใน platform เดียว, ไม่หลับ</div>
+    </div>
+  </div>
+
+  <!-- 7 Training -->
+  <h2 id="s7"><span class="num">7</span>ด้านที่ 5 · บุคลากร / การฝึกอบรม (People)</h2>
+
+  <div class="item p1">
+    <div class="head">
+      <div class="title">7.1 คู่มือ User แยกตาม Role (PDF + Video)</div>
+      <span class="priority p1">P1</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> สูง · <b>ประมาณระยะเวลา:</b> 4 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> แยก 3 แบบ (พยาบาล / คนขับ / Admin) — PDF + วิดีโอ 5-10 นาที</div>
+      <div><span class="label">อัปโหลดที่:</span> Google Drive link ในหน้า Admin</div>
+    </div>
+  </div>
+
+  <div class="item p2">
+    <div class="head">
+      <div class="title">7.2 Onboarding Program — เจ้าหน้าที่ใหม่</div>
+      <span class="priority p2">P2</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> กลาง · <b>ประมาณระยะเวลา:</b> 2 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> Checklist + Sandbox environment (Training server แยก) ให้ลองก่อนใช้จริง</div>
+    </div>
+  </div>
+
+  <div class="item p3">
+    <div class="head">
+      <div class="title">7.3 ระบบให้คะแนน/Gamification</div>
+      <span class="priority p3">P3</span>
+    </div>
+    <div class="meta"><b>ผลกระทบ:</b> ต่ำ · <b>ประมาณระยะเวลา:</b> 3 สัปดาห์</div>
+    <div class="body">
+      <div><span class="label">ข้อเสนอ:</span> Badge, level up เมื่อบันทึกครบ, leaderboard</div>
+      <div><span class="label">ข้อควรระวัง:</span> อย่าทำให้รู้สึกเหมือนแข่ง — เน้น positive reinforcement</div>
+    </div>
+  </div>
+
+  <!-- 8 Roadmap -->
+  <h2 id="s8"><span class="num">8</span>Roadmap 12 เดือน (แบ่งเป็น 4 Quarter)</h2>
+  <div class="phases">
+    <div class="phase q1">
+      <div class="q">Q1</div>
+      <div class="theme">FOUNDATION & SECURITY</div>
+      <ul>
+        <li>4.1 RBAC</li>
+        <li>4.2 2FA Admin</li>
+        <li>4.3 Auto-backup</li>
+        <li>4.5 Session timeout</li>
+        <li>3.1 Critical alert</li>
+      </ul>
+    </div>
+    <div class="phase q2">
+      <div class="q">Q2</div>
+      <div class="theme">CLINICAL ENHANCEMENT</div>
+      <ul>
+        <li>3.2 CDS popup</li>
+        <li>3.3 ACS/Stroke proto</li>
+        <li>4.4 Field audit trail</li>
+        <li>7.1 User manual + วิดีโอ</li>
+      </ul>
+    </div>
+    <div class="phase q3">
+      <div class="q">Q3</div>
+      <div class="theme">MANAGEMENT & REPORTS</div>
+      <ul>
+        <li>5.1 Exec dashboard</li>
+        <li>5.2 Scheduled report</li>
+        <li>5.3 KPI staff</li>
+        <li>6.3 V/S table refactor</li>
+      </ul>
+    </div>
+    <div class="phase q4">
+      <div class="q">Q4</div>
+      <div class="theme">CONNECTIVITY & MOBILE</div>
+      <ul>
+        <li>3.4 Referral notify</li>
+        <li>6.1 Offline mode</li>
+        <li>6.2 PWA</li>
+        <li>5.4 Patient feedback</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 9 KPI -->
+  <h2 id="s9"><span class="num">9</span>KPI วัดผลหลังปรับปรุง</h2>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="icon">⏱️</div>
+      <div class="name">Response Time</div>
+      <div class="target">Target: ลด 20% จากปัจจุบัน</div>
+    </div>
+    <div class="kpi">
+      <div class="icon">✅</div>
+      <div class="name">ความครบถ้วนข้อมูล</div>
+      <div class="target">Target: ≥95% ของเคส</div>
+    </div>
+    <div class="kpi">
+      <div class="icon">📋</div>
+      <div class="name">Consent Rate</div>
+      <div class="target">Target: ≥98% ของเคสที่เซ็นได้</div>
+    </div>
+    <div class="kpi">
+      <div class="icon">🛡️</div>
+      <div class="name">Security Incident</div>
+      <div class="target">Target: 0 เหตุการณ์/ปี</div>
+    </div>
+    <div class="kpi">
+      <div class="icon">😊</div>
+      <div class="name">User Satisfaction</div>
+      <div class="target">Target: ≥4.0/5.0</div>
+    </div>
+    <div class="kpi">
+      <div class="icon">⚡</div>
+      <div class="name">System Uptime</div>
+      <div class="target">Target: ≥99.5%</div>
+    </div>
+  </div>
+
+  <!-- 10 Budget -->
+  <h2 id="s10"><span class="num">10</span>งบประมาณโดยประมาณ</h2>
+  <table>
+    <tr><th>หัวข้อ</th><th>ประเภท</th><th>โดยประมาณ/ปี</th></tr>
+    <tr><td>Supabase Pro (Database)</td><td>Subscription</td><td>$300 (≈ 10,500 ฿)</td></tr>
+    <tr><td>Cloudinary Plus</td><td>Subscription</td><td>$1,020 (≈ 36,000 ฿)</td></tr>
+    <tr><td>Cloudflare Workers Paid</td><td>Subscription</td><td>$60 (≈ 2,100 ฿)</td></tr>
+    <tr><td>Domain + HTTPS</td><td>Subscription</td><td>1,500 ฿</td></tr>
+    <tr><td>Developer (ปรับปรุง Q1-Q4)</td><td>Man-hour</td><td>ขึ้นอยู่กับทีม</td></tr>
+    <tr><td>External API (HIS connect)</td><td>Integration</td><td>15,000-50,000 ฿ (one-time)</td></tr>
+    <tr><td>SMS Gateway (2FA)</td><td>Usage</td><td>~3,000 ฿/ปี</td></tr>
+    <tr><td><b>รวมค่าบริการ Cloud</b></td><td></td><td><b>≈ 50,000-75,000 ฿/ปี</b></td></tr>
+  </table>
+  <div class="callout info">
+    <strong>💡 หมายเหตุ:</strong> ปัจจุบันใช้ free tier ค่าใช้จ่ายเกือบ 0 — การอัปเกรดจะเพิ่มเสถียรภาพ
+    (uptime, backup, performance) ซึ่งจำเป็นสำหรับระบบที่ใช้งานจริงกับผู้ป่วย
+  </div>
+
+  <!-- 11 Risk -->
+  <h2 id="s11"><span class="num">11</span>Risk & Mitigation</h2>
+  <table>
+    <tr><th>ความเสี่ยง</th><th>ผลกระทบ</th><th>การป้องกัน</th></tr>
+    <tr>
+      <td>Supabase หรือ Cloudinary ล่ม</td>
+      <td>ระบบใช้งานไม่ได้</td>
+      <td>Backup รายวัน + มีแบบกระดาษ fallback</td>
+    </tr>
+    <tr>
+      <td>Data leak / hack</td>
+      <td>กระทบกฎหมาย PDPA</td>
+      <td>2FA + RBAC + Audit trail + Penetration test รายปี</td>
+    </tr>
+    <tr>
+      <td>ผู้ใช้ต่อต้านเปลี่ยนแปลง</td>
+      <td>ไม่ใช้ระบบใหม่</td>
+      <td>Change management + training + incentive</td>
+    </tr>
+    <tr>
+      <td>Developer key person หาย</td>
+      <td>บำรุงรักษายาก</td>
+      <td>Documentation ครบ + pair programming + knowledge transfer</td>
+    </tr>
+    <tr>
+      <td>งบประมาณไม่พอ</td>
+      <td>ทำไม่ครบ roadmap</td>
+      <td>จัดลำดับ P0/P1 ทำก่อน — ที่เหลือเลื่อน ไม่ทำทีเดียว</td>
+    </tr>
+  </table>
+
+  <!-- 12 Recommendation -->
+  <h2 id="s12"><span class="num">12</span>ข้อเสนอแนะต่อผู้บริหาร</h2>
+  <div class="callout danger">
+    <strong>🎯 เริ่มจาก 3 เรื่องเร่งด่วนสุด (P0) ภายใน 90 วัน:</strong>
+    <ol>
+      <li>ระบบ RBAC ระดับหน่วยงาน (ข้อ 4.1) — จำเป็นตาม PDPA</li>
+      <li>2FA สำหรับ Admin (ข้อ 4.2) — ลดความเสี่ยง data breach</li>
+      <li>Auto-backup + DR plan (ข้อ 4.3) — ปกป้องข้อมูลผู้ป่วย</li>
+    </ol>
+  </div>
+
+  <div class="callout success">
+    <strong>✅ ข้อเสนอต่อผู้บริหาร:</strong>
+    <ol>
+      <li>อนุมัติงบประมาณ Supabase Pro + Cloudinary Plus เพื่อเพิ่มเสถียรภาพ</li>
+      <li>แต่งตั้งคณะทำงาน (Clinical + IT + Admin) ประชุมเดือนละ 1 ครั้ง</li>
+      <li>จัดสรรเวลา developer อย่างน้อย 20 ชม./สัปดาห์ สำหรับปรับปรุง</li>
+      <li>เริ่มเจรจากับโรงพยาบาลปลายทาง 1-2 แห่ง สำหรับ referral API</li>
+      <li>วาง timeline review progress ทุกสิ้น quarter</li>
+    </ol>
+  </div>
+
+  <div class="callout info">
+    <strong>📣 ผลที่คาดหวังหลัง 12 เดือน:</strong> ระบบปลอดภัยตาม PDPA, ลด response time, มี dashboard ผู้บริหารใช้งานจริง,
+    เชื่อมกับโรงพยาบาลปลายทางอย่างน้อย 2 แห่ง, ใช้งาน offline ได้, มีระบบ backup/recovery
+    พร้อม KPI ครบทั้ง 6 ตัวเข้าใกล้ target
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top: 15mm; padding-top: 5mm; border-top: 2px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 9pt;">
+    © PT Medical System · Improvement Plan v1.0 · ร่างเสนอ 2026-04-15<br>
+    <i>เอกสารภายใน — สำหรับการวางแผนเท่านั้น ยังไม่มีผลผูกพัน</i>
+  </div>
+
+</div>
+
+<script>
+  window.addEventListener('beforeprint', function(){ document.querySelector('.toolbar').style.display = 'none'; });
+  window.addEventListener('afterprint', function(){ document.querySelector('.toolbar').style.display = ''; });
+</script>
+
+</body>
+</html>

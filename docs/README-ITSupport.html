@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>PT Medical System — คู่มือ IT Support</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: 'Sarabun', sans-serif;
+    color: #1e293b;
+    background: #f1f5f9;
+    margin: 0;
+    font-size: 11.5pt;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 210mm;
+    margin: 14mm auto;
+    background: #fff;
+    padding: 18mm 16mm;
+    box-shadow: 0 4px 20px rgba(15,36,68,0.08);
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1e3a5f;
+    color: #fff;
+    padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .toolbar h6 { margin: 0; font-weight: 700; font-size: 0.95rem; }
+  .btn-print {
+    background: #dc2626; color: #fff; border: none;
+    padding: 7px 16px; border-radius: 6px; font-weight: 600;
+    cursor: pointer; font-size: 0.85rem; font-family: inherit;
+  }
+  .btn-print:hover { background: #b91c1c; }
+
+  /* Cover */
+  .cover {
+    text-align: center;
+    padding: 30mm 0 20mm;
+    border-bottom: 4px solid #dc2626;
+    margin-bottom: 10mm;
+  }
+  .cover .accent { color: #dc2626; }
+  .cover h1 { font-size: 28pt; font-weight: 800; margin: 0 0 6mm; color: #1e3a5f; letter-spacing: -0.02em; }
+  .cover .sub { font-size: 14pt; color: #64748b; font-weight: 500; margin-bottom: 12mm; }
+  .cover .meta {
+    display: inline-block; text-align: left;
+    font-size: 10pt; color: #475569;
+    background: #f8fafc; padding: 4mm 6mm; border-radius: 3mm;
+  }
+  .cover .meta b { color: #1e3a5f; }
+  .cover .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    color: #fff; padding: 2mm 5mm; border-radius: 100px;
+    font-size: 10pt; font-weight: 600; letter-spacing: 0.3px;
+    margin-bottom: 10mm;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4 { color: #1e3a5f; font-weight: 700; }
+  h2 {
+    font-size: 16pt; margin: 12mm 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid #dc2626;
+    display: flex; align-items: center; gap: 3mm;
+  }
+  h2 .num {
+    background: #1e3a5f; color: #fff;
+    width: 9mm; height: 9mm; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11pt; font-weight: 700;
+  }
+  h3 { font-size: 13pt; margin: 6mm 0 2mm; color: #1e3a5f; }
+  h4 { font-size: 11.5pt; margin: 4mm 0 1.5mm; color: #475569; }
+
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 7mm; }
+  li { margin-bottom: 1mm; }
+
+  /* Callouts */
+  .callout {
+    padding: 3mm 5mm; border-radius: 2mm;
+    margin: 3mm 0; font-size: 10.5pt;
+    border-left: 4px solid;
+  }
+  .callout.info    { background: #eff6ff; border-color: #2563eb; }
+  .callout.warn    { background: #fffbeb; border-color: #f59e0b; }
+  .callout.danger  { background: #fef2f2; border-color: #dc2626; }
+  .callout.success { background: #f0fdf4; border-color: #16a34a; }
+  .callout strong { color: inherit; }
+
+  /* Tables */
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 2mm 0 4mm; font-size: 10pt;
+  }
+  th {
+    background: #1e3a5f; color: #fff;
+    padding: 2mm 3mm; text-align: left; font-weight: 600;
+  }
+  td {
+    border: 1px solid #e2e8f0;
+    padding: 2mm 3mm; vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  /* Code */
+  code {
+    background: #f1f5f9; padding: 0.5mm 1.5mm;
+    border-radius: 1mm; font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt; color: #dc2626;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0;
+    padding: 3mm 4mm; border-radius: 2mm;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt; line-height: 1.4;
+    overflow-x: auto;
+    margin: 2mm 0 4mm;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+
+  /* Step list */
+  .steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .steps li {
+    counter-increment: step;
+    padding: 2mm 0 2mm 10mm;
+    position: relative;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before {
+    content: counter(step);
+    position: absolute; left: 0;
+    width: 7mm; height: 7mm;
+    background: #dc2626; color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 10pt;
+  }
+
+  /* Topic cards */
+  .card-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 4mm;
+    margin: 3mm 0 4mm;
+  }
+  .mini-card {
+    background: #f8fafc;
+    padding: 3mm 4mm;
+    border-radius: 2mm;
+    border-left: 3px solid #2563eb;
+  }
+  .mini-card .title { font-weight: 700; color: #1e3a5f; margin-bottom: 1mm; font-size: 10.5pt; }
+  .mini-card .body { font-size: 9.5pt; color: #475569; }
+
+  /* Severity pills */
+  .sev { display: inline-block; padding: 0.5mm 3mm; border-radius: 100px;
+         font-weight: 700; font-size: 9pt; letter-spacing: 0.3px; }
+  .sev.high { background: #fee2e2; color: #b91c1c; }
+  .sev.mid  { background: #fef3c7; color: #b45309; }
+  .sev.low  { background: #dcfce7; color: #15803d; }
+
+  /* TOC */
+  .toc {
+    background: #f8fafc;
+    padding: 5mm 7mm;
+    border-radius: 3mm;
+    margin: 5mm 0 10mm;
+    border: 1px solid #e2e8f0;
+  }
+  .toc h3 { margin: 0 0 3mm; color: #1e3a5f; }
+  .toc ol { columns: 2; column-gap: 8mm; padding-left: 5mm; margin: 0; }
+  .toc li { margin-bottom: 1mm; break-inside: avoid; font-size: 10pt; }
+  .toc a { color: #1e3a5f; text-decoration: none; }
+  .toc a:hover { color: #dc2626; }
+
+  /* Print styles */
+  @media print {
+    .toolbar { display: none; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+    h2 { page-break-after: avoid; }
+    pre, table, .callout { page-break-inside: avoid; }
+    .page-break { page-break-before: always; }
+    a { color: #1e3a5f; text-decoration: none; }
+  }
+
+  @page { size: A4; margin: 18mm 16mm; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h6>📘 คู่มือ IT Support — PT Medical System</h6>
+  <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / Save as PDF (Ctrl+P)</button>
+</div>
+
+<div class="page">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="badge">IT Support Manual · v1.0</div>
+    <h1>PT Medical <span class="accent">System</span></h1>
+    <div class="sub">คู่มือการติดตั้ง บำรุงรักษา และแก้ไขปัญหา สำหรับเจ้าหน้าที่ IT</div>
+    <div class="meta">
+      <b>ระบบ:</b> PT Medical Transport + First Aid + GPS + Location<br>
+      <b>Stack:</b> HTML/JS · Supabase · Cloudinary · Google Apps Script · CMSV6<br>
+      <b>Repo:</b> github.com/supwilaimedical/pt-medical-system<br>
+      <b>วันที่:</b> ปรับปรุงล่าสุด 2026-04-15
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>📑 สารบัญ</h3>
+    <ol>
+      <li><a href="#s1">ภาพรวมระบบ</a></li>
+      <li><a href="#s2">Stack และส่วนประกอบ</a></li>
+      <li><a href="#s3">การเข้าถึง / Login</a></li>
+      <li><a href="#s4">โครงสร้างไฟล์</a></li>
+      <li><a href="#s5">ฐานข้อมูล Supabase</a></li>
+      <li><a href="#s6">Credential & Config</a></li>
+      <li><a href="#s7">Deploy / Hosting</a></li>
+      <li><a href="#s8">GPS Proxy Architecture</a></li>
+      <li><a href="#s9">Cloudinary (รูป + PDF)</a></li>
+      <li><a href="#s10">งานประจำ (Daily / Weekly)</a></li>
+      <li><a href="#s11">Troubleshoot ทั่วไป</a></li>
+      <li><a href="#s12">Backup / Recovery</a></li>
+      <li><a href="#s13">การเพิ่ม User ใหม่</a></li>
+      <li><a href="#s14">การอัปเกรด / Deploy ใหม่</a></li>
+      <li><a href="#s15">Contact & Escalation</a></li>
+    </ol>
+  </div>
+
+  <!-- Section 1 -->
+  <h2 id="s1"><span class="num">1</span>ภาพรวมระบบ</h2>
+  <p>
+    <b>PT Medical System</b> คือระบบจัดการผู้ป่วยฉุกเฉิน + ปฐมพยาบาล + ติดตามรถ
+    แบบ <b>Web-based</b> ไม่ต้องติดตั้งโปรแกรม ใช้งานผ่าน <b>Browser</b> ได้เลย
+    ทั้งบนคอม แท็บเล็ต และมือถือ
+  </p>
+  <div class="card-grid">
+    <div class="mini-card"><div class="title">🚑 Transport</div><div class="body">บันทึกเคสนำส่งผู้ป่วย V/S + IV + Consent 2 ขั้นตอน + พิมพ์ใบส่งตัว</div></div>
+    <div class="mini-card"><div class="title">🩹 First Aid</div><div class="body">อีเวนท์ปฐมพยาบาล ลงทะเบียนผู้บาดเจ็บ, triage 4 ระดับ</div></div>
+    <div class="mini-card"><div class="title">📡 GPS Tracking</div><div class="body">ตามรถ real-time + แชร์ลิงก์สาธารณะ + เปิดกล้อง DVR</div></div>
+    <div class="mini-card"><div class="title">📍 Location</div><div class="body">แผนที่โรงพยาบาล/สถานที่ พร้อม marker clustering</div></div>
+    <div class="mini-card"><div class="title">🖥️ Monitor</div><div class="body">Dashboard รวมสถานะ real-time สำหรับศูนย์สั่งการ</div></div>
+    <div class="mini-card"><div class="title">⚙️ Admin Panel</div><div class="body">ตั้งค่า + สถิติ + Activity Log + ภาพรวมระบบ</div></div>
+  </div>
+
+  <h2 id="s2"><span class="num">2</span>Stack และส่วนประกอบ</h2>
+  <table>
+    <tr><th style="width:25%">หัวข้อ</th><th>บริการ / ไลบรารี</th><th>หมายเหตุ</th></tr>
+    <tr><td>Frontend</td><td>HTML + JS (Vanilla) + Bootstrap 5</td><td>ไม่ใช้ Build tool — เปิดไฟล์ .html รันได้เลย</td></tr>
+    <tr><td>Database</td><td>Supabase PostgreSQL</td><td>rwxaalgvkzlsyfzdebcj.supabase.co</td></tr>
+    <tr><td>Realtime</td><td>Supabase Realtime (Postgres changes)</td><td>Sync ข้ามอุปกรณ์</td></tr>
+    <tr><td>Auth</td><td>Google Apps Script (HR API)</td><td>ไม่ใช้ Supabase Auth</td></tr>
+    <tr><td>File storage</td><td>Cloudinary (deimrg3xs)</td><td>รูป + PDF (ใบ Refer, Consent)</td></tr>
+    <tr><td>GPS API</td><td>CMSV6 / 808gps</td><td>ต้อง Proxy เพราะเป็น HTTP</td></tr>
+    <tr><td>GPS Proxy</td><td>Render.com + Google Apps Script fallback</td><td>Timeout 5s → ใช้ fallback</td></tr>
+    <tr><td>OCR</td><td>Gemini API via Cloudflare Worker</td><td>OCR บัตรประชาชน</td></tr>
+    <tr><td>Map</td><td>Leaflet 1.9.4 + MarkerCluster</td><td>Tile จาก CartoDB</td></tr>
+    <tr><td>PDF</td><td>PDF.js 2.16.105</td><td>แสดงผล PDF ใน browser</td></tr>
+  </table>
+
+  <h2 id="s3"><span class="num">3</span>การเข้าถึง / Login</h2>
+  <ol class="steps">
+    <li>เปิด Browser ไปที่ URL ระบบ (เช่น <code>https://your-domain/pt-medical-system/</code>)</li>
+    <li>ใส่ <b>Username</b> และ <b>Password</b> ที่ HR ให้มา (ใช้ระบบเดียวกับข้อมูลพนักงาน)</li>
+    <li>กด <b>Login</b> — ระบบจะเช็คผ่าน Google Apps Script (GAS HR API)</li>
+    <li>ถ้า role เป็น <b>Admin</b> จะเห็นปุ่ม "ตั้งค่า" และเมนูเพิ่มเติม</li>
+  </ol>
+  <div class="callout info">
+    <strong>💡 Session</strong> — เก็บใน browser's <code>localStorage</code> key: <code>pt_user_meta</code>
+    ปิด browser แล้วเปิดใหม่ยังล็อกอินอยู่ — ถ้าอยาก logout ให้กดปุ่ม logout
+  </div>
+  <div class="callout warn">
+    <strong>⚠️ ถ้า Login ไม่ได้</strong> — ตรวจสอบ: (1) Internet (2) GAS_AUTH_API_URL ยังทำงานอยู่ไหม
+    (3) Username/Password ถูกต้องไหม (4) Browser console มี error อะไร
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>โครงสร้างไฟล์</h2>
+<pre><code>pt-medical-system/
+├── index.html              ← Landing + Login + Admin
+├── shared/                 ← ไลบรารีใช้ร่วมทุกโมดูล
+│   ├── config.js           ← URL + Key ทั้งระบบ (สำคัญ!)
+│   ├── auth.js             ← Login, session
+│   ├── realtime.js         ← Supabase realtime
+│   ├── cloudinary.js       ← Upload
+│   ├── gps-providers.js    ← Adapter GPS (CMSV6...)
+│   └── styles.css          ← CSS รวม
+├── transport/index.html    ← โมดูล Transport
+├── firstaid/index.html     ← โมดูล First Aid
+├── gps/
+│   ├── index.html          ← Dashboard GPS (Admin)
+│   └── share.html          ← หน้าแชร์สาธารณะ (no auth)
+├── location/index.html     ← โมดูล Location
+├── monitor/index.html      ← Dashboard Monitor
+├── migration/*.sql         ← SQL สำหรับ Supabase
+├── cloudflare/             ← Cloudflare Worker code
+└── docs/                   ← เอกสาร</code></pre>
+
+  <h2 id="s5"><span class="num">5</span>ฐานข้อมูล Supabase</h2>
+  <h3>Tables หลัก</h3>
+  <table>
+    <tr><th>Table</th><th>หน้าที่</th><th>Module</th></tr>
+    <tr><td><code>cases</code></td><td>เคส Transport — ข้อมูลผู้ป่วย V/S, IV, สถานะ</td><td>Transport</td></tr>
+    <tr><td><code>transport_consents</code></td><td>Consent ทุก version (ไม่ลบ)</td><td>Transport</td></tr>
+    <tr><td><code>fa_events</code></td><td>อีเวนท์ปฐมพยาบาล</td><td>First Aid</td></tr>
+    <tr><td><code>fa_registry</code></td><td>ผู้บาดเจ็บในอีเวนท์</td><td>First Aid</td></tr>
+    <tr><td><code>loc_customers</code></td><td>ลูกค้า/สถานที่บนแผนที่</td><td>Location</td></tr>
+    <tr><td><code>loc_shared_tokens</code></td><td>ลิงก์แชร์ location</td><td>Location</td></tr>
+    <tr><td><code>gps_providers</code></td><td>บัญชี GPS (CMSV6)</td><td>GPS</td></tr>
+    <tr><td><code>gps_vehicles</code></td><td>รถที่ sync มาจาก CMSV6</td><td>GPS</td></tr>
+    <tr><td><code>gps_shared_tokens</code></td><td>ลิงก์แชร์ GPS + สิทธิ์กล้อง</td><td>GPS</td></tr>
+    <tr><td><code>settings</code></td><td>ตั้งค่าระบบ (key-value)</td><td>All</td></tr>
+    <tr><td><code>activity_log</code></td><td>บันทึกกิจกรรม user (audit trail)</td><td>All</td></tr>
+    <tr><td><code>analytics</code></td><td>Snapshot เคสสำหรับรีพอร์ต</td><td>All</td></tr>
+  </table>
+
+  <h3>การเข้าถึง Supabase</h3>
+  <ol class="steps">
+    <li>เข้า <code>https://supabase.com/dashboard</code> → เลือก project <b>rwxaalgvkzlsyfzdebcj</b></li>
+    <li>Table Editor → เลือก table ที่ต้องการดู/แก้</li>
+    <li>SQL Editor → รัน query ได้โดยตรง</li>
+    <li>Settings → API → ดู URL และ anon key</li>
+  </ol>
+  <div class="callout danger">
+    <strong>🔒 ห้ามแชร์ service_role key</strong> — ใช้เฉพาะ anon key สำหรับ client-side
+    service_role key มีสิทธิ์เต็ม bypass RLS — แชร์แล้วอันตรายมาก
+  </div>
+
+  <h2 id="s6"><span class="num">6</span>Credential & Config</h2>
+  <p>ทุกค่าที่เป็น <b>public</b> (URL, anon key, cloudinary cloud name) อยู่ใน <code>shared/config.js</code></p>
+<pre><code>const CONFIG = {
+  SUPABASE_URL: 'https://rwxaalgvkzlsyfzdebcj.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_...',
+  CLOUDINARY_CLOUD_NAME: 'deimrg3xs',
+  CLOUDINARY_UPLOAD_PRESET: 'pt-medical',
+  GAS_AUTH_API_URL: 'https://script.google.com/macros/s/.../exec',
+  GPS_PROXY_URL: 'https://gps-proxy-lpdq.onrender.com',
+  GPS_PROXY_FALLBACK: 'https://script.google.com/macros/.../exec',
+  OCR_PROXY_URL: 'https://gps-proxy.supwilai-ambulance.workers.dev'
+};</code></pre>
+  <div class="callout warn">
+    <strong>⚠️ Secret ที่ห้ามเข้า git:</strong> Supabase service_role key, Gemini API key,
+    รหัสบัญชี CMSV6 — เก็บไว้ที่ Cloudflare Secret, Render env, หรือ .env ที่ ignore แล้ว
+  </div>
+
+  <h2 id="s7"><span class="num">7</span>Deploy / Hosting</h2>
+  <p>ระบบเป็น <b>Static site</b> — ไม่มี backend ต้อง deploy เองก็ได้ หรือโฮสต์ที่:</p>
+  <ul>
+    <li><b>GitHub Pages</b> — เปิด Pages จาก repo → เลือก branch main → ใช้ root</li>
+    <li><b>Cloudflare Pages</b> — connect repo → build command เว้นว่าง → output dir = root</li>
+    <li><b>Netlify</b> — ลาก folder ใส่ หรือ connect repo</li>
+    <li><b>Self-host</b> — วางไฟล์ใน nginx/apache — serve static</li>
+  </ul>
+  <div class="callout success">
+    <strong>✅ เปิด HTTPS</strong> — จำเป็น! เพราะ (1) Service Worker ต้องการ
+    (2) getUserMedia (กล้อง) ต้องการ (3) Supabase realtime ใช้ wss://
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>GPS Proxy Architecture</h2>
+  <p>CMSV6 เป็น HTTP ไม่ใช่ HTTPS — browser จะ block เพราะ mixed content
+  ระบบเลยผ่าน proxy 2 ชั้น:</p>
+  <table>
+    <tr><th>ลำดับ</th><th>บริการ</th><th>URL / ตั้งค่า</th><th>Timeout</th></tr>
+    <tr><td>1 (เร็ว)</td><td>Render.com</td><td><code>gps-proxy-lpdq.onrender.com</code></td><td>5 วิ</td></tr>
+    <tr><td>2 (fallback)</td><td>Google Apps Script</td><td>เดียวกับ AUTH_API</td><td>ช้ากว่าแต่นิ่ง</td></tr>
+  </table>
+  <div class="callout warn">
+    <strong>⚠️ Render free tier</strong> "นอน" หลังไม่ใช้ 15 นาที — ต่อครั้งแรกอาจรอ 30 วิ
+    ระบบจะ fallback ไป GAS ถ้า timeout
+  </div>
+  <h3>การตรวจสอบ</h3>
+  <ul>
+    <li>เข้า Admin → GPS → ดู <b>Proxy Status Monitor</b></li>
+    <li>หรือเปิด <code>https://gps-proxy-lpdq.onrender.com</code> ตรงๆ ควรตอบ 200/404</li>
+    <li>Console log ที่หน้า GPS จะเห็น "proxy failed, using fallback"</li>
+  </ul>
+
+  <h2 id="s9"><span class="num">9</span>Cloudinary (รูป + PDF)</h2>
+  <p>ใช้ Upload preset <b>pt-medical</b> แบบ <b>unsigned</b> (client upload ได้ตรง)</p>
+  <h3>Folder structure</h3>
+  <ul>
+    <li><code>pt-medical/transport/{case_id}</code> — ใบ Refer ของแต่ละเคส</li>
+    <li><code>pt-medical/firstaid/</code> — รูปอีเวนท์</li>
+    <li><code>pt-medical/location/</code> — รูปสถานที่</li>
+    <li><code>pt-medical/signatures/</code> — ลายเซ็น Consent</li>
+    <li><code>pt-medical/logos/</code> — โลโก้บริษัท</li>
+  </ul>
+  <div class="callout danger">
+    <strong>🛑 ถ้า PDF view ไม่ได้</strong> — ไปที่ Cloudinary Dashboard → Settings → Security
+    → เปิด "Allow delivery of PDF and ZIP files"
+  </div>
+
+  <h2 id="s10"><span class="num">10</span>งานประจำ (Daily / Weekly)</h2>
+  <h3>Daily</h3>
+  <ul>
+    <li>เช็ค Admin → ภาพรวม → ดู System Health (Database, Realtime, GPS Proxy) ต้องเขียวหมด</li>
+    <li>ดู Activity Log → ค้นหา action ผิดปกติ (DELETE_CASE, SETTINGS_UPDATE)</li>
+    <li>เช็คเคส Active ค้างเกิน 24 ชม. — อาจลืมปิดเคส</li>
+  </ul>
+  <h3>Weekly</h3>
+  <ul>
+    <li>Supabase Dashboard → Database → ดู disk usage + row count</li>
+    <li>Cloudinary Dashboard → ดู storage + bandwidth</li>
+    <li>ทดสอบ GPS Share link — สร้าง/เปิดดู/ยกเลิก</li>
+    <li>ทดสอบ Multi-device consent flow (Device A + B)</li>
+  </ul>
+  <h3>Monthly</h3>
+  <ul>
+    <li>Backup ฐานข้อมูล (Supabase → Database → Backups, หรือ SQL Dump)</li>
+    <li>Export Activity Log ลบ row เก่าเกิน 6 เดือน</li>
+    <li>Update dependencies (Bootstrap, Leaflet, PDF.js) ถ้ามี security patch</li>
+  </ul>
+
+  <h2 id="s11"><span class="num">11</span>Troubleshoot ปัญหาที่พบบ่อย</h2>
+
+  <table>
+    <tr><th>อาการ</th><th>สาเหตุ</th><th>วิธีแก้</th></tr>
+    <tr>
+      <td>หน้าแชร์ GPS loading ค้าง</td>
+      <td>Token ไม่มี / หมดอายุ / provider off</td>
+      <td>เช็ค <code>gps_shared_tokens</code> → <code>status='Active'</code> และ <code>expires_at &gt; now()</code></td>
+    </tr>
+    <tr>
+      <td>GPS Refresh ช้ามาก (&gt;10s)</td>
+      <td>Render proxy หลับ — ใช้ GAS fallback</td>
+      <td>ไปเปิด URL Render ตรงๆ ครั้งเดียวให้ตื่น ปกติเร็วภายใน 30 วิ</td>
+    </tr>
+    <tr>
+      <td>PDF Refer ไม่โชว์</td>
+      <td>Cloudinary PDF delivery ปิดอยู่</td>
+      <td>Settings → Security → เปิด "Allow delivery of PDF"</td>
+    </tr>
+    <tr>
+      <td>Refer docs หายหลังเปิดเคสใหม่</td>
+      <td>Bug เก่า (แก้แล้ว commit 468ab80)</td>
+      <td>อัปเดต code เป็น version ล่าสุด</td>
+    </tr>
+    <tr>
+      <td>Login บอก "รหัสผิด" ทั้งที่ถูก</td>
+      <td>GAS API ไม่ตอบ / URL เปลี่ยน</td>
+      <td>เปิด Browser Console ดู error → เช็ค GAS_AUTH_API_URL ยัง deploy อยู่ไหม</td>
+    </tr>
+    <tr>
+      <td>Realtime ไม่ sync ข้าม device</td>
+      <td>(1) Realtime ปิด (2) RLS block (3) WebSocket block</td>
+      <td>Admin → ภาพรวม → เช็ค Realtime Status → ถ้าไม่เขียวเข้า Supabase เปิด realtime</td>
+    </tr>
+    <tr>
+      <td>Device B sync แล้ว Device A หายข้อมูล</td>
+      <td>Race condition — Device A overwrite</td>
+      <td>สอนผู้ใช้ Refresh ก่อน Save (ดู <code>docs/MULTI_DEVICE_WORKFLOW.md</code>)</td>
+    </tr>
+    <tr>
+      <td>แผนที่ไม่โหลด tile</td>
+      <td>CartoDB ล่ม / CORS</td>
+      <td>เปลี่ยน tile เป็น OSM: <code>https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</code></td>
+    </tr>
+    <tr>
+      <td>กล้อง CMSV6 เปิดไม่ได้</td>
+      <td>HLS port 6604 block / session หมดอายุ</td>
+      <td>Admin → GPS Provider → ทดสอบเชื่อมต่อ → re-login</td>
+    </tr>
+    <tr>
+      <td>หน้าเด้งกลับ Login ตลอด</td>
+      <td><code>pt_user_meta</code> โดนลบ / corrupt</td>
+      <td>Browser → Console → <code>localStorage.clear()</code> แล้ว Login ใหม่</td>
+    </tr>
+  </table>
+
+  <h2 id="s12"><span class="num">12</span>Backup / Recovery</h2>
+  <h3>Backup รายเดือน</h3>
+  <ol class="steps">
+    <li>เข้า Supabase Dashboard → Database → <b>Backups</b></li>
+    <li>คลิก "Download backup" (backup อัตโนมัติทำทุกวัน เก็บ 7 วัน)</li>
+    <li>หรือใช้ SQL Editor → export table ที่สำคัญเป็น CSV</li>
+    <li>เก็บไฟล์ backup ที่ Google Drive / OneDrive (อย่าเก็บเครื่องเดียว)</li>
+  </ol>
+  <h3>Recovery</h3>
+  <ol class="steps">
+    <li>Supabase → Database → Backups → "Restore" (pro plan เท่านั้น)</li>
+    <li>หรือ Import CSV กลับเข้า table เดิม (SQL: <code>COPY table FROM 'file.csv' CSV HEADER</code>)</li>
+    <li>ทดสอบใน staging ก่อน restore production</li>
+  </ol>
+  <div class="callout info">
+    <strong>💾 Cloudinary ไม่ต้อง backup</strong> — Cloudinary มี durability เองแล้ว
+    แต่ URL ทั้งหมดอยู่ใน Supabase อยู่แล้ว — ถ้าลบ Cloudinary → PDF/รูปหายหมด
+  </div>
+
+  <h2 id="s13"><span class="num">13</span>การเพิ่ม User ใหม่</h2>
+  <p>ระบบใช้ <b>GAS HR API</b> ไม่ใช่ Supabase Auth ดังนั้น:</p>
+  <ol class="steps">
+    <li>ติดต่อ HR ให้เพิ่มพนักงานในระบบ HR (Google Sheet หลัง GAS)</li>
+    <li>กำหนด username/password และ role (Admin / User)</li>
+    <li>HR save sheet → GAS จะเห็นผู้ใช้ใหม่อัตโนมัติ</li>
+    <li>แจ้งผู้ใช้ login ที่ URL ระบบ</li>
+  </ol>
+  <div class="callout warn">
+    <strong>ℹ️ Role ที่ใช้:</strong> <code>Admin</code> เห็น ตั้งค่า + Provider GPS + Log<br>
+    <code>User</code> (ค่า default) เห็นโมดูลอื่นทั้งหมดเว้นแต่ตั้งค่า
+  </div>
+
+  <h2 id="s14"><span class="num">14</span>การอัปเกรด / Deploy ใหม่</h2>
+  <ol class="steps">
+    <li>Dev push code ขึ้น GitHub (repo <code>supwilaimedical/pt-medical-system</code>)</li>
+    <li>ถ้าใช้ Cloudflare Pages / Netlify / GitHub Pages — auto deploy</li>
+    <li>ถ้า self-host — <code>git pull</code> บน server</li>
+    <li>ถ้ามี migration SQL ใหม่ (folder <code>migration/</code>) — รันใน Supabase SQL Editor</li>
+    <li>ทดสอบ smoke test: Login → เปิดแต่ละโมดูล → สร้างเคสทดสอบ</li>
+  </ol>
+  <div class="callout danger">
+    <strong>🛑 Rollback</strong> — ถ้า deploy แล้วพัง: <code>git revert HEAD</code> แล้ว push
+    หรือ redeploy commit เก่า (Cloudflare Pages/Netlify เก็บ history ให้)
+  </div>
+
+  <h2 id="s15"><span class="num">15</span>Contact & Escalation</h2>
+  <table>
+    <tr><th>ระดับ</th><th>ติดต่อ</th><th>เคสที่เหมาะ</th></tr>
+    <tr><td><span class="sev low">L1</span></td><td>IT Support (คุณ)</td><td>Login ไม่ได้, ใช้งาน UI ไม่เป็น</td></tr>
+    <tr><td><span class="sev mid">L2</span></td><td>System Admin</td><td>Supabase ล่ม, RLS error, Proxy ตาย</td></tr>
+    <tr><td><span class="sev high">L3</span></td><td>Developer (repo maintainer)</td><td>Bug ใน code, schema migration, new feature</td></tr>
+  </table>
+  <div class="callout info">
+    <strong>📞 Emergency</strong> — ถ้าทั้งระบบใช้งานไม่ได้เกิน 30 นาที โทรหา Developer ทันที
+    (แจ้งระดับความรุนแรง + จำนวนผู้กระทบ + error screenshot)
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top: 15mm; padding-top: 5mm; border-top: 2px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 9pt;">
+    © PT Medical System · IT Support Manual v1.0 · ปรับปรุง 2026-04-15<br>
+    <i>สำหรับใช้ภายในองค์กรเท่านั้น</i>
+  </div>
+
+</div>
+
+<script>
+  // Auto hide toolbar when printing
+  window.addEventListener('beforeprint', function(){
+    document.querySelector('.toolbar').style.display = 'none';
+  });
+  window.addEventListener('afterprint', function(){
+    document.querySelector('.toolbar').style.display = '';
+  });
+</script>
+
+</body>
+</html>
