@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Multi-Device Workflow — PT Medical System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: 'Sarabun', sans-serif;
+    color: #1e293b; background: #f1f5f9;
+    margin: 0; font-size: 11.5pt; line-height: 1.55;
+  }
+  .page {
+    max-width: 210mm; margin: 14mm auto;
+    background: #fff; padding: 18mm 16mm;
+    box-shadow: 0 4px 20px rgba(15,36,68,0.08);
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1e3a5f; color: #fff;
+    padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .toolbar h6 { margin: 0; font-weight: 700; font-size: 0.95rem; }
+  .btn-print {
+    background: #dc2626; color: #fff; border: none;
+    padding: 7px 16px; border-radius: 6px; font-weight: 600;
+    cursor: pointer; font-size: 0.85rem; font-family: inherit;
+  }
+  .btn-print:hover { background: #b91c1c; }
+
+  .cover {
+    text-align: center;
+    padding: 25mm 0 15mm;
+    border-bottom: 4px solid #dc2626;
+    margin-bottom: 10mm;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    color: #fff; padding: 2mm 5mm; border-radius: 100px;
+    font-size: 10pt; font-weight: 600; margin-bottom: 8mm;
+  }
+  .cover h1 {
+    font-size: 26pt; font-weight: 800;
+    margin: 0 0 4mm; color: #1e3a5f; letter-spacing: -0.02em;
+  }
+  .cover .sub { font-size: 13pt; color: #64748b; font-weight: 500; }
+
+  h1, h2, h3, h4 { color: #1e3a5f; font-weight: 700; }
+  h2 {
+    font-size: 16pt; margin: 12mm 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid #dc2626;
+  }
+  h3 { font-size: 13pt; margin: 6mm 0 2mm; }
+  h4 { font-size: 11.5pt; margin: 4mm 0 1.5mm; color: #475569; }
+
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 7mm; }
+  li { margin-bottom: 1mm; }
+
+  blockquote {
+    margin: 3mm 0; padding: 3mm 5mm;
+    background: #eff6ff; border-left: 4px solid #2563eb;
+    border-radius: 2mm; color: #1e3a5f;
+    font-style: italic;
+  }
+
+  .callout {
+    padding: 3mm 5mm; border-radius: 2mm;
+    margin: 3mm 0; font-size: 10.5pt;
+    border-left: 4px solid;
+  }
+  .callout.info    { background: #eff6ff; border-color: #2563eb; }
+  .callout.warn    { background: #fffbeb; border-color: #f59e0b; }
+  .callout.danger  { background: #fef2f2; border-color: #dc2626; }
+  .callout.success { background: #f0fdf4; border-color: #16a34a; }
+
+  code {
+    background: #f1f5f9; padding: 0.3mm 1.5mm;
+    border-radius: 1mm; font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt; color: #dc2626;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0;
+    padding: 3mm 4mm; border-radius: 2mm;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9pt; line-height: 1.5;
+    overflow-x: auto;
+    margin: 2mm 0 4mm;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 2mm 0 4mm; font-size: 10pt;
+  }
+  th { background: #1e3a5f; color: #fff; padding: 2mm 3mm; text-align: left; }
+  td { border: 1px solid #e2e8f0; padding: 2mm 3mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  .pattern {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-left: 5px solid;
+    border-radius: 2mm; padding: 4mm 6mm;
+    margin: 4mm 0;
+  }
+  .pattern.safe     { border-left-color: #16a34a; background: #f0fdf4; }
+  .pattern.ok       { border-left-color: #2563eb; background: #eff6ff; }
+  .pattern.risky    { border-left-color: #f59e0b; background: #fffbeb; }
+  .pattern .title {
+    font-weight: 700; color: #1e3a5f; font-size: 12pt; margin-bottom: 2mm;
+  }
+
+  .golden-rule {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 5px solid #dc2626;
+    border-radius: 2mm;
+    padding: 4mm 6mm;
+    margin: 3mm 0;
+    position: relative;
+  }
+  .golden-rule .num {
+    position: absolute;
+    top: -3mm; left: -3mm;
+    width: 10mm; height: 10mm;
+    background: #dc2626; color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 11pt;
+    box-shadow: 0 2px 6px rgba(220,38,38,0.3);
+  }
+  .golden-rule .title {
+    font-weight: 700; color: #b91c1c; font-size: 11.5pt; margin-bottom: 1mm; margin-left: 8mm;
+  }
+  .golden-rule .body { margin-left: 8mm; font-size: 10.5pt; color: #475569; }
+
+  .qa {
+    background: #f8fafc;
+    border-radius: 2mm;
+    padding: 4mm 6mm;
+    margin: 3mm 0;
+    border-left: 3px solid #64748b;
+  }
+  .qa .q { font-weight: 700; color: #1e3a5f; margin-bottom: 2mm; }
+  .qa .a { font-size: 10.5pt; color: #475569; }
+
+  .toc {
+    background: #f8fafc; padding: 5mm 7mm;
+    border-radius: 3mm; margin: 5mm 0 10mm;
+    border: 1px solid #e2e8f0;
+  }
+  .toc h3 { margin: 0 0 3mm; color: #1e3a5f; }
+  .toc ol { padding-left: 5mm; margin: 0; }
+  .toc li { margin-bottom: 1mm; font-size: 10pt; }
+  .toc a { color: #1e3a5f; text-decoration: none; }
+
+  @media print {
+    .toolbar { display: none; }
+    body { background: #fff; font-size: 10.5pt; }
+    .page { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+    h2, .pattern, .golden-rule, .qa { page-break-inside: avoid; }
+  }
+  @page { size: A4; margin: 18mm 16mm; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h6>📱 คู่มือ Multi-Device Workflow — PT Medical System</h6>
+  <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / Save as PDF</button>
+</div>
+
+<div class="page">
+
+  <div class="cover">
+    <div class="badge">MULTI-DEVICE GUIDE</div>
+    <h1>Multi-Device Workflow</h1>
+    <div class="sub">คู่มือการทำงานหลายอุปกรณ์พร้อมกัน — Transport + Consent</div>
+  </div>
+
+  <div class="toc">
+    <h3>📑 สารบัญ</h3>
+    <ol>
+      <li><a href="#s1">สถานการณ์ที่ครอบคลุม</a></li>
+      <li><a href="#s2">สถาปัตยกรรมข้อมูลที่ต้องเข้าใจ</a></li>
+      <li><a href="#s3">แนวทางที่แนะนำ — 3 Pattern</a></li>
+      <li><a href="#s4">กฎทอง 5 ข้อเพื่อไม่ให้ข้อมูลหาย</a></li>
+      <li><a href="#s5">สถานการณ์ที่พบบ่อย (Q&amp;A)</a></li>
+      <li><a href="#s6">Timeline ตัวอย่างที่ปลอดภัย</a></li>
+      <li><a href="#s7">หลักเทคนิคเบื้องหลัง</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1">1. สถานการณ์ที่ครอบคลุม</h2>
+  <ul>
+    <li><b>Device A</b> (เจ้าหน้าที่) — บันทึก V/S, IV, timeline ระหว่างนำส่ง</li>
+    <li><b>Device B</b> (แท็บเล็ตสำหรับญาติ) — ให้ญาติ/ผู้ป่วยเซ็น Consent</li>
+  </ul>
+  <blockquote>
+    ทั้งสองเครื่องใช้ Case เดียวกัน (<code>case_id</code> เดียวกัน) บน Supabase เดียวกัน
+  </blockquote>
+
+  <h2 id="s2">2. สถาปัตยกรรมข้อมูลที่ต้องเข้าใจ</h2>
+  <table>
+    <tr><th>ตาราง</th><th>เนื้อหา</th><th>พฤติกรรมการบันทึก</th></tr>
+    <tr>
+      <td><code>cases</code></td>
+      <td>ข้อมูลผู้ป่วย + V/S + IV + timeline ทั้งหมด</td>
+      <td><b>Upsert ทั้งก้อน</b> — เขียนทับทุกฟิลด์จากฟอร์ม</td>
+    </tr>
+    <tr>
+      <td><code>transport_consents</code></td>
+      <td>Consent แต่ละฉบับ (version)</td>
+      <td><b>Insert แถวใหม่</b> ทุกครั้งที่เซ็น — ไม่ชนกับ V/S</td>
+    </tr>
+  </table>
+
+  <h3>จุดที่ต้องระวัง</h3>
+  <div class="callout warn">
+    <ol style="margin-bottom:0;">
+      <li><code>cases.patient_info</code> (ชื่อ, อายุ, เลขบัตร, route) และ <code>cases.raw_data.rawSnapshot</code> จะถูก Device A <b>เขียนทับทั้งก้อน</b> ทุกครั้งที่กด Save</li>
+      <li>การเซ็น Consent บน Device B จะ <b>sync-back เลขบัตรกลับ <code>cases</code></b> เฉพาะเมื่อ <code>patient_info.idCard</code> ยังว่าง</li>
+      <li>ถ้า Device A เปิดฟอร์มค้างไว้ก่อน Device B sync-back → Device A กด Save ทีหลัง → <b>ข้อมูลของ Device B หาย</b></li>
+    </ol>
+  </div>
+
+  <h2 id="s3">3. แนวทางที่แนะนำ — 3 Pattern</h2>
+
+  <div class="pattern safe">
+    <div class="title">✅ Pattern 1: Sequential — ปลอดภัยที่สุด</div>
+    <pre><code>1. Device A: กรอกข้อมูลผู้ป่วย (ชื่อ/อายุ/เลขบัตร/route) → กด Save
+2. Device B: เปิด Case จาก Dashboard → ให้ญาติเซ็น Consent → Submit
+3. Device A: เพิ่ม V/S, IV, timeline ได้ตามปกติ</code></pre>
+    <ul style="margin-bottom:0;">
+      <li>Device A บันทึกเลขบัตรก่อน → Device B ไม่ต้อง sync-back → ไม่เสี่ยง overwrite</li>
+      <li>V/S ที่ Device A เพิ่มภายหลังไม่ชนกับ Consent (คนละตาราง)</li>
+    </ul>
+  </div>
+
+  <div class="pattern ok">
+    <div class="title">✅ Pattern 2: Parallel แบบแบ่งหน้าที่ชัดเจน</div>
+    <pre><code>Device A: เฉพาะ V/S + IV + timeline (ล็อกไม่แตะข้อมูลผู้ป่วย/route)
+Device B: เฉพาะ Consent (modal ไม่ touch main form)</code></pre>
+    <b>เงื่อนไข:</b>
+    <ul style="margin-bottom:0;">
+      <li>Device A ต้อง <b>กรอก demographics + route ให้ครบก่อนแตะ V/S เสมอ</b></li>
+      <li>ห้ามแก้ชื่อ/อายุ/เลขบัตร/route หลังจาก Device B เริ่มกระบวนการ Consent</li>
+      <li>ถ้าจำเป็นต้องแก้ demographics → ให้ Device A <b>Refresh หน้าก่อน</b> เพื่อโหลดค่าล่าสุดจาก DB</li>
+    </ul>
+  </div>
+
+  <div class="pattern risky">
+    <div class="title">⚠️ Pattern 3: Ad-hoc — ไม่แนะนำ</div>
+    <p style="margin-bottom:0;">
+      สลับแก้ไขอิสระระหว่างสองเครื่อง — มีโอกาสเกิด race condition เสมอ<br>
+      <b>ถ้าจำเป็นต้องทำ ให้ Refresh Device A ทุกครั้งก่อนกด Save</b>
+    </p>
+  </div>
+
+  <h2 id="s4">4. กฎทอง 5 ข้อเพื่อไม่ให้ข้อมูลหาย</h2>
+
+  <div class="golden-rule">
+    <div class="num">1</div>
+    <div class="title">กรอกเลขบัตรผู้ป่วยให้เสร็จก่อนเริ่มกระบวนการ Consent</div>
+    <div class="body">เพราะ idCard คือข้อมูลสำคัญที่สุดทางกฎหมาย</div>
+  </div>
+
+  <div class="golden-rule">
+    <div class="num">2</div>
+    <div class="title">Device A เป็นผู้ "owner" ของ Case เสมอ</div>
+    <div class="body">Device B ทำหน้าที่เฉพาะ Consent, ห้ามแก้ข้อมูลผู้ป่วยบน Device B</div>
+  </div>
+
+  <div class="golden-rule">
+    <div class="num">3</div>
+    <div class="title">ก่อน Device A กด Save V/S → เช็คว่าข้อมูลผู้ป่วยบน form ยัง sync กับ DB ล่าสุดหรือไม่</div>
+    <div class="body">หากไม่แน่ใจ ให้ Refresh / เปิด Case ใหม่ก่อน</div>
+  </div>
+
+  <div class="golden-rule">
+    <div class="num">4</div>
+    <div class="title">ห้ามเปิด Case เดียวกันบน 2 เครื่องพร้อมกันโดยทั้งสองเครื่องมีสิทธิ์แก้ form หลัก</div>
+    <div class="body">ใช้กฎ "A = Form, B = Consent" เท่านั้น</div>
+  </div>
+
+  <div class="golden-rule">
+    <div class="num">5</div>
+    <div class="title">หลัง Consent ถูกเซ็น → Device A ควร Refresh ก่อนกด Save ครั้งต่อไป</div>
+    <div class="body">เพื่อให้ form ของ Device A โหลด idCard ที่ถูก sync-back กลับมาแล้ว</div>
+  </div>
+
+  <h2 id="s5">5. สถานการณ์ที่พบบ่อย (Q&amp;A)</h2>
+
+  <div class="qa">
+    <div class="q">Q1: Device A กำลังกรอก V/S อยู่, Device B ส่ง Consent — จะเกิดอะไรขึ้น?</div>
+    <div class="a">
+      <ul>
+        <li>Consent ถูกบันทึกในตาราง <code>transport_consents</code> (ไม่ชน)</li>
+        <li>ถ้า <code>patient_info.idCard</code> ใน DB ยังว่าง → ระบบจะ sync-back เลขบัตรจาก Consent กลับ <code>cases</code></li>
+        <li><b>แต่</b> ถ้า Device A กด Save หลังจากนั้น → Device A จะเขียนทับ patient_info ด้วยค่าจาก form ของตน</li>
+        <li><b>วิธีแก้:</b> Device A Refresh หน้า หรือเปิด Case ใหม่ก่อนกด Save</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q2: Device A กด Save ก่อน, Device B ส่ง Consent ทีหลัง — ปลอดภัยไหม?</div>
+    <div class="a">
+      <ul>
+        <li>✅ ปลอดภัย ถ้า Device A ใส่เลขบัตรไปแล้ว</li>
+        <li>Device B ส่ง Consent → ระบบเช็คว่า <code>patient_info.idCard</code> ไม่ว่าง → ไม่ sync-back (เคารพค่าเดิม)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q3: Device A ลืมกรอกเลขบัตร, Device B ให้ญาติกรอกใน Consent แทน</div>
+    <div class="a">
+      <ul>
+        <li>✅ Device B's Consent Submit → sync-back เลขบัตรเข้า <code>cases</code> อัตโนมัติ</li>
+        <li><b>ระวัง:</b> Device A ห้ามกด Save ซ้ำ (ด้วยค่าเลขบัตรว่างจาก form เก่า) จนกว่าจะ Refresh</li>
+        <li>หาก Device A Save ด้วยค่าว่าง → เลขบัตรจะหายอีกรอบ</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q4: ต้องแก้ Consent ย้อนหลัง ทำอย่างไรไม่ให้กระทบ V/S?</div>
+    <div class="a">
+      <ul>
+        <li>เปิด Case จาก Dashboard → เปิด Consent preview → กด "✏️ แก้ไข (เวอร์ชันใหม่)"</li>
+        <li>ระบบจะสร้างเวอร์ชันใหม่ (v2, v3, ...) โดยไม่ยุ่งกับ <code>cases.raw_data</code></li>
+        <li>V/S บน Device A ไม่ได้รับผลกระทบ (คนละตาราง)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q5: Admin ลบ Consent ที่ผิด ทำอย่างไร?</div>
+    <div class="a">
+      <ul>
+        <li>เปิด Case → Preview Consent → เลือกเวอร์ชันจาก dropdown → กด "🗑️ ลบฉบับนี้ (Admin)"</li>
+        <li>ถ้าลบฉบับ active → ระบบ promote เวอร์ชันก่อนหน้าเป็น active ให้อัตโนมัติ</li>
+        <li>ไม่กระทบ V/S / timeline</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 id="s6">6. Timeline ตัวอย่างที่ปลอดภัย</h2>
+
+  <h3>ตัวอย่างที่ 1 — Sequential Pattern</h3>
+<pre><code>09:00  Device A: เปิด Case ใหม่ → กรอกชื่อ/อายุ/เลขบัตร/route → Save (ID auto-gen)
+09:02  Device A: เริ่มบันทึก V/S แรก
+09:05  Device B: เปิด Case จาก Dashboard (ดึงข้อมูลล่าสุด)
+09:07  Device B: ให้ญาติเซ็น Consent → Submit
+       → transport_consents v1 created
+       → cases.patient_info.idCard มีค่าอยู่แล้ว → ไม่ sync-back
+09:10  Device A: บันทึก V/S ถัดไป → Save (ปลอดภัย — idCard ใน form ยังครบ)
+09:30  Device A: ถึงปลายทาง → Complete Case</code></pre>
+
+  <h3>ตัวอย่างที่ 2 — Consent กรอกเลขบัตรแทน</h3>
+<pre><code>09:00  Device A: เปิด Case ใหม่ → กรอกแค่ชื่อ + route → Save (ลืมเลขบัตร)
+09:02  Device B: เปิด Case → ญาติกรอกเลขบัตรใน Consent + เซ็น → Submit
+       → cases.patient_info.idCard ถูก sync-back จาก Consent
+09:05  Device A: 🔄 Refresh หน้า (สำคัญ!) → form โหลด idCard ที่ sync-back แล้ว
+09:06  Device A: เริ่มบันทึก V/S → Save ได้ตามปกติ</code></pre>
+
+  <h2 id="s7">7. หลักเทคนิคเบื้องหลัง (สำหรับทีม Dev)</h2>
+  <ul>
+    <li><b>Consent sync-back เป็น partial update:</b> <code>.update({ patient_info, raw_data })</code> โดยอ่าน raw_data จาก DB ก่อนแล้ว merge เฉพาะ <code>pt_idcard</code> → ไม่ทำลาย vitalsJson / ivJson ที่ Device A เคย save</li>
+    <li><b>Device A's saveData เป็น full upsert:</b> <code>.upsert({ ... raw_data: { rawSnapshot, vitalsJson, ivJson } })</code> → เขียนทับทุกฟิลด์จาก form state</li>
+    <li><b>แก้ไขในอนาคต</b> (ถ้าต้องการ strong consistency):
+      <ul>
+        <li>ย้าย V/S / IV ไปตารางแยกที่ append-only (เช่น <code>case_vitals_log</code>)</li>
+        <li>หรือใช้ Supabase Realtime subscribe ให้ Device A รับ event เมื่อ <code>cases</code> ถูก update โดยเครื่องอื่น → prompt Refresh</li>
+        <li>หรือ merge แบบ JSON patch แทน upsert</li>
+      </ul>
+    </li>
+  </ul>
+
+  <!-- Footer -->
+  <div style="margin-top: 15mm; padding-top: 5mm; border-top: 2px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 9pt;">
+    © PT Medical System · Multi-Device Workflow Guide v1.0<br>
+    <i>เอกสารสำหรับเจ้าหน้าที่และทีมพัฒนา</i>
+  </div>
+
+</div>
+
+<script>
+  window.addEventListener('beforeprint', function(){ document.querySelector('.toolbar').style.display = 'none'; });
+  window.addEventListener('afterprint', function(){ document.querySelector('.toolbar').style.display = ''; });
+</script>
+
+</body>
+</html>
