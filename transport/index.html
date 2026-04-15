@@ -1970,14 +1970,15 @@
                 referDocsJson: row.raw_data ? row.raw_data.referDocsJson : null
             };
 
-            // Load refer documents
+            loadedCaseStatus = data.status || "Active";
+
+            resetFormState();
+
+            // Load refer documents (AFTER resetFormState so they don't get wiped)
             try {
                 var refDocs = data.referDocsJson ? JSON.parse(data.referDocsJson) : [];
                 if (typeof setReferDocs === 'function') setReferDocs(refDocs);
             } catch(e) { console.error('refer docs parse:', e); if (typeof setReferDocs === 'function') setReferDocs([]); }
-            loadedCaseStatus = data.status || "Active";
-
-            resetFormState();
 
             document.getElementById('caseId').value = data.id;
             document.getElementById('display-case-id').innerText = data.id;
