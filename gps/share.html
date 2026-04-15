@@ -100,7 +100,7 @@
   <script src="../shared/config.js"></script>
   <script src="../shared/gps-providers.js"></script>
   <script>
-    var _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    var _supabase = null;
     var _tokenData = null;
     var _providerData = null;
     var _marker = null;
@@ -108,6 +108,9 @@
     var _refreshInterval = null;
 
     async function init() {
+      // Create Supabase client here (after supabase-js UMD has loaded)
+      _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
       var params = new URLSearchParams(window.location.search);
       var token = params.get('token');
 
