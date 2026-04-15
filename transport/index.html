@@ -404,7 +404,7 @@
                                 <label class="form-check-label fw-medium" for="op_als">ALS</label>
                             </div>
                             <div class="input-group input-group-sm w-auto shadow-sm rounded" id="vehicle-selector-group">
-                                <span class="input-group-text bg-light border-end-0 text-secondary">รหัสรถ</span>
+                                <span class="input-group-text bg-light border-end-0 text-secondary">รถ</span>
                                 <select class="form-select border-start-0" id="vehicle-select" onchange="onVehicleSelect(this)" style="min-width:140px; display:none;">
                                     <option value="">-- เลือกรถ --</option>
                                 </select>
@@ -437,35 +437,6 @@
                       </div>
                  </div>
               </div>
-
-              <div class="card p-4 mb-4 island-card">
-                <h5 class="card-title fw-bold text-dark mb-4 border-bottom pb-2"><i class="bi bi-tags-fill text-warning me-2"></i> การจำแนกประเภท</h5>
-                <div class="row g-4">
-                   <div class="col-md-7">
-                    <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ระดับความเร่งด่วน (Triage)</label><br>
-                    <div class="btn-group w-100 shadow-sm" role="group">
-                      <input type="radio" class="btn-check" name="triage_level" id="t1" value="Resuscitation" onchange="updateBanner()" autocomplete="off">
-                      <label class="btn btn-outline-danger fw-medium" for="t1">วิกฤต</label>
-                      <input type="radio" class="btn-check" name="triage_level" id="t2" value="Emergency" onchange="updateBanner()" autocomplete="off">
-                      <label class="btn btn-outline-danger fw-medium" style="color: #d63384; border-color: #d63384;" for="t2">ฉุกเฉิน</label>
-                      <input type="radio" class="btn-check" name="triage_level" id="t3" value="Urgent" onchange="updateBanner()" autocomplete="off">
-                      <label class="btn btn-outline-warning text-dark fw-medium" for="t3">เร่งด่วน</label>
-                      <input type="radio" class="btn-check" name="triage_level" id="t4" value="Non-Urgent" onchange="updateBanner()" autocomplete="off" checked>
-                      <label class="btn btn-outline-success fw-medium" for="t4">ไม่เร่งด่วน</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ประเภทการนำส่ง</label>
-                    <select class="form-select shadow-sm border-0 bg-light" name="transport_type" onchange="updateTimelineUI(); updateSceneInfo();">
-                      <option value="Refer">Refer (ส่งต่อ)</option>
-                      <option value="Discharge">Discharge (ส่งกลับบ้าน)</option>
-                      <option value="EMS">EMS (รับจากจุดเกิดเหตุ)</option>
-                      <option value="Follow up">Follow up (ตรวจตามนัด)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
 
               <!-- SCENE INFO (EMS only) -->
               <div class="card p-4 mb-4 island-card d-none" id="scene-info-card">
@@ -509,44 +480,60 @@
                 </div>
               </div>
 
+              <!-- ═══ Card A: ข้อมูลผู้ป่วย (identity) ═══ -->
               <div class="card p-4 mb-4 island-card">
-                <h5 class="card-title fw-bold text-dark mb-4 border-bottom pb-2"><i class="bi bi-person-vcard-fill text-success me-2"></i> ข้อมูลผู้ป่วย</h5>
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                  <h5 class="card-title fw-bold text-dark m-0"><i class="bi bi-person-vcard-fill text-success me-2"></i> ข้อมูลผู้ป่วย</h5>
+                  <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-sm no-print" onclick="openIdCardScanner()" title="สแกนบัตรด้วย AI (Gemini)">
+                    <i class="bi bi-camera me-1"></i> สแกนบัตร
+                  </button>
+                </div>
                 <div class="row g-3">
-                  <div class="col-md-6"><label class="form-label fw-bold fs-7 text-secondary">ชื่อ - นามสกุล</label><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_name" id="pt_name" required></div>
-                  <div class="col-md-3"><label class="form-label fw-bold fs-7 text-secondary">อายุ</label><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_age" id="pt_age"></div>
-                  <div class="col-md-3"><label class="form-label fw-bold fs-7 text-secondary">เพศ</label><select class="form-select bg-light border-0 shadow-none" name="pt_gender"><option value="" disabled selected>-- เลือกเพศ --</option><option value="Male">ชาย (Male)</option><option value="Female">หญิง (Female)</option><option value="Other">อื่นๆ (Other)</option></select></div>
+                  <div class="col-md-5"><label class="form-label fw-bold fs-7 text-secondary">ชื่อ - นามสกุล</label><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_name" id="pt_name" required></div>
+                  <div class="col-md-2"><label class="form-label fw-bold fs-7 text-secondary">อายุ</label><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_age" id="pt_age"></div>
+                  <div class="col-md-2"><label class="form-label fw-bold fs-7 text-secondary">เพศ</label><select class="form-select bg-light border-0 shadow-none" name="pt_gender"><option value="" disabled selected>-- เลือกเพศ --</option><option value="Male">ชาย (Male)</option><option value="Female">หญิง (Female)</option><option value="Other">อื่นๆ (Other)</option></select></div>
+                  <div class="col-md-3"><label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-card-text me-1"></i> บัตร/Passport</label><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_idcard" id="pt_idcard" placeholder="13 หลัก หรือ Passport" maxlength="30" oninput="formatIdOrPassport(this)"></div>
+                </div>
+              </div>
 
-                  <!-- ID Card / Passport -->
-                  <div class="col-12 mt-4">
-                    <label class="form-label fw-bold fs-7 text-secondary mb-2"><i class="bi bi-card-text me-1"></i> เอกสารระบุตัวตน</label>
-                    <div class="d-flex gap-3 mb-2">
-                      <div class="form-check form-check-inline m-0">
-                        <input class="form-check-input" type="radio" name="id_type" id="id_thai" value="ThaiID" checked onchange="toggleIdType()">
-                        <label class="form-check-label fw-medium" for="id_thai">บัตรประชาชน</label>
-                      </div>
-                      <div class="form-check form-check-inline m-0">
-                        <input class="form-check-input" type="radio" name="id_type" id="id_passport" value="Passport" onchange="toggleIdType()">
-                        <label class="form-check-label fw-medium" for="id_passport">Passport</label>
-                      </div>
-                    </div>
-                    <div id="id-thai-group">
-                      <div class="col-md-6"><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_idcard" id="pt_idcard" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17" oninput="formatIdCard(this)"></div>
-                    </div>
-                    <div id="id-passport-group" class="d-none">
-                      <div class="row g-2">
-                        <div class="col-md-4"><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_passport" id="pt_passport" placeholder="Passport No."></div>
-                        <div class="col-md-4"><input type="text" class="form-control bg-light border-0 shadow-none" name="pt_nationality" id="pt_nationality" placeholder="สัญชาติ (Nationality)"></div>
-                      </div>
+              <!-- ═══ Card B: รายละเอียดผู้ป่วย (triage + transport + clinical) ═══ -->
+              <div class="card p-4 mb-4 island-card">
+                <h5 class="card-title fw-bold text-dark mb-4 border-bottom pb-2"><i class="bi bi-clipboard2-pulse-fill text-primary me-2"></i> รายละเอียดผู้ป่วย</h5>
+                <div class="row g-3">
+                  <!-- Triage + Transport Type (moved from การจำแนกประเภท card) -->
+                  <div class="col-md-7">
+                    <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ระดับความเร่งด่วน (Triage)</label>
+                    <div class="btn-group w-100 shadow-sm" role="group">
+                      <input type="radio" class="btn-check" name="triage_level" id="t1" value="Resuscitation" onchange="updateBanner()" autocomplete="off">
+                      <label class="btn btn-outline-danger fw-medium" for="t1">วิกฤต</label>
+                      <input type="radio" class="btn-check" name="triage_level" id="t2" value="Emergency" onchange="updateBanner()" autocomplete="off">
+                      <label class="btn btn-outline-danger fw-medium" style="color: #d63384; border-color: #d63384;" for="t2">ฉุกเฉิน</label>
+                      <input type="radio" class="btn-check" name="triage_level" id="t3" value="Urgent" onchange="updateBanner()" autocomplete="off">
+                      <label class="btn btn-outline-warning text-dark fw-medium" for="t3">เร่งด่วน</label>
+                      <input type="radio" class="btn-check" name="triage_level" id="t4" value="Non-Urgent" onchange="updateBanner()" autocomplete="off" checked>
+                      <label class="btn btn-outline-success fw-medium" for="t4">ไม่เร่งด่วน</label>
                     </div>
                   </div>
+                  <div class="col-md-5">
+                    <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ประเภทการนำส่ง</label>
+                    <select class="form-select shadow-sm border-0 bg-light" name="transport_type" onchange="updateTimelineUI(); updateSceneInfo();">
+                      <option value="Refer">Refer (ส่งต่อ)</option>
+                      <option value="Discharge">Discharge (ส่งกลับบ้าน)</option>
+                      <option value="EMS">EMS (รับจากจุดเกิดเหตุ)</option>
+                      <option value="Follow up">Follow up (ตรวจตามนัด)</option>
+                    </select>
+                  </div>
 
-                  <div class="col-md-6 mt-4"><label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-geo-alt text-primary"></i> รับจาก (ต้นทาง)</label><input type="text" class="form-control bg-light border-0 shadow-none" name="origin" id="pt_origin"></div>
-                  <div class="col-md-6 mt-4"><label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-geo-alt-fill text-danger"></i> นำส่ง (ปลายทาง)</label><input type="text" class="form-control bg-light border-0 shadow-none" name="destination" id="pt_dest"></div>
-                  <div class="col-12 mt-4"><label class="form-label fw-bold fs-7 text-secondary">อาการสำคัญ (Chief Complaint)</label><textarea class="form-control bg-light border-0 shadow-none" name="pt_cc" rows="2"></textarea></div>
+                  <!-- Origin / Destination -->
+                  <div class="col-md-6 mt-3"><label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-geo-alt text-primary"></i> รับจาก (ต้นทาง)</label><input type="text" class="form-control bg-light border-0 shadow-none" name="origin" id="pt_origin"></div>
+                  <div class="col-md-6 mt-3"><label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-geo-alt-fill text-danger"></i> นำส่ง (ปลายทาง)</label><input type="text" class="form-control bg-light border-0 shadow-none" name="destination" id="pt_dest"></div>
+
+                  <!-- CC / Dx -->
+                  <div class="col-12 mt-3"><label class="form-label fw-bold fs-7 text-secondary">อาการสำคัญ (Chief Complaint)</label><textarea class="form-control bg-light border-0 shadow-none" name="pt_cc" rows="2"></textarea></div>
                   <div class="col-12"><label class="form-label fw-bold fs-7 text-secondary">การวินิจฉัย (Diagnosis)</label><textarea class="form-control bg-light border-0 shadow-none" name="pt_dx" id="pt_dx" rows="2"></textarea></div>
 
                   <!-- Underlying Disease -->
-                  <div class="col-12 mt-4">
+                  <div class="col-12 mt-3">
                     <label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-clipboard2-pulse me-1"></i> โรคประจำตัว (Underlying Disease)</label>
                     <div class="d-flex flex-wrap gap-2 mb-2">
                       <div class="form-check bg-light px-3 py-1 rounded border"><input class="form-check-input ms-0" type="checkbox" name="ud_dm" id="ud_dm"><label class="form-check-label fw-medium ms-1" for="ud_dm">DM</label></div>
@@ -563,13 +550,13 @@
                   </div>
 
                   <!-- Current Medications -->
-                  <div class="col-12 mt-3">
+                  <div class="col-12 mt-2">
                     <label class="form-label fw-bold fs-7 text-secondary"><i class="bi bi-capsule me-1"></i> ยาประจำตัว (Current Medications)</label>
                     <input type="text" class="form-control bg-light border-0 shadow-none" name="pt_meds" id="pt_meds" placeholder="เช่น Metformin 500mg, Amlodipine 5mg, ASA 81mg">
                   </div>
 
-                  <div class="col-md-6 mt-4"><label class="form-label fw-bold fs-7 text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ประวัติแพ้ยา/อาหาร</label><input type="text" class="form-control border-danger-subtle bg-danger-subtle text-danger fw-medium" name="pt_allergies" id="pt_allergies" placeholder="ระบุหากมี (ถ้าไม่มีเว้นว่าง)"></div>
-                  <div class="col-md-6 mt-4"><label class="form-label fw-bold fs-7 text-secondary">สถานะการกู้ชีพ (NR Status)</label><select class="form-select bg-light border-0 shadow-none fw-medium" name="nr_status"><option value="Full Support">Full Support</option><option value="DNR">DNR (Do Not Resuscitate)</option><option value="Palliative">Palliative Care</option></select></div>
+                  <div class="col-md-6 mt-3"><label class="form-label fw-bold fs-7 text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ประวัติแพ้ยา/อาหาร</label><input type="text" class="form-control border-danger-subtle bg-danger-subtle text-danger fw-medium" name="pt_allergies" id="pt_allergies" placeholder="ระบุหากมี (ถ้าไม่มีเว้นว่าง)"></div>
+                  <div class="col-md-6 mt-3"><label class="form-label fw-bold fs-7 text-secondary">สถานะการกู้ชีพ (NR Status)</label><select class="form-select bg-light border-0 shadow-none fw-medium" name="nr_status"><option value="Full Support">Full Support</option><option value="DNR">DNR (Do Not Resuscitate)</option><option value="Palliative">Palliative Care</option></select></div>
                 </div>
               </div>
 
@@ -969,50 +956,71 @@
                         </div>
                     </div>
                  </div>
+                 <!-- ═══ Card A: ข้อมูลผู้ป่วย (identity) ═══ -->
                  <div class="col-12">
-                    <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ระดับความเร่งด่วน (Triage)</label>
-                    <div class="btn-group w-100 shadow-sm" role="group">
-                       <input type="radio" class="btn-check" name="m_triage_level" id="mt1" value="Resuscitation" autocomplete="off"><label class="btn btn-outline-danger fw-medium" for="mt1">วิกฤต</label>
-                       <input type="radio" class="btn-check" name="m_triage_level" id="mt2" value="Emergency" autocomplete="off"><label class="btn btn-outline-danger fw-medium" style="color: #d63384; border-color: #d63384;" for="mt2">ฉุกเฉิน</label>
-                       <input type="radio" class="btn-check" name="m_triage_level" id="mt3" value="Urgent" autocomplete="off"><label class="btn btn-outline-warning text-dark fw-medium" for="mt3">เร่งด่วน</label>
-                       <input type="radio" class="btn-check" name="m_triage_level" id="mt4" value="Non-Urgent" autocomplete="off"><label class="btn btn-outline-success fw-medium" for="mt4">ไม่เร่งด่วน</label>
-                    </div>
+                   <div class="card p-3 island-card">
+                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                       <h6 class="card-title fw-bold text-dark m-0"><i class="bi bi-person-vcard-fill text-success me-2"></i> ข้อมูลผู้ป่วย</h6>
+                       <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-sm no-print" onclick="openIdCardScanner('mobile')" title="สแกนบัตรด้วย AI">
+                         <i class="bi bi-camera me-1"></i> สแกนบัตร
+                       </button>
+                     </div>
+                     <div class="row g-3">
+                       <div class="col-md-5"><label class="form-label fs-8 fw-bold text-secondary">ชื่อ - นามสกุล</label><input type="text" class="form-control bg-light border-0" id="m_pt_name"></div>
+                       <div class="col-md-2"><label class="form-label fs-8 fw-bold text-secondary">อายุ</label><input type="text" class="form-control bg-light border-0" id="m_pt_age"></div>
+                       <div class="col-md-2"><label class="form-label fs-8 fw-bold text-secondary">เพศ</label><select class="form-select bg-light border-0" id="m_pt_gender"><option value="" disabled>-- เลือกเพศ --</option><option value="Male">ชาย (Male)</option><option value="Female">หญิง (Female)</option><option value="Other">อื่นๆ (Other)</option></select></div>
+                       <div class="col-md-3"><label class="form-label fs-8 fw-bold text-secondary">บัตร/Passport</label><input type="text" class="form-control bg-light border-0" id="m_pt_idcard" placeholder="13 หลัก หรือ Passport" maxlength="30" oninput="formatIdOrPassport(this)"></div>
+                     </div>
+                   </div>
                  </div>
-                 <div class="col-md-6"><label class="form-label fs-8 fw-bold text-secondary">Patient Name</label><input type="text" class="form-control bg-light border-0" id="m_pt_name"></div>
-                 <div class="col-md-3"><label class="form-label fs-8 fw-bold text-secondary">Age</label><input type="text" class="form-control bg-light border-0" id="m_pt_age"></div>
-                 <div class="col-md-3"><label class="form-label fs-8 fw-bold text-secondary">Gender</label><select class="form-select bg-light border-0" id="m_pt_gender"><option value="" disabled>-- เลือกเพศ --</option><option value="Male">ชาย (Male)</option><option value="Female">หญิง (Female)</option><option value="Other">อื่นๆ (Other)</option></select></div>
-                 <div class="col-12 mt-3"><div class="row g-3"><div class="col-6"><label class="form-label fs-8 fw-bold text-secondary">Origin (รับจาก)</label><input type="text" class="form-control bg-light border-0" id="m_origin"></div><div class="col-6"><label class="form-label fs-8 fw-bold text-secondary">Destination (ไปส่ง)</label><input type="text" class="form-control bg-light border-0" id="m_destination"></div></div></div>
-                 <div class="col-12 mt-3"><label class="form-label fs-8 fw-bold text-secondary">Diagnosis</label><textarea class="form-control bg-light border-0" id="m_pt_dx" rows="2"></textarea></div>
-                 <div class="col-12 mt-3"><label class="form-label fs-8 fw-bold text-secondary">Chief Complaint (อาการสำคัญ)</label><textarea class="form-control bg-light border-0" id="m_pt_cc" rows="2"></textarea></div>
-                 <!-- ID Card / Passport -->
-                 <div class="col-12 mt-3">
-                    <label class="form-label fs-8 fw-bold text-secondary">เอกสารระบุตัวตน</label>
-                    <div class="d-flex gap-3 mb-2">
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="radio" name="m_id_type" id="m_id_thai" value="ThaiID" checked onchange="toggleModalIdType()"><label class="form-check-label small fw-medium" for="m_id_thai">บัตร ปชช.</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="radio" name="m_id_type" id="m_id_passport" value="Passport" onchange="toggleModalIdType()"><label class="form-check-label small fw-medium" for="m_id_passport">Passport</label></div>
-                    </div>
-                    <div id="m-id-thai-group"><input type="text" class="form-control form-control-sm bg-light border-0" id="m_pt_idcard" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17" oninput="formatIdCard(this)"></div>
-                    <div id="m-id-passport-group" class="d-none"><div class="row g-2"><div class="col-6"><input type="text" class="form-control form-control-sm bg-light border-0" id="m_pt_passport" placeholder="Passport No."></div><div class="col-6"><input type="text" class="form-control form-control-sm bg-light border-0" id="m_pt_nationality" placeholder="สัญชาติ"></div></div></div>
+
+                 <!-- ═══ Card B: รายละเอียดผู้ป่วย (triage + clinical) ═══ -->
+                 <div class="col-12">
+                   <div class="card p-3 island-card">
+                     <h6 class="card-title fw-bold text-dark mb-3 border-bottom pb-2"><i class="bi bi-clipboard2-pulse-fill text-primary me-2"></i> รายละเอียดผู้ป่วย</h6>
+                     <div class="row g-3">
+                       <!-- Triage (moved to top of detail card) -->
+                       <div class="col-12">
+                         <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ระดับความเร่งด่วน (Triage)</label>
+                         <div class="btn-group w-100 shadow-sm" role="group">
+                           <input type="radio" class="btn-check" name="m_triage_level" id="mt1" value="Resuscitation" autocomplete="off"><label class="btn btn-outline-danger fw-medium" for="mt1">วิกฤต</label>
+                           <input type="radio" class="btn-check" name="m_triage_level" id="mt2" value="Emergency" autocomplete="off"><label class="btn btn-outline-danger fw-medium" style="color: #d63384; border-color: #d63384;" for="mt2">ฉุกเฉิน</label>
+                           <input type="radio" class="btn-check" name="m_triage_level" id="mt3" value="Urgent" autocomplete="off"><label class="btn btn-outline-warning text-dark fw-medium" for="mt3">เร่งด่วน</label>
+                           <input type="radio" class="btn-check" name="m_triage_level" id="mt4" value="Non-Urgent" autocomplete="off"><label class="btn btn-outline-success fw-medium" for="mt4">ไม่เร่งด่วน</label>
+                         </div>
+                       </div>
+
+                       <!-- Origin / Destination -->
+                       <div class="col-md-6 mt-3"><label class="form-label fs-8 fw-bold text-secondary"><i class="bi bi-geo-alt text-primary"></i> รับจาก (ต้นทาง)</label><input type="text" class="form-control bg-light border-0" id="m_origin"></div>
+                       <div class="col-md-6 mt-3"><label class="form-label fs-8 fw-bold text-secondary"><i class="bi bi-geo-alt-fill text-danger"></i> นำส่ง (ปลายทาง)</label><input type="text" class="form-control bg-light border-0" id="m_destination"></div>
+
+                       <!-- CC / Dx -->
+                       <div class="col-12 mt-3"><label class="form-label fs-8 fw-bold text-secondary">อาการสำคัญ (Chief Complaint)</label><textarea class="form-control bg-light border-0" id="m_pt_cc" rows="2"></textarea></div>
+                       <div class="col-12"><label class="form-label fs-8 fw-bold text-secondary">การวินิจฉัย (Diagnosis)</label><textarea class="form-control bg-light border-0" id="m_pt_dx" rows="2"></textarea></div>
+
+                       <!-- Underlying -->
+                       <div class="col-12 mt-3">
+                         <label class="form-label fs-8 fw-bold text-secondary"><i class="bi bi-clipboard2-pulse me-1"></i> โรคประจำตัว (Underlying)</label>
+                         <div class="d-flex flex-wrap gap-1">
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_dm"><label class="form-check-label small" for="m_ud_dm">DM</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_ht"><label class="form-check-label small" for="m_ud_ht">HT</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_dlp"><label class="form-check-label small" for="m_ud_dlp">DLP</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_ihd"><label class="form-check-label small" for="m_ud_ihd">IHD</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_cva"><label class="form-check-label small" for="m_ud_cva">CVA</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_ckd"><label class="form-check-label small" for="m_ud_ckd">CKD</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_copd"><label class="form-check-label small" for="m_ud_copd">COPD</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_cancer"><label class="form-check-label small" for="m_ud_cancer">Cancer</label></div>
+                           <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_epilepsy"><label class="form-check-label small" for="m_ud_epilepsy">Epilepsy</label></div>
+                         </div>
+                         <input type="text" class="form-control form-control-sm bg-light border-0 mt-1" id="m_ud_other" placeholder="อื่นๆ ระบุ...">
+                       </div>
+
+                       <!-- Meds / Allergies -->
+                       <div class="col-12 mt-2"><label class="form-label fs-8 fw-bold text-secondary"><i class="bi bi-capsule me-1"></i> ยาประจำตัว</label><input type="text" class="form-control form-control-sm bg-light border-0" id="m_pt_meds" placeholder="เช่น Metformin, ASA"></div>
+                       <div class="col-12 mt-3"><label class="form-label fs-8 fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ประวัติแพ้ยา/อาหาร</label><input type="text" class="form-control border-danger-subtle bg-danger-subtle text-danger fw-medium" id="m_pt_allergies" placeholder="ระบุหากมี"></div>
+                     </div>
+                   </div>
                  </div>
-                 <!-- Underlying -->
-                 <div class="col-12 mt-3">
-                    <label class="form-label fs-8 fw-bold text-secondary">โรคประจำตัว (Underlying)</label>
-                    <div class="d-flex flex-wrap gap-1">
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_dm"><label class="form-check-label small" for="m_ud_dm">DM</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_ht"><label class="form-check-label small" for="m_ud_ht">HT</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_dlp"><label class="form-check-label small" for="m_ud_dlp">DLP</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_ihd"><label class="form-check-label small" for="m_ud_ihd">IHD</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_cva"><label class="form-check-label small" for="m_ud_cva">CVA</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_ckd"><label class="form-check-label small" for="m_ud_ckd">CKD</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_copd"><label class="form-check-label small" for="m_ud_copd">COPD</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_cancer"><label class="form-check-label small" for="m_ud_cancer">Cancer</label></div>
-                      <div class="form-check form-check-inline m-0"><input class="form-check-input" type="checkbox" id="m_ud_epilepsy"><label class="form-check-label small" for="m_ud_epilepsy">Epilepsy</label></div>
-                    </div>
-                    <input type="text" class="form-control form-control-sm bg-light border-0 mt-1" id="m_ud_other" placeholder="อื่นๆ ระบุ...">
-                 </div>
-                 <!-- Meds -->
-                 <div class="col-12 mt-2"><label class="form-label fs-8 fw-bold text-secondary">ยาประจำตัว</label><input type="text" class="form-control form-control-sm bg-light border-0" id="m_pt_meds" placeholder="เช่น Metformin, ASA"></div>
-                 <div class="col-md-6 mt-3"><label class="form-label fs-8 fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ประวัติแพ้ยา/อาหาร</label><input type="text" class="form-control border-danger-subtle bg-danger-subtle text-danger fw-medium" id="m_pt_allergies" placeholder="ระบุหากมี"></div>
               </div>
            </form>
         </div>
@@ -1515,10 +1523,10 @@
         card.className = 'col-12 px-2';
         var hasActionBtns = isAdmin || (rec.status === 'Completed');
         var rightPad = isAdmin ? '134px' : (rec.status === 'Completed' ? '40px' : '');
-        var consentCountLabel = consentCount > 1 ? ' (' + consentCount + ')' : '';
+        var consentVersionLabel = consentCount > 0 ? ' v' + consentCount : '';
         var consentBadgeHtml = hasConsent
-            ? '<span class="badge rounded-pill px-2 py-0" style="font-size:0.6rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; cursor:pointer;" onclick="event.stopPropagation(); previewConsent(\'' + rec.id + '\')" title="ดู Consent (ลงนามแล้ว)"><i class="bi bi-check-circle-fill me-1"></i>Consent' + consentCountLabel + '</span>'
-            : '<span class="badge rounded-pill px-2 py-0" style="font-size:0.6rem; background:#fef9c3; color:#92400e; border:1px solid #fde68a; cursor:pointer;" onclick="event.stopPropagation(); previewConsent(\'' + rec.id + '\')" title="ดู Consent (รอลงนาม)"><i class="bi bi-file-earmark-check me-1"></i>Consent</span>';
+            ? '<span class="badge rounded-pill px-2 py-0" style="font-size:0.6rem; background:#dcfce7; color:#15803d; border:1px solid #86efac; cursor:pointer;" onclick="event.stopPropagation(); openConsentFromDashboard(\'' + rec.id + '\')" title="ดู / แก้ไข Consent"><i class="bi bi-check-circle-fill me-1"></i>Consent' + consentVersionLabel + '</span>'
+            : '<span class="badge rounded-pill px-2 py-0" style="font-size:0.6rem; background:#fef9c3; color:#92400e; border:1px solid #fde68a; cursor:pointer;" onclick="event.stopPropagation(); openConsentFromDashboard(\'' + rec.id + '\')" title="เซ็น Consent จากหน้า Dashboard"><i class="bi bi-pen me-1"></i>รอเซ็น</span>';
 
         card.innerHTML =
             '<div class="card patient-card mb-2">' + actionBtnsHtml +
@@ -1746,6 +1754,8 @@
        consentData = null;
        consentVersions = [];
        consentActiveVersion = null;
+       // Clear consent UI (otherwise previous case's "ลงนามแล้ว" banner persists)
+       if (typeof updateConsentUI === 'function') updateConsentUI();
 
        var loggedUser = getUserName();
        if (loggedUser) {
@@ -1929,6 +1939,10 @@
                           else if (el.type === 'checkbox') el.checked = snapshot[key];
                           else el.value = snapshot[key];
                        }
+                    }
+                    // Migrate legacy pt_passport → pt_idcard (single merged field)
+                    if (f.pt_idcard && !f.pt_idcard.value && snapshot.pt_passport) {
+                        f.pt_idcard.value = snapshot.pt_passport;
                     }
                 } catch(e) { console.error("Error parsing snapshot", e); }
             }
@@ -3089,13 +3103,8 @@
        document.getElementById('m_pt_cc').value = f.pt_cc.value;
        document.getElementById('m_pt_allergies').value = f.pt_allergies.value;
 
-       var idType = f.id_type ? f.id_type.value : 'ThaiID';
-       var mIdRadios = document.getElementsByName('m_id_type');
-       for(var i=0; i<mIdRadios.length; i++) mIdRadios[i].checked = (mIdRadios[i].value === idType);
+       // Merged ID/Passport field (single input)
        document.getElementById('m_pt_idcard').value = f.pt_idcard ? f.pt_idcard.value : '';
-       document.getElementById('m_pt_passport').value = f.pt_passport ? f.pt_passport.value : '';
-       document.getElementById('m_pt_nationality').value = f.pt_nationality ? f.pt_nationality.value : '';
-       toggleModalIdType();
 
        var udNames = ['ud_dm','ud_ht','ud_dlp','ud_ihd','ud_cva','ud_ckd','ud_copd','ud_cancer','ud_epilepsy'];
        for(var i=0; i<udNames.length; i++) {
@@ -3130,14 +3139,8 @@
        if(editModal) editModal.show();
     }
 
-    function toggleModalIdType() {
-        var idType = document.querySelector('input[name="m_id_type"]:checked');
-        var val = idType ? idType.value : 'ThaiID';
-        var thaiGroup = document.getElementById('m-id-thai-group');
-        var passGroup = document.getElementById('m-id-passport-group');
-        if (val === 'ThaiID') { thaiGroup.classList.remove('d-none'); passGroup.classList.add('d-none'); }
-        else { thaiGroup.classList.add('d-none'); passGroup.classList.remove('d-none'); }
-    }
+    // Legacy no-op (ID/Passport merged into single field)
+    function toggleModalIdType() { return; }
 
     function saveEditModal() {
        var f = document.forms['main-form'];
@@ -3150,15 +3153,8 @@
        f.pt_cc.value = document.getElementById('m_pt_cc').value;
        f.pt_allergies.value = document.getElementById('m_pt_allergies').value;
 
-       var mIdType = document.querySelector('input[name="m_id_type"]:checked');
-       if (mIdType) {
-           var mainIdRadios = document.getElementsByName('id_type');
-           for(var i=0; i<mainIdRadios.length; i++) mainIdRadios[i].checked = (mainIdRadios[i].value === mIdType.value);
-       }
+       // Merged ID/Passport field (single input)
        f.pt_idcard.value = document.getElementById('m_pt_idcard').value;
-       f.pt_passport.value = document.getElementById('m_pt_passport').value;
-       f.pt_nationality.value = document.getElementById('m_pt_nationality').value;
-       toggleIdType();
 
        var udNames = ['ud_dm','ud_ht','ud_dlp','ud_ihd','ud_cva','ud_ckd','ud_copd','ud_cancer','ud_epilepsy'];
        for(var i=0; i<udNames.length; i++) {
@@ -3280,8 +3276,10 @@
         });
     }
 
-    // --- ID TYPE TOGGLE ---
+    // --- ID TYPE TOGGLE (legacy no-op — ID/Passport merged into single field) ---
     function toggleIdType() {
+        return;
+        // legacy body kept dead to preserve brace balance
         var idType = document.querySelector('input[name="id_type"]:checked');
         var val = idType ? idType.value : 'ThaiID';
         var thaiGroup = document.getElementById('id-thai-group');
@@ -3303,6 +3301,16 @@
             formatted += raw[i];
         }
         el.value = formatted;
+    }
+
+    // Smart formatter: auto-format as Thai ID only if input is purely numeric, otherwise leave as Passport text
+    function formatIdOrPassport(el) {
+        var v = el.value;
+        // Numeric / dash / space only → format as Thai ID
+        if (/^[0-9\-\s]*$/.test(v)) {
+            formatIdCard(el);
+        }
+        // Contains letters → treat as Passport, leave as-is
     }
 
     // --- UNDERLYING DISEASE HELPERS ---
@@ -3605,10 +3613,11 @@
         d.nrStatus = getVal('nr_status');
         d.nurseNote = getVal('nurse_note');
 
-        var idTypeRadio = document.querySelector('input[name="id_type"]:checked');
-        d.idType = idTypeRadio ? idTypeRadio.value : 'ThaiID';
+        // Merged ID/Passport — auto-detect type by value (13 digits → Thai ID, else Passport)
         d.idCard = getVal('pt_idcard');
-        d.passport = getVal('pt_passport');
+        var idDigits = (d.idCard || '').replace(/\D/g, '');
+        d.idType = (idDigits.length === 13 && /^[0-9\-\s]+$/.test(d.idCard || '')) ? 'ThaiID' : (d.idCard ? 'Passport' : 'ThaiID');
+        d.passport = d.idType === 'Passport' ? d.idCard : '';
         d.idDisplay = d.idType === 'Passport' ? ('Passport: ' + (d.passport || '-')) : ('ID: ' + (d.idCard || '-'));
         d.meds = getVal('pt_meds');
 
@@ -4040,6 +4049,38 @@
             }
         });
 
+        // Consent realtime — Device A knows when Device B signs/updates consent
+        RT.subscribe('transport-consents', 'transport_consents', function() {
+            // Refresh dashboard to update consent badge version
+            var dashView = document.getElementById('dashboard-view');
+            if (dashView && dashView.classList.contains('active')) {
+                loadDashboardData(currentPage);
+            }
+            // If editing a case, sync consent state + toast
+            var curCaseId = document.getElementById('caseId') ? document.getElementById('caseId').value : '';
+            if (curCaseId) {
+                (async function() {
+                    try {
+                        var vers = await loadConsentsFromDB(curCaseId);
+                        var prevCount = (consentVersions || []).length;
+                        if (vers && vers.length !== prevCount) {
+                            consentVersions = vers;
+                            consentActiveVersion = vers.find(function(v){ return v.status === 'active'; });
+                            consentSigned = !!consentActiveVersion;
+                            if (typeof updateConsentUI === 'function') updateConsentUI();
+                            try {
+                                Swal.fire({
+                                    toast: true, position: 'top-end', icon: 'info',
+                                    title: 'Consent ถูกอัปเดตจากอุปกรณ์อื่น',
+                                    timer: 3500, showConfirmButton: false
+                                });
+                            } catch(e) {}
+                        }
+                    } catch(err) { console.warn('Consent realtime sync error:', err); }
+                })();
+            }
+        });
+
         showDashboard();
     }
 
@@ -4061,6 +4102,657 @@
         }
     });
   </script>
+  <!-- ═══ ID Card Scanner Modal (Gemini Vision OCR) ═══ -->
+  <style>
+    .ocr-modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:99990; align-items:center; justify-content:center; padding:12px; }
+    .ocr-modal-overlay.show { display:flex; }
+    .ocr-modal-box { background:#fff; border-radius:14px; width:100%; max-width:520px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.35); }
+    .ocr-modal-header { padding:14px 18px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; display:flex; align-items:center; justify-content:space-between; }
+    .ocr-modal-title { font-weight:700; font-size:1rem; }
+    .ocr-modal-body { padding:18px; overflow-y:auto; flex:1; }
+    .ocr-step { display:none; }
+    .ocr-step.active { display:block; }
+    .ocr-upload-zone { border:2px dashed #cbd5e1; border-radius:12px; padding:24px 16px; text-align:center; cursor:pointer; background:#fafbff; transition:all .15s; }
+    .ocr-upload-zone:hover, .ocr-upload-zone:active { border-color:#6366f1; background:#f5f6ff; }
+    .ocr-upload-icon { font-size:42px; margin-bottom:6px; }
+    .ocr-preview-img { width:100%; max-height:240px; object-fit:contain; border-radius:10px; background:#f1f5f9; margin-top:10px; }
+    .ocr-camera-wrap { position:relative; border-radius:12px; overflow:hidden; background:#000; aspect-ratio:16/10; }
+    .ocr-camera-video { width:100%; height:100%; object-fit:cover; display:block; }
+    .ocr-camera-overlay { position:absolute; inset:10%; border:2px dashed rgba(255,255,255,0.75); border-radius:10px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.15) inset; }
+    .ocr-camera-hint { position:absolute; top:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.55); color:#fff; font-size:11px; padding:3px 10px; border-radius:99px; pointer-events:none; }
+    .ocr-camera-err { background:#fee2e2; color:#991b1b; border-radius:10px; padding:14px; font-size:13px; text-align:center; }
+    .ocr-cam-btns { display:flex; gap:8px; margin-top:10px; }
+    .ocr-cam-btns > button { flex:1; }
+    .ocr-fallback-link { display:block; text-align:center; margin-top:10px; font-size:12px; color:#64748b; text-decoration:underline; cursor:pointer; }
+    .ocr-pdpa-card { background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.55; color:#78350f; }
+    .ocr-pdpa-card ul { padding-left:20px; margin:6px 0; }
+    .ocr-pdpa-card b { color:#92400e; }
+    .ocr-status { padding:10px 14px; border-radius:8px; font-size:13px; margin-top:12px; display:none; }
+    .ocr-status.info { background:#dbeafe; color:#1e40af; display:block; }
+    .ocr-status.error { background:#fee2e2; color:#991b1b; display:block; }
+    .ocr-status.success { background:#d1fae5; color:#065f46; display:block; }
+    .ocr-loader { display:inline-block; width:14px; height:14px; border:2px solid #e2e8f0; border-top-color:#6366f1; border-radius:50%; animation:ocr-spin .8s linear infinite; margin-right:6px; vertical-align:-2px; }
+    @keyframes ocr-spin { to { transform:rotate(360deg); } }
+    .ocr-result-row { display:grid; grid-template-columns:110px 1fr; gap:6px 12px; font-size:14px; }
+    .ocr-result-row .k { color:#64748b; text-align:right; padding-top:2px; }
+    .ocr-result-row .v { font-weight:600; color:#1e293b; word-break:break-word; }
+    .ocr-badge-ok { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; background:#d1fae5; color:#065f46; }
+    .ocr-badge-warn { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; background:#fef3c7; color:#92400e; }
+    .ocr-modal-footer { padding:12px 16px; border-top:1px solid #e2e8f0; display:flex; gap:8px; justify-content:flex-end; background:#f8fafc; }
+    .ocr-apikey-link { color:#4f46e5; font-size:12px; }
+    .ocr-btn-close-x { background:transparent; border:none; color:#fff; font-size:20px; cursor:pointer; padding:4px 8px; }
+  </style>
+  <div class="ocr-modal-overlay" id="ocr-modal" onclick="if(event.target===this) closeIdCardScanner()">
+    <div class="ocr-modal-box">
+      <div class="ocr-modal-header">
+        <div class="ocr-modal-title"><i class="bi bi-camera me-1"></i> สแกนบัตรประชาชน (AI)</div>
+        <button class="ocr-btn-close-x" onclick="closeIdCardScanner()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="ocr-modal-body">
+
+        <!-- Step 1: PDPA Consent -->
+        <div class="ocr-step" id="ocr-step-pdpa">
+          <h6 class="fw-bold mb-2"><i class="bi bi-shield-lock me-1 text-warning"></i> แจ้งเพื่อทราบก่อนใช้งาน (PDPA)</h6>
+          <div class="ocr-pdpa-card">
+            <div>การสแกนบัตรประชาชนใช้บริการ AI ของผู้ให้บริการภายนอก (Google Gemini) โปรดทราบ:</div>
+            <ul>
+              <li><b>ถ่ายภาพจากกล้องสด</b> (live stream) เท่านั้น — <b>ไม่บันทึกลง Photos/คลังภาพของเครื่อง</b></li>
+              <li>ภาพอยู่ใน <b>หน่วยความจำชั่วคราว</b> ของหน้าเว็บ ส่งไป Google <b>ครั้งเดียว</b> แล้วลบทิ้งอัตโนมัติ</li>
+              <li><b>ไม่มีการเก็บภาพ</b> ไว้ในระบบของโรงพยาบาล/คลินิก (เก็บเฉพาะข้อความที่อ่านได้จากบัตร)</li>
+              <li>Google ประกาศนโยบายไม่ใช้ข้อมูลของ API free tier เพื่อ training แต่อาจเก็บ log ชั่วคราวเพื่อ monitoring</li>
+              <li>วัตถุประสงค์: <b>auto-fill ข้อมูลผู้ป่วยเท่านั้น</b> (ชื่อ, เลขบัตร, อายุ, เพศ)</li>
+              <li>เจ้าหน้าที่ต้อง <b>ตรวจสอบความถูกต้อง</b> ก่อนยืนยันบันทึก</li>
+              <li>หากผู้ป่วย/ญาติ <b>ไม่ยินยอม</b> → กรุณากรอกข้อมูลด้วยมือ</li>
+            </ul>
+            <div class="mt-2"><b>ฐานกฎหมาย:</b> การให้บริการทางการแพทย์ฉุกเฉิน (PDPA มาตรา 24(5)) และประโยชน์โดยชอบด้วยกฎหมาย (มาตรา 24(3))</div>
+          </div>
+          <label id="ocr-pdpa-check-wrap" for="ocr-pdpa-accept" class="mt-3 p-2 rounded d-flex align-items-start" style="background:#f1f5f9; border:2px solid #cbd5e1; cursor:pointer; gap:10px; margin-bottom:0;">
+            <input type="checkbox" id="ocr-pdpa-accept" onchange="updatePDPAButtonState()" style="width:20px; height:20px; flex-shrink:0; margin-top:2px; cursor:pointer;">
+            <span class="small" style="line-height:1.45;">
+              <b>ข้าพเจ้าได้แจ้ง/ขอความยินยอมจากผู้ป่วยหรือญาติแล้ว</b> และยอมรับเงื่อนไขการประมวลผลข้างต้น
+            </span>
+          </label>
+          <div id="ocr-pdpa-warn" class="text-danger small mt-2" style="display:none;">
+            <i class="bi bi-exclamation-circle"></i> กรุณาติ๊กช่อง ✓ เพื่อยืนยันว่าได้รับความยินยอมแล้ว
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="closeIdCardScanner()">ยกเลิก</button>
+            <button class="btn btn-primary btn-sm flex-grow-1" id="ocr-btn-pdpa-next" onclick="acceptPDPAAndNext()" disabled><i class="bi bi-arrow-right me-1"></i> ยอมรับและดำเนินการต่อ</button>
+          </div>
+        </div>
+
+        <!-- Step 2: API Key Setup (first-time only) -->
+        <div class="ocr-step" id="ocr-step-apikey">
+          <h6 class="fw-bold mb-2"><i class="bi bi-key me-1 text-primary"></i> ตั้งค่า Gemini API Key (ครั้งแรกเท่านั้น)</h6>
+          <p class="text-muted small">ต้องมี Gemini API key เพื่อใช้งาน — สมัครฟรี 100 req/วัน ที่ <a href="https://aistudio.google.com/apikey" target="_blank" class="ocr-apikey-link">aistudio.google.com/apikey</a></p>
+          <label class="form-label fw-semibold small">API Key</label>
+          <input type="password" id="ocr-apikey-input" class="form-control form-control-sm" placeholder="AIzaSy..." autocomplete="off">
+          <div class="form-text small">เก็บไว้ใน browser ของเครื่องนี้เท่านั้น (localStorage)</div>
+
+          <label class="form-label fw-semibold small mt-3">Model (แนะนำ 2.5 Pro สำหรับภาษาไทย)</label>
+          <select id="ocr-model-select" class="form-select form-select-sm">
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (แนะนำ — ไทยแม่น)</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (เร็วกว่า)</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+          </select>
+
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="closeIdCardScanner()">ยกเลิก</button>
+            <button class="btn btn-primary btn-sm flex-grow-1" onclick="saveApiKeyAndNext()"><i class="bi bi-save me-1"></i> บันทึกและต่อ</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Live Camera Capture (no device storage) -->
+        <div class="ocr-step" id="ocr-step-upload">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0"><i class="bi bi-camera-video me-1"></i> ถ่ายภาพบัตรจากกล้องสด</h6>
+            <button class="btn btn-sm btn-link text-muted p-0" id="ocr-gear-btn" onclick="resetApiKey()" title="ตั้งค่า API ใหม่"><i class="bi bi-gear"></i></button>
+          </div>
+
+          <!-- Camera live view (shown when camera is available) -->
+          <div id="ocr-camera-view" style="display:none;">
+            <div class="ocr-camera-wrap">
+              <video id="ocr-video" class="ocr-camera-video" autoplay playsinline muted></video>
+              <div class="ocr-camera-overlay"></div>
+              <div class="ocr-camera-hint">วางบัตรให้อยู่ในกรอบ</div>
+            </div>
+            <div class="ocr-cam-btns">
+              <button class="btn btn-outline-secondary btn-sm" onclick="switchOCRCamera()" title="สลับกล้อง"><i class="bi bi-arrow-repeat"></i></button>
+              <button class="btn btn-primary btn-sm" id="ocr-btn-capture" onclick="captureOCRFrame()"><i class="bi bi-camera-fill me-1"></i> ถ่ายภาพ</button>
+            </div>
+            <span class="ocr-fallback-link" onclick="switchToUploadMode()">
+              <i class="bi bi-upload"></i> หรืออัปโหลดรูปที่มีอยู่แล้ว
+            </span>
+          </div>
+
+          <!-- Upload fallback view (shown when camera fails or user chose upload) -->
+          <div id="ocr-upload-view" style="display:none;">
+            <div id="ocr-camera-err" class="ocr-camera-err" style="display:none;"></div>
+            <div class="ocr-upload-zone" onclick="document.getElementById('ocr-file-input').click()">
+              <div class="ocr-upload-icon">📁</div>
+              <div><b>แตะเพื่อเลือกรูปบัตร</b></div>
+              <div class="text-muted small mt-1">JPG / PNG / HEIC — วางบัตรพื้นเรียบ แสงสม่ำเสมอ</div>
+              <div class="text-warning small mt-2" style="font-size:11px;">
+                <i class="bi bi-exclamation-triangle"></i> โหมดอัปโหลด: รูปต้องมีอยู่ในเครื่องก่อน (ไม่ใช่ live capture)
+              </div>
+            </div>
+            <span class="ocr-fallback-link" id="ocr-retry-camera" onclick="switchToCameraMode()" style="display:none;">
+              <i class="bi bi-camera-video"></i> ลองเปิดกล้องอีกครั้ง
+            </span>
+          </div>
+
+          <input type="file" id="ocr-file-input" accept="image/*" style="display:none" onchange="handleOCRFile(event.target.files[0])">
+
+          <!-- Captured preview (shown after capture) -->
+          <div id="ocr-preview-wrap" style="display:none;">
+            <img id="ocr-preview-img" class="ocr-preview-img" alt="preview">
+            <div class="text-center mt-2">
+              <button class="btn btn-sm btn-outline-secondary me-2" onclick="retakeOCRImage()"><i class="bi bi-arrow-counterclockwise"></i> ถ่ายใหม่</button>
+              <button class="btn btn-sm btn-primary" id="ocr-btn-extract" onclick="extractIdCardData()"><i class="bi bi-magic me-1"></i> อ่านข้อมูลจากบัตร</button>
+            </div>
+          </div>
+
+          <div id="ocr-status" class="ocr-status"></div>
+        </div>
+
+        <!-- Step 4: Preview Result -->
+        <div class="ocr-step" id="ocr-step-result">
+          <h6 class="fw-bold mb-2"><i class="bi bi-check-circle me-1 text-success"></i> ตรวจสอบข้อมูลก่อนยืนยัน</h6>
+          <div class="ocr-pdpa-card mb-2" style="background:#eff6ff; border-color:#bfdbfe; color:#1e40af;">
+            <i class="bi bi-info-circle me-1"></i> <b>กรุณาตรวจสอบ</b> ก่อนกดยืนยัน — AI อาจอ่านตัวอักษรไทยผิดพลาดได้ โดยเฉพาะชื่อ
+          </div>
+          <div class="ocr-result-row" id="ocr-result-grid"></div>
+        </div>
+
+      </div>
+      <div class="ocr-modal-footer" id="ocr-footer-result" style="display:none;">
+        <button class="btn btn-sm btn-outline-secondary" onclick="backToUpload()"><i class="bi bi-arrow-left"></i> ถ่ายใหม่</button>
+        <button class="btn btn-sm btn-primary" onclick="confirmAndFill()"><i class="bi bi-check-lg me-1"></i> ยืนยัน & เติมในฟอร์ม</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ════════════════════════════════════════════════════════════
+    // ID Card Scanner (Gemini Vision OCR) — Prototype
+    // ════════════════════════════════════════════════════════════
+    // NOTE: สำหรับ production ควรย้าย API call ไป Cloudflare Worker proxy
+    //       เพื่อไม่ให้ API key โผล่ใน browser
+    // ════════════════════════════════════════════════════════════
+
+    var _ocrTargetMode = 'desktop'; // 'desktop' | 'mobile'
+    var _ocrImageBase64 = '';
+    var _ocrImageMime = '';
+    var _ocrExtractedData = null;
+    var _ocrStream = null;          // MediaStream — stopped on close/capture
+    var _ocrFacingMode = 'environment'; // 'environment' | 'user'
+    var OCR_PDPA_KEY = 'ocr_pdpa_accepted_v1';
+    var OCR_APIKEY = 'ocr_gemini_api_key';
+    var OCR_MODEL = 'ocr_gemini_model';
+
+    function openIdCardScanner(mode) {
+      _ocrTargetMode = mode || 'desktop';
+      var modal = document.getElementById('ocr-modal');
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+      _ocrImageBase64 = ''; _ocrExtractedData = null;
+      document.getElementById('ocr-preview-wrap').style.display = 'none';
+      // Don't force camera view here — showOCRStep('upload') will pick the right mode
+      document.getElementById('ocr-camera-view').style.display = 'none';
+      document.getElementById('ocr-upload-view').style.display = 'none';
+      var fileInput = document.getElementById('ocr-file-input');
+      if (fileInput) fileInput.value = '';
+      document.getElementById('ocr-footer-result').style.display = 'none';
+      setOCRStatus('', '');
+
+      // Reset PDPA checkbox state (re-acknowledge each session is a good practice)
+      var pdpaCb = document.getElementById('ocr-pdpa-accept');
+      if (pdpaCb) { pdpaCb.checked = false; updatePDPAButtonState(); }
+
+      // Routing: PDPA → (API key if no proxy) → Upload
+      var pdpaAccepted = localStorage.getItem(OCR_PDPA_KEY);
+      var apiKey = localStorage.getItem(OCR_APIKEY);
+      var hasProxy = !!getOCRProxyUrl();
+      // Hide gear icon (API key settings) when proxy is configured
+      var gearBtn = document.getElementById('ocr-gear-btn');
+      if (gearBtn) gearBtn.style.display = hasProxy ? 'none' : '';
+      if (!pdpaAccepted) {
+        showOCRStep('pdpa');
+      } else if (!hasProxy && !apiKey) {
+        showOCRStep('apikey');
+      } else {
+        showOCRStep('upload');
+      }
+    }
+
+    function closeIdCardScanner() {
+      stopOCRCamera();
+      // clear in-memory image too (no trace)
+      _ocrImageBase64 = ''; _ocrImageMime = ''; _ocrExtractedData = null;
+      var img = document.getElementById('ocr-preview-img'); if (img) img.src = '';
+      document.getElementById('ocr-modal').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    function showOCRStep(name) {
+      ['pdpa','apikey','upload','result'].forEach(function(s){
+        var el = document.getElementById('ocr-step-' + s);
+        if (el) el.classList.toggle('active', s === name);
+      });
+      document.getElementById('ocr-footer-result').style.display = (name === 'result') ? 'flex' : 'none';
+      // Start/stop camera based on step
+      if (name === 'upload') {
+        // only auto-detect if preview not already filled
+        if (document.getElementById('ocr-preview-wrap').style.display === 'none') {
+          autoDetectCameraMode();
+        }
+      } else {
+        stopOCRCamera();
+      }
+    }
+
+    // Check if this environment supports getUserMedia (HTTPS + API + permission)
+    function canUseCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return false;
+      return true;
+    }
+
+    // Pick camera or upload mode automatically
+    async function autoDetectCameraMode() {
+      if (canUseCamera()) {
+        await switchToCameraMode();
+      } else {
+        // No HTTPS / no API support — go straight to upload
+        switchToUploadMode('ℹ️ อุปกรณ์นี้ไม่รองรับกล้องสด (ต้องใช้ HTTPS หรือเบราว์เซอร์ที่รองรับ) — กรุณาอัปโหลดรูป');
+      }
+    }
+
+    function switchToUploadMode(errorHtml) {
+      stopOCRCamera();
+      document.getElementById('ocr-camera-view').style.display = 'none';
+      document.getElementById('ocr-upload-view').style.display = 'block';
+      var errBox = document.getElementById('ocr-camera-err');
+      if (errorHtml) {
+        errBox.innerHTML = errorHtml;
+        errBox.style.display = 'block';
+        // show retry link only if camera is theoretically possible
+        document.getElementById('ocr-retry-camera').style.display = canUseCamera() ? 'block' : 'none';
+      } else {
+        errBox.style.display = 'none';
+        document.getElementById('ocr-retry-camera').style.display = canUseCamera() ? 'block' : 'none';
+      }
+    }
+
+    async function switchToCameraMode() {
+      document.getElementById('ocr-upload-view').style.display = 'none';
+      document.getElementById('ocr-camera-view').style.display = 'block';
+      await startOCRCamera();
+    }
+
+    // ── Live camera (getUserMedia) — no device storage ──────────────
+    async function startOCRCamera() {
+      if (_ocrStream) return; // already running
+      if (!canUseCamera()) {
+        switchToUploadMode('⚠ ต้องใช้ผ่าน HTTPS เพื่อเข้าถึงกล้อง — กรุณาอัปโหลดรูป หรือเปิดผ่าน https://');
+        return;
+      }
+      try {
+        _ocrStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: _ocrFacingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
+        });
+        var v = document.getElementById('ocr-video');
+        v.srcObject = _ocrStream;
+        v.setAttribute('playsinline', 'true'); // iOS must not go fullscreen
+        await v.play().catch(function(){}); // iOS sometimes needs user gesture — ignored
+      } catch (e) {
+        var msg = 'ไม่สามารถเปิดกล้อง: ' + (e.name || e.message || 'unknown');
+        if (e.name === 'NotAllowedError' || e.name === 'SecurityError') {
+          msg = '🔒 ผู้ใช้ปฏิเสธสิทธิ์กล้อง — เปิดสิทธิ์ใน browser settings แล้วกด "ลองเปิดกล้องอีกครั้ง" หรืออัปโหลดรูป';
+        } else if (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') {
+          msg = '📷 ไม่พบกล้องบนเครื่องนี้ — กรุณาอัปโหลดรูป';
+        } else if (e.name === 'NotReadableError') {
+          msg = '⚠ กล้องถูกแอปอื่นใช้งานอยู่ — ปิดแอปอื่นแล้วลองใหม่ หรืออัปโหลดรูป';
+        }
+        // Auto-fallback to upload mode with error message
+        switchToUploadMode(msg);
+      }
+    }
+
+    function stopOCRCamera() {
+      if (_ocrStream) {
+        try { _ocrStream.getTracks().forEach(function(t){ t.stop(); }); } catch(_){}
+        _ocrStream = null;
+      }
+      var v = document.getElementById('ocr-video');
+      if (v) { try { v.pause(); } catch(_){} v.srcObject = null; }
+    }
+
+    async function switchOCRCamera() {
+      _ocrFacingMode = (_ocrFacingMode === 'environment') ? 'user' : 'environment';
+      stopOCRCamera();
+      await startOCRCamera();
+    }
+
+    function captureOCRFrame() {
+      var v = document.getElementById('ocr-video');
+      if (!v || !v.videoWidth) {
+        setOCRStatus('กล้องยังไม่พร้อม — รอสักครู่', 'error'); return;
+      }
+      try {
+        // Draw current frame to canvas (in memory only)
+        var maxW = 2400;
+        var scale = Math.min(1, maxW / v.videoWidth);
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(v.videoWidth * scale);
+        canvas.height = Math.round(v.videoHeight * scale);
+        canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        _ocrImageBase64 = dataUrl.split(',')[1];
+        _ocrImageMime = 'image/jpeg';
+        document.getElementById('ocr-preview-img').src = dataUrl;
+        // Swap views: hide camera, show preview
+        document.getElementById('ocr-camera-view').style.display = 'none';
+        document.getElementById('ocr-preview-wrap').style.display = 'block';
+        stopOCRCamera(); // release camera immediately after capture (privacy)
+        setOCRStatus('ถ่ายภาพเรียบร้อย — กด "อ่านข้อมูลจากบัตร"', 'success');
+      } catch (e) {
+        setOCRStatus('ถ่ายภาพผิดพลาด: ' + e.message, 'error');
+      }
+    }
+
+    function retakeOCRImage() {
+      _ocrImageBase64 = ''; _ocrImageMime = '';
+      document.getElementById('ocr-preview-img').src = '';
+      document.getElementById('ocr-preview-wrap').style.display = 'none';
+      var fi = document.getElementById('ocr-file-input'); if (fi) fi.value = '';
+      setOCRStatus('', '');
+      autoDetectCameraMode(); // re-pick camera or upload
+    }
+
+    function updatePDPAButtonState() {
+      var checked = document.getElementById('ocr-pdpa-accept').checked;
+      var btn = document.getElementById('ocr-btn-pdpa-next');
+      var warn = document.getElementById('ocr-pdpa-warn');
+      var wrap = document.getElementById('ocr-pdpa-check-wrap');
+      if (btn) btn.disabled = !checked;
+      if (warn) warn.style.display = 'none';
+      if (wrap) {
+        wrap.style.borderColor = checked ? '#10b981' : '#cbd5e1';
+        wrap.style.background = checked ? '#ecfdf5' : '#f1f5f9';
+      }
+    }
+
+    function acceptPDPAAndNext() {
+      var cb = document.getElementById('ocr-pdpa-accept');
+      if (!cb.checked) {
+        // Inline warning (not Swal — modal z-index would hide it)
+        document.getElementById('ocr-pdpa-warn').style.display = 'block';
+        document.getElementById('ocr-pdpa-check-wrap').style.borderColor = '#ef4444';
+        document.getElementById('ocr-pdpa-check-wrap').style.background = '#fef2f2';
+        return;
+      }
+      localStorage.setItem(OCR_PDPA_KEY, String(Date.now()));
+      var apiKey = localStorage.getItem(OCR_APIKEY);
+      var hasProxy = !!getOCRProxyUrl();
+      showOCRStep((hasProxy || apiKey) ? 'upload' : 'apikey');
+    }
+
+    function saveApiKeyAndNext() {
+      var key = (document.getElementById('ocr-apikey-input').value || '').trim();
+      if (!key) { Swal.fire({icon:'warning', title:'กรุณาใส่ API key'}); return; }
+      var model = document.getElementById('ocr-model-select').value;
+      localStorage.setItem(OCR_APIKEY, key);
+      localStorage.setItem(OCR_MODEL, model);
+      showOCRStep('upload');
+    }
+
+    function resetApiKey() {
+      if (!confirm('ต้องการตั้งค่า API key ใหม่ใช่หรือไม่?')) return;
+      document.getElementById('ocr-apikey-input').value = localStorage.getItem(OCR_APIKEY) || '';
+      document.getElementById('ocr-model-select').value = localStorage.getItem(OCR_MODEL) || 'gemini-2.5-pro';
+      showOCRStep('apikey');
+    }
+
+    // Fallback file handling (desktop without camera / upload existing JPG)
+    // NOTE: This path reads a file that already exists on the device — less PDPA-ideal
+    // than the live-camera path, but kept for desktops without cameras.
+    async function handleOCRFile(file) {
+      if (!file) return;
+      if (!file.type || !file.type.startsWith('image/')) {
+        setOCRStatus('กรุณาเลือกไฟล์รูปภาพ', 'error'); return;
+      }
+      setOCRStatus('กำลังประมวลผลรูป...', 'info');
+      try {
+        var result = await compressOCRImage(file, 2400);
+        _ocrImageBase64 = result.base64;
+        _ocrImageMime = result.mimeType;
+        document.getElementById('ocr-preview-img').src = result.dataUrl;
+        // swap to preview view
+        document.getElementById('ocr-camera-view').style.display = 'none';
+        document.getElementById('ocr-preview-wrap').style.display = 'block';
+        stopOCRCamera();
+        setOCRStatus('พร้อมส่งเข้า AI — กด "อ่านข้อมูลจากบัตร"', 'success');
+      } catch (e) {
+        setOCRStatus('ประมวลผลรูปผิดพลาด: ' + e.message + ' (iOS HEIC อาจไม่รองรับในบางเวอร์ชัน ลองถ่ายเป็น JPG)', 'error');
+      }
+    }
+
+    function compressOCRImage(file, maxWidth) {
+      return new Promise(function(resolve, reject){
+        var img = new Image();
+        var objUrl = URL.createObjectURL(file);
+        img.onload = function(){
+          try {
+            var scale = Math.min(1, maxWidth / img.width);
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            URL.revokeObjectURL(objUrl);
+            resolve({ base64: dataUrl.split(',')[1], mimeType:'image/jpeg', dataUrl: dataUrl });
+          } catch(err) { URL.revokeObjectURL(objUrl); reject(err); }
+        };
+        img.onerror = function(){ URL.revokeObjectURL(objUrl); reject(new Error('โหลดรูปไม่สำเร็จ')); };
+        img.src = objUrl;
+      });
+    }
+
+    // Check if proxy is configured (hide API key from browser)
+    function getOCRProxyUrl() {
+      try {
+        if (typeof CONFIG !== 'undefined' && CONFIG.OCR_PROXY_URL && CONFIG.OCR_PROXY_URL.trim()) {
+          return CONFIG.OCR_PROXY_URL.trim().replace(/\/+$/,''); // strip trailing /
+        }
+      } catch(_){}
+      return '';
+    }
+
+    // Call Gemini with retry-on-503. Returns parsed data or throws.
+    // Uses Worker proxy if CONFIG.OCR_PROXY_URL is set, otherwise direct with apiKey.
+    async function callGeminiOCR(model, apiKey, body) {
+      var proxyUrl = getOCRProxyUrl();
+      var url;
+      if (proxyUrl) {
+        // Via Cloudflare Worker — no API key in browser
+        url = proxyUrl + '/?model=' + encodeURIComponent(model);
+      } else {
+        // Direct to Gemini (legacy: API key per-browser localStorage)
+        url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(apiKey);
+      }
+      var maxRetries = 2;           // initial + 2 retries = 3 total attempts
+      var delays = [1500, 3500];    // ms — exponential-ish backoff
+
+      for (var attempt = 0; attempt <= maxRetries; attempt++) {
+        var resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        if (resp.ok) {
+          var data = await resp.json();
+          var parts = (((data.candidates||[])[0]||{}).content||{}).parts || [];
+          var jsonStr = (parts[0]||{}).text || '{}';
+          return JSON.parse(jsonStr);
+        }
+        var errText = await resp.text();
+        // Retry on 503 (overloaded) / 500 (internal) / 429 (rate) — NOT on 400/403 (bad request/auth)
+        var retriable = (resp.status === 503 || resp.status === 500 || resp.status === 429);
+        if (retriable && attempt < maxRetries) {
+          setOCRStatus('⏳ ' + model + ' โหลดเต็ม (HTTP ' + resp.status + ') — รอแล้วลองอีกครั้ง (' + (attempt+1) + '/' + maxRetries + ')...', 'info');
+          await new Promise(function(r){ setTimeout(r, delays[attempt]); });
+          continue;
+        }
+        // Non-retriable or out of retries → throw with status + body
+        var err = new Error('HTTP ' + resp.status);
+        err.status = resp.status; err.body = errText;
+        throw err;
+      }
+    }
+
+    async function extractIdCardData() {
+      var proxyUrl = getOCRProxyUrl();
+      var apiKey = localStorage.getItem(OCR_APIKEY);
+      var model = localStorage.getItem(OCR_MODEL) || 'gemini-2.5-pro';
+      // Only require API key if proxy is not configured
+      if (!proxyUrl && !apiKey) { showOCRStep('apikey'); return; }
+      if (!_ocrImageBase64) { setOCRStatus('กรุณาเลือกรูปก่อน', 'error'); return; }
+
+      var btn = document.getElementById('ocr-btn-extract');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="ocr-loader"></span> กำลังอ่าน...';
+      setOCRStatus('กำลังส่งเข้า ' + model + '...', 'info');
+
+      var prompt = 'You are a highly accurate OCR assistant for Thai National ID cards.\n\n' +
+        'CRITICAL RULES:\n' +
+        '1. Thai ID cards show BOTH Thai and English names. USE THE ENGLISH as cross-check for Thai reading.\n' +
+        '2. Confusing Thai chars: ฐ/รู้, ฑ/ฌ, ธ/ท/พ, ฆ/ม, ฉ/ณ, ษ/ห. Match English transliteration when in doubt.\n' +
+        '3. If English says "Dhitivara", Thai must start with ฐ/ฑ/ธ/ฒ — NOT รู้.\n' +
+        '4. Return ONLY valid JSON matching the schema. Empty string "" for unreadable fields.\n' +
+        '5. birthDate/issueDate/expiryDate: convert Thai Buddhist Era (พ.ศ.) to Gregorian (ค.ศ.) by subtracting 543.\n' +
+        '6. idCard: 13 digits only, strip dashes and spaces.\n\n' +
+        'Accuracy is critical — this data enters medical records.';
+
+      var body = {
+        contents:[{ parts:[ {text:prompt}, {inline_data:{mime_type:_ocrImageMime, data:_ocrImageBase64}} ]}],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type:'object',
+            properties: {
+              idCard:{type:'string'}, prefixTh:{type:'string'},
+              firstNameTh:{type:'string'}, lastNameTh:{type:'string'},
+              firstNameEn:{type:'string'}, lastNameEn:{type:'string'},
+              birthDate:{type:'string'}, gender:{type:'string'},
+              issueDate:{type:'string'}, expiryDate:{type:'string'}
+            },
+            required:['idCard','firstNameTh','lastNameTh']
+          },
+          temperature:0.1
+        }
+      };
+
+      try {
+        var parsed;
+        try {
+          parsed = await callGeminiOCR(model, apiKey, body);
+        } catch (e) {
+          // Auto-fallback: if Pro is overloaded (503), try Flash once
+          if (e.status === 503 && model === 'gemini-2.5-pro') {
+            setOCRStatus('⚠ 2.5 Pro โหลดเต็ม — กำลังสลับไปใช้ 2.5 Flash (ไทยอาจเพี้ยน ตรวจสอบก่อนบันทึก)...', 'info');
+            parsed = await callGeminiOCR('gemini-2.5-flash', apiKey, body);
+          } else {
+            throw e;
+          }
+        }
+        _ocrExtractedData = enrichOCRData(parsed);
+        showOCRResult(_ocrExtractedData);
+      } catch(e) {
+        var msg = '';
+        if (e.status === 503) msg = '❌ Gemini server โหลดเต็ม (503) — ลองใหม่อีกครั้งใน 1-2 นาที หรือเปลี่ยนเป็น 2.5 Flash';
+        else if (e.status === 429) {
+          msg = (e.body || '').indexOf('limit: 0') >= 0
+            ? '❌ API key ไม่มีสิทธิ์ free tier ของ ' + model + ' — ลอง Gmail ส่วนตัว หรือเปลี่ยน model'
+            : '❌ เกินโควตา — รอสักครู่ หรือเปลี่ยน model';
+        }
+        else if (e.status === 403) msg = '❌ API key ไม่ถูกต้อง';
+        else if (e.status === 400) msg = '❌ รูปหรือ request ไม่ถูกต้อง (HTTP 400)';
+        else msg = '❌ ' + (e.message || 'unknown error');
+        setOCRStatus(msg, 'error');
+        console.error('OCR error:', e);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-magic me-1"></i> อ่านข้อมูลจากบัตร';
+      }
+    }
+
+    function enrichOCRData(d) {
+      var age = '';
+      if (d.birthDate && /^\d{4}-\d{2}-\d{2}$/.test(d.birthDate)) {
+        var bd = new Date(d.birthDate);
+        if (!isNaN(bd)) age = Math.floor((Date.now() - bd.getTime()) / (1000*60*60*24*365.25));
+      }
+      var id = (d.idCard || '').replace(/\D/g, '');
+      var idValid = false;
+      if (id.length === 13) {
+        var sum = 0;
+        for (var i = 0; i < 12; i++) sum += parseInt(id[i]) * (13 - i);
+        idValid = ((11 - sum % 11) % 10) === parseInt(id[12]);
+      }
+      return Object.assign({}, d, { idCard: id, age: age, idCardValid: idValid });
+    }
+
+    function showOCRResult(d) {
+      var fullName = ((d.prefixTh||'') + (d.firstNameTh||'') + ' ' + (d.lastNameTh||'')).replace(/\s+/g,' ').trim();
+      var idDisplay = d.idCard ? d.idCard.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, '$1-$2-$3-$4-$5') : '-';
+      var idBadge = d.idCard ? (d.idCardValid ? '<span class="ocr-badge-ok">✓ ถูกต้อง</span>' : '<span class="ocr-badge-warn">⚠ Checksum ผิด</span>') : '';
+      var genderTh = (d.gender||'').toLowerCase().indexOf('m')===0 ? 'ชาย' : (((d.gender||'').toLowerCase().indexOf('f')===0) ? 'หญิง' : (d.gender||'-'));
+
+      document.getElementById('ocr-result-grid').innerHTML =
+        '<div class="k">เลขบัตร:</div><div class="v">' + idDisplay + ' ' + idBadge + '</div>' +
+        '<div class="k">ชื่อ-นามสกุล:</div><div class="v">' + (fullName || '-') + '</div>' +
+        '<div class="k">ชื่ออังกฤษ:</div><div class="v">' + (d.firstNameEn||'-') + ' ' + (d.lastNameEn||'') + '</div>' +
+        '<div class="k">วันเกิด:</div><div class="v">' + (d.birthDate||'-') + (d.age ? ' (อายุ ' + d.age + ' ปี)' : '') + '</div>' +
+        '<div class="k">เพศ:</div><div class="v">' + genderTh + '</div>';
+      showOCRStep('result');
+    }
+
+    function backToUpload() { showOCRStep('upload'); }
+
+    function confirmAndFill() {
+      if (!_ocrExtractedData) return;
+      var d = _ocrExtractedData;
+      var fullName = ((d.prefixTh||'') + (d.firstNameTh||'') + ' ' + (d.lastNameTh||'')).replace(/\s+/g,' ').trim();
+      var gender = (d.gender||'').toLowerCase().indexOf('m')===0 ? 'Male' : (((d.gender||'').toLowerCase().indexOf('f')===0) ? 'Female' : '');
+
+      if (_ocrTargetMode === 'mobile') {
+        var setM = function(id, v) { var el = document.getElementById(id); if (el && v) el.value = v; };
+        setM('m_pt_idcard', d.idCard);
+        setM('m_pt_name', fullName);
+        setM('m_pt_age', d.age);
+        setM('m_pt_gender', gender);
+      } else {
+        var f = document.forms['main-form'];
+        if (f) {
+          if (d.idCard && f.pt_idcard) f.pt_idcard.value = d.idCard;
+          if (fullName && f.pt_name) f.pt_name.value = fullName;
+          if (d.age && f.pt_age) f.pt_age.value = d.age;
+          if (gender && f.pt_gender) f.pt_gender.value = gender;
+        }
+      }
+      if (typeof formDirty !== 'undefined') formDirty = true;
+      if (typeof updateBanner === 'function') try { updateBanner(); } catch(e){}
+
+      closeIdCardScanner();
+      Swal.fire({ icon:'success', title:'เติมข้อมูลเรียบร้อย', text:'กรุณาตรวจสอบความถูกต้องอีกครั้ง', timer:2000, showConfirmButton:false });
+    }
+
+    function setOCRStatus(msg, type) {
+      var el = document.getElementById('ocr-status');
+      if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+      el.className = 'ocr-status ' + (type||'info');
+      el.textContent = msg;
+    }
+  </script>
+
   <!-- ═══ Consent Modal ═══ -->
   <div class="consent-modal-overlay" id="consent-modal">
     <div class="consent-modal-content">
@@ -4074,7 +4766,7 @@
         </button>
       </div>
       <div class="consent-modal-body">
-        <iframe id="consent-iframe" src="" style="width:100%; border:none; min-height:70vh;" onload="if(typeof resizeConsentIframe==='function')resizeConsentIframe()"></iframe>
+        <iframe id="consent-iframe" src="" style="width:100%; border:none; min-height:70vh;" onload="if(typeof resizeConsentIframe==='function') resizeConsentIframe()"></iframe>
       </div>
     </div>
   </div>
@@ -4161,7 +4853,7 @@
       var ptName = '', ptAge = '', ptId = '', routeFrom = '', routeTo = '';
       try {
         var results = await Promise.all([
-          _supabase.from('cases').select('patient_info,raw_data').eq('case_id', caseId).single(),
+          _supabase.from('cases').select('patient_info').eq('case_id', caseId).single(),
           loadConsentsFromDB(caseId)
         ]);
         Swal.close();
@@ -4173,16 +4865,6 @@
           ptId = pi.idCard || '';
           routeFrom = pi.origin || '';
           routeTo = pi.destination || '';
-        }
-        // Legacy fallback: if idCard missing in patient_info, pull from raw_data.rawSnapshot
-        if (!ptId && results[0].data && results[0].data.raw_data) {
-          try {
-            var rs = results[0].data.raw_data.rawSnapshot;
-            if (rs) {
-              var snap = typeof rs === 'string' ? JSON.parse(rs) : rs;
-              ptId = snap.pt_idcard || snap.pt_passport || '';
-            }
-          } catch(e) { console.warn('rawSnapshot parse error:', e); }
         }
         _previewConsentVersions = results[1] || [];
         _previewConsentCaseId = caseId;
@@ -4337,7 +5019,7 @@
       var ptAge = f ? (f.pt_age?.value || '') : '';
       var ptIdCard = '';
       try {
-        ptIdCard = (f.pt_idcard?.value || f.pt_passport?.value || '').trim();
+        ptIdCard = (f.pt_idcard?.value || '').trim();
       } catch(e) {}
       var routeFrom = f ? (f.origin?.value || '') : '';
       var routeTo = f ? (f.destination?.value || '') : '';
@@ -4468,7 +5150,203 @@
       document.getElementById('consent-iframe').src = '';
     }
 
-    // Delete consent version from Transport Case edit view (Admin only)
+    // ══════════════════════════════════════════════════════════════════
+    // Device B — Open Consent directly from Dashboard (without opening full form)
+    // ══════════════════════════════════════════════════════════════════
+    window._consentDashboardMode = false;
+    window._consentDashboardCaseId = null;
+    window._consentDashboardPatient = null;
+
+    function _exitConsentDashboardMode() {
+      window._consentDashboardMode = false;
+      window._consentDashboardCaseId = null;
+      window._consentDashboardPatient = null;
+    }
+
+    async function openConsentFromDashboard(caseId) {
+      if (!caseId) return;
+      Swal.fire({ title: 'กำลังโหลดข้อมูลเคส...', didOpen: function(){ Swal.showLoading(); }, allowOutsideClick: false });
+      try {
+        var results = await Promise.all([
+          _supabase.from('cases').select('patient_info,status,raw_data').eq('case_id', caseId).single(),
+          loadConsentsFromDB(caseId)
+        ]);
+        Swal.close();
+        var pi = (results[0].data && results[0].data.patient_info) || {};
+        // Legacy fallback: if patient_info.idCard empty, pull from rawSnapshot.pt_idcard (or pt_passport)
+        if (!pi.idCard && results[0].data && results[0].data.raw_data) {
+          try {
+            var rs = results[0].data.raw_data.rawSnapshot;
+            if (rs) {
+              var snap = typeof rs === 'string' ? JSON.parse(rs) : rs;
+              pi.idCard = snap.pt_idcard || snap.pt_passport || '';
+            }
+          } catch(e) { console.warn('rawSnapshot parse error:', e); }
+        }
+        var caseStatus = (results[0].data && results[0].data.status) || 'InProgress';
+        var versions = results[1] || [];
+        var activeVer = versions.find(function(v){ return v.status === 'active'; });
+        var isLocked = caseStatus === 'Completed';
+
+        // Pin dashboard mode (postMessage handler uses these)
+        window._consentDashboardMode = true;
+        window._consentDashboardCaseId = caseId;
+        window._consentDashboardPatient = pi;
+
+        _previewConsentVersions = versions;
+        _previewConsentCaseId = caseId;
+
+        if (!activeVer) {
+          // No consent yet → open editable modal directly
+          _openConsentEditFromDashboard(caseId, pi);
+          return;
+        }
+
+        // Has consent → show preview (view-first pattern)
+        _openConsentPreviewFromDashboard(caseId, pi, versions, isLocked);
+      } catch(err) {
+        Swal.close();
+        _exitConsentDashboardMode();
+        console.error('openConsentFromDashboard error:', err);
+        Swal.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ', text: (err && err.message) || String(err) });
+      }
+    }
+
+    function _openConsentEditFromDashboard(caseId, pi) {
+      var modal = document.getElementById('consent-modal');
+      var iframe = document.getElementById('consent-iframe');
+      var src = 'consent-prototype.html?embed=1';
+      src += '&case_id=' + encodeURIComponent(caseId);
+      if (pi.name) src += '&pt_name=' + encodeURIComponent(pi.name);
+      if (pi.idCard) src += '&pt_id=' + encodeURIComponent(pi.idCard);
+      if (pi.age) src += '&pt_age=' + encodeURIComponent(pi.age);
+      if (pi.origin) src += '&route_from=' + encodeURIComponent(pi.origin);
+      if (pi.destination) src += '&route_to=' + encodeURIComponent(pi.destination);
+      iframe.src = src;
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function _openConsentPreviewFromDashboard(caseId, pi, versions, isLocked) {
+      var role = (typeof getUserRole === 'function') ? getUserRole() : '';
+      var isAdmin = role === 'Admin';
+
+      // Version dropdown
+      var versionDropdown = '';
+      if (versions.length > 1) {
+        versionDropdown = '<select id="consent-version-select" onchange="switchConsentVersion()" style="padding:8px 12px;font-size:14px;border-radius:6px;border:1px solid #cbd5e1;font-family:Sarabun,sans-serif;margin:0 8px;min-width:200px;">';
+        versions.forEach(function(v) {
+          var d = new Date(v.signed_at);
+          var thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+          var pad = function(n){ return n < 10 ? '0' + n : n; };
+          var label = 'ฉบับที่ ' + v.version + ' — ' + d.getDate() + ' ' + thM[d.getMonth()] + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+          if (v.status === 'active') label += ' ✅ ฉบับปัจจุบัน';
+          else label += ' (ถูกแทนที่)';
+          versionDropdown += '<option value="' + v.version + '"' + (v.status === 'active' ? ' selected' : '') + '>' + label + '</option>';
+        });
+        versionDropdown += '</select>';
+      } else {
+        versionDropdown = '<span style="font-size:14px;color:#64748b;margin:0 8px;">ฉบับที่ 1</span>';
+      }
+
+      var editBtn = isLocked ? '' :
+        '<button onclick="openConsentEditFromDashboardMode()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#f59e0b;color:#fff;">✏️ แก้ไข (เวอร์ชันใหม่)</button>';
+
+      var delBtn = isAdmin ?
+        '<button onclick="deleteConsentFromDashboard()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#dc2626;color:#fff;">🗑️ ลบฉบับนี้ (Admin)</button>' : '';
+
+      var mode = isLocked ? 'preview' : 'print-preview';
+      var src = 'consent-prototype.html?embed=1&mode=' + mode;
+      src += '&case_id=' + encodeURIComponent(caseId);
+      if (pi.name) src += '&pt_name=' + encodeURIComponent(pi.name);
+      if (pi.idCard) src += '&pt_id=' + encodeURIComponent(pi.idCard);
+      if (pi.age) src += '&pt_age=' + encodeURIComponent(pi.age);
+      if (pi.origin) src += '&route_from=' + encodeURIComponent(pi.origin);
+      if (pi.destination) src += '&route_to=' + encodeURIComponent(pi.destination);
+
+      var printArea = document.getElementById('print-content-area');
+      var printContainer = document.getElementById('print-layout-container');
+      var toolbar = '<div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;" class="no-print">' +
+          versionDropdown + editBtn + delBtn +
+          '<button onclick="printConsentIframe()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#2563eb;color:#fff;">🖨️ พิมพ์</button>' +
+          '<button onclick="closeConsentDashboardPreview()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#64748b;color:#fff;">✕ กลับ</button></div>';
+
+      printArea.innerHTML = toolbar + '<iframe id="consent-print-iframe" src="' + src + '" style="width:100%;border:none;min-height:calc(100vh - 60px);"></iframe>';
+      printContainer.style.display = 'block';
+      document.getElementById('app-main-wrapper').style.display = 'none';
+
+      var activeVer = versions.find(function(v){ return v.status === 'active'; }) || versions[0];
+      if (activeVer && activeVer.consent_data) {
+        var pIframe = document.getElementById('consent-print-iframe');
+        pIframe.addEventListener('load', function() {
+          sendConsentDataToIframe(pIframe, activeVer.consent_data);
+        });
+      }
+
+      var ps = document.createElement('style');
+      ps.id = 'transport-print-inject';
+      ps.textContent = '#print-layout-container { position:fixed; top:0; left:0; right:0; bottom:0; z-index:99999; background:#fff; overflow:auto; } @media print { #app-main-wrapper, .modal, .modal-backdrop, .swal2-container, .no-print { display:none!important; } #print-layout-container { position:static!important; display:block!important; overflow:visible!important; } #consent-print-iframe { height:auto!important; min-height:0!important; } }';
+      document.head.appendChild(ps);
+    }
+
+    function openConsentEditFromDashboardMode() {
+      // Switch from preview to editable modal (keeping dashboard mode flag)
+      transport_closePrintView();
+      var caseId = window._consentDashboardCaseId;
+      var pi = window._consentDashboardPatient || {};
+      if (!caseId) return;
+      _openConsentEditFromDashboard(caseId, pi);
+    }
+
+    function closeConsentDashboardPreview() {
+      transport_closePrintView();
+      _exitConsentDashboardMode();
+    }
+
+    async function deleteConsentFromDashboard() {
+      var caseId = window._consentDashboardCaseId;
+      if (!caseId) return;
+      var sel = document.getElementById('consent-version-select');
+      var verNum = sel ? parseInt(sel.value) : ((_previewConsentVersions[0] || {}).version);
+      if (!verNum) return;
+      var ver = _previewConsentVersions.find(function(v){ return v.version === verNum; });
+      if (!ver) return;
+
+      var confirm = await Swal.fire({
+        icon: 'warning',
+        title: 'ลบ Consent ฉบับที่ ' + verNum + '?',
+        html: '<div class="text-muted small">เคส: ' + caseId + '</div><div class="mt-2">การกระทำนี้ไม่สามารถย้อนกลับได้</div>',
+        showCancelButton: true,
+        confirmButtonText: 'ลบ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#dc2626'
+      });
+      if (!confirm.isConfirmed) return;
+
+      Swal.fire({ title: 'กำลังลบ...', didOpen: function(){ Swal.showLoading(); }, allowOutsideClick: false });
+      var res = await _supabase.from('transport_consents').delete().eq('id', ver.id);
+      if (res.error) {
+        Swal.fire({ icon: 'error', title: 'ลบไม่สำเร็จ', text: res.error.message });
+        return;
+      }
+
+      // If we deleted the active version, promote the newest superseded to active
+      if (ver.status === 'active') {
+        var remain = await loadConsentsFromDB(caseId);
+        if (remain && remain.length > 0) {
+          var newest = remain[0]; // already sorted desc by version
+          await _supabase.from('transport_consents')
+            .update({ status: 'active', superseded_at: null })
+            .eq('id', newest.id);
+        }
+      }
+
+      Swal.fire({ icon: 'success', title: 'ลบเรียบร้อย', timer: 1500, showConfirmButton: false });
+      closeConsentDashboardPreview();
+      if (typeof loadDashboardData === 'function') loadDashboardData(currentPage);
+    }
+
+    // Delete consent from Transport Case edit view (Admin only)
     async function deleteConsentFromCase() {
       var caseId = _previewConsentCaseId || document.getElementById('caseId').value;
       if (!caseId) return;
@@ -4507,7 +5385,7 @@
         }
       }
 
-      // Reload consent state and refresh UI
+      // Reload consent state for this case and update UI
       consentVersions = await loadConsentsFromDB(caseId);
       consentActiveVersion = consentVersions.find(function(v){ return v.status === 'active'; });
       if (consentActiveVersion) {
@@ -4537,41 +5415,52 @@
     // Listen for messages from consent iframe
     window.addEventListener('message', async function(e) {
       if (e.data && e.data.type === 'consent-signed') {
-        consentSigned = true;
+        var isDashboardMode = window._consentDashboardMode === true;
         consentData = e.data.payload || {};
         closeConsentModal();
 
-        // Sync consent data back to Transport form (fill empty fields)
-        try {
-          var cd = consentData.data || {};
-          var f = document.forms['main-form'];
-          if (f) {
-            // Patient info: only fill if Transport field is empty
-            if (cd.patient) {
-              if (cd.patient.name && !f.pt_name.value) f.pt_name.value = cd.patient.name;
-              if (cd.patient.age && !f.pt_age.value) f.pt_age.value = cd.patient.age;
-              // ID card / passport
-              var idField = f.pt_idcard || f.pt_passport;
-              if (idField && cd.patient.idCard && !idField.value) idField.value = cd.patient.idCard;
+        if (!isDashboardMode) {
+          consentSigned = true;
+          // Sync consent data back to Transport form (fill empty fields)
+          // ── Only in Device-A mode (editing form). In dashboard mode we must NOT
+          //    touch main-form because it might belong to a different case.
+          try {
+            var cd = consentData.data || {};
+            var f = document.forms['main-form'];
+            if (f) {
+              // Patient info: only fill if Transport field is empty
+              if (cd.patient) {
+                if (cd.patient.name && !f.pt_name.value) f.pt_name.value = cd.patient.name;
+                if (cd.patient.age && !f.pt_age.value) f.pt_age.value = cd.patient.age;
+                // Merged ID/Passport — consent may send either as idCard or passport, both go to pt_idcard
+                var idVal = cd.patient.idCard || cd.patient.passport || '';
+                if (f.pt_idcard && idVal && !f.pt_idcard.value) f.pt_idcard.value = idVal;
+              }
+              // Route: only fill if Transport field is empty
+              if (cd.route) {
+                if (cd.route.from && f.origin && !f.origin.value) f.origin.value = cd.route.from;
+                if (cd.route.to && f.destination && !f.destination.value) f.destination.value = cd.route.to;
+              }
+              // Mark form dirty so it will save
+              formDirty = true;
+              updateBanner();
             }
-            // Route: only fill if Transport field is empty
-            if (cd.route) {
-              if (cd.route.from && f.origin && !f.origin.value) f.origin.value = cd.route.from;
-              if (cd.route.to && f.destination && !f.destination.value) f.destination.value = cd.route.to;
-            }
-            // Mark form dirty so it will save
-            formDirty = true;
-            updateBanner();
-          }
-        } catch(syncErr) { console.warn('Consent→Transport sync error:', syncErr); }
+          } catch(syncErr) { console.warn('Consent→Transport sync error:', syncErr); }
+        }
+
+        // Determine target caseId (dashboard mode uses pinned caseId)
+        var caseId = isDashboardMode
+          ? window._consentDashboardCaseId
+          : (consentData.caseId || document.getElementById('caseId').value);
 
         // Save to Supabase
-        var caseId = consentData.caseId || document.getElementById('caseId').value;
         if (caseId) {
           Swal.fire({ title: 'กำลังบันทึก Consent...', didOpen: function() { Swal.showLoading(); }, allowOutsideClick: false });
           var ver = await saveConsentToDB(caseId, consentData);
 
-          // Sync consent idCard back to case record (critical: wrong ID has legal/medical impact)
+          // ── Sync consent idCard back into the case (both modes). ──
+          // Critical: wrong/missing patient ID on the case has legal/medical consequences.
+          // If the case has no idCard yet, persist the one captured in consent.
           try {
             var cdPatient = (consentData.data && consentData.data.patient) || {};
             var consentIdCard = (cdPatient.idCard || cdPatient.passport || '').trim();
@@ -4594,8 +5483,11 @@
           } catch(idSyncErr) { console.warn('Consent idCard → case sync error:', idSyncErr); }
 
           // Reload versions
-          consentVersions = await loadConsentsFromDB(caseId);
-          consentActiveVersion = consentVersions.find(function(v) { return v.status === 'active'; });
+          var vers = await loadConsentsFromDB(caseId);
+          if (!isDashboardMode) {
+            consentVersions = vers;
+            consentActiveVersion = vers.find(function(v) { return v.status === 'active'; });
+          }
           Swal.fire({
             icon: 'success',
             title: 'ลงนามสำเร็จ',
@@ -4607,7 +5499,12 @@
           Swal.fire({ icon: 'success', title: 'ลงนามสำเร็จ', timer: 2000, showConfirmButton: false });
         }
 
-        updateConsentUI();
+        if (isDashboardMode) {
+          _exitConsentDashboardMode();
+          if (typeof loadDashboardData === 'function') loadDashboardData(currentPage);
+        } else {
+          updateConsentUI();
+        }
       }
     });
 

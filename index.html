@@ -115,7 +115,7 @@
                           <i class="bi bi-broadcast"></i>
                       </div>
                       <h5 class="fw-bold mb-1">GPS Tracking</h5>
-                      <p class="text-muted small mb-0">ติดตามรถ Real-time</p>
+                      <p class="text-muted small mb-0">ติดตามตำแหน่งรถแบบ Real-time</p>
                   </div>
               </div>
           </div>
@@ -146,6 +146,9 @@
                 <i class="bi bi-person-circle me-2"></i>
                 <span id="nav-user-display" class="small fw-medium"></span>
             </div>
+            <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="enterSystem('monitor')" title="Monitor Dashboard">
+                <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
+            </button>
             <div class="btn-group system-toggle" role="group" id="nav-system-toggle">
               <button type="button" class="btn btn-sm rounded-pill-start sys-tog" id="sys-tog-transport" onclick="switchSystem('transport')" title="Patient Transport" style="min-width:40px;">
                 <i class="bi bi-truck-front-fill"></i><span class="d-none d-lg-inline ms-1">Transport</span>
@@ -160,9 +163,6 @@
                 <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
               </button>
             </div>
-            <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="enterSystem('monitor')" title="Monitor Dashboard">
-                <i class="bi bi-display"></i><span class="d-none d-md-inline ms-1">Monitor</span>
-            </button>
             <button class="btn btn-light btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-system-dashboard" onclick="goToLanding()" title="กลับหน้าเลือกระบบ">
                 <i class="bi bi-house-door-fill"></i><span class="d-none d-md-inline ms-1">Dashboard</span>
             </button>
@@ -304,6 +304,14 @@
                           <div class="text-muted" style="font-size:0.7rem;" id="proxy-gas-ms">กำลังตรวจสอบ...</div>
                         </div>
                       </div>
+                      <div class="border rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="min-width:200px;" id="proxy-ocr-wrap">
+                        <span class="spinner-border spinner-border-sm text-muted" id="proxy-ocr-spinner"></span>
+                        <span class="badge rounded-pill" id="proxy-ocr-badge" style="display:none;">--</span>
+                        <div>
+                          <div class="small fw-bold">OCR (Gemini)</div>
+                          <div class="text-muted" style="font-size:0.7rem;" id="proxy-ocr-ms">กำลังตรวจสอบ...</div>
+                        </div>
+                      </div>
                       <button class="btn btn-outline-secondary btn-sm align-self-center" onclick="checkProxyStatus()">
                         <i class="bi bi-arrow-clockwise"></i>
                       </button>
@@ -395,22 +403,22 @@
                     <li><i class="bi bi-geo-alt-fill me-1 text-success"></i> <strong>PT Location:</strong> ฐานข้อมูลตำแหน่งผู้ป่วย, แผนที่ Leaflet + MarkerCluster, แชร์ลิงก์สาธารณะ</li>
                     <li><i class="bi bi-broadcast me-1 text-info"></i> <strong>GPS Tracking:</strong> ติดตามรถ Real-time, รองรับหลาย Provider (CMSV6), แชร์ลิงก์ติดตาม, Proxy Fallback (Render + GAS)</li>
                   </ul>
-                  <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-hdd-network me-1 text-secondary"></i> GPS Proxy Architecture</h6>
-                  <ul class="list-unstyled mb-3 text-muted small ps-3">
-                    <li><strong>Primary:</strong> Render.com Node.js Proxy — HTTPS → HTTP (CMSV6), ~0.3s response</li>
-                    <li><strong>Fallback:</strong> Google Apps Script — สำรองเมื่อ Render cold start, timeout 5 วินาที</li>
-                    <li><strong>เหตุผล:</strong> GitHub Pages (HTTPS) ไม่สามารถเรียก CMSV6 API (HTTP) ตรงได้ (Mixed Content)</li>
-                  </ul>
                   <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-shield-lock me-1 text-secondary"></i> ความปลอดภัยและ Session</h6>
                   <ul class="list-unstyled mb-3 text-muted small ps-3">
                     <li><strong>Authentication:</strong> เชื่อมต่อระบบ HR Backend สำหรับยืนยันตัวตน</li>
                     <li><strong>Session Token:</strong> localStorage-based session</li>
                     <li><strong>Role-based Access:</strong> Admin / User — การลบเคส, จัดการ Settings, Share Token ต้องเป็น Admin</li>
                   </ul>
+                  <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-hdd-network me-1 text-secondary"></i> GPS Proxy Architecture</h6>
+                  <ul class="list-unstyled mb-3 text-muted small ps-3">
+                    <li><strong>Primary:</strong> Render.com Node.js Proxy — HTTPS → HTTP (CMSV6), ~0.3s response</li>
+                    <li><strong>Fallback:</strong> Google Apps Script — สำรองเมื่อ Render cold start, timeout 5 วินาที</li>
+                    <li><strong>เหตุผล:</strong> GitHub Pages (HTTPS) ไม่สามารถเรียก CMSV6 API (HTTP) ตรงได้ (Mixed Content)</li>
+                  </ul>
                   <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-box-seam me-1 text-secondary"></i> Libraries ที่ใช้งาน</h6>
                   <ul class="list-unstyled mb-0 text-muted small ps-3">
                     <li>Bootstrap 5.3.0 — UI Framework</li>
-                    <li>Bootstrap Icons 1.10 — Icon Set</li>
+                    <li>Bootstrap Icons 1.11 — Icon Set</li>
                     <li>SweetAlert2 — Modal / Alert Dialogs</li>
                     <li>Supabase JS v2 — Backend Client</li>
                     <li>Leaflet 1.9.4 — Interactive Map (Lazy Loaded)</li>
@@ -1096,22 +1104,76 @@
 
     // --- Proxy Status Check ---
     async function checkProxyStatus() {
-        // ต้องมี provider อย่างน้อย 1 ตัวเพื่อเทส
-        if (!_gpsProviders || _gpsProviders.length === 0) {
-            ['render','gas'].forEach(function(n){
-                var s = document.getElementById('proxy-'+n+'-spinner');
-                var b = document.getElementById('proxy-'+n+'-badge');
-                var m = document.getElementById('proxy-'+n+'-ms');
-                if (s) s.style.display='none';
-                if (b) { b.style.display=''; b.textContent='— No Provider'; b.className='badge rounded-pill bg-secondary'; }
-                if (m) m.textContent='เพิ่ม Provider ก่อนเพื่อทดสอบ';
-            });
-            return;
-        }
-        var p = _gpsProviders[0];
-        var testUrl = p.base_url + '/StandardApiAction_login.action?account=' + encodeURIComponent(p.account||'') + '&password=' + encodeURIComponent(p.password||'');
+        var testUrl = 'http://203.170.193.90/StandardApiAction_login.action?account=supwilai&password=1234';
         checkOneProxy('render', CONFIG.GPS_PROXY_URL, testUrl);
         checkOneProxy('gas', CONFIG.GPS_PROXY_FALLBACK, testUrl);
+        checkOcrProxy();
+    }
+
+    async function checkOcrProxy() {
+        var spinner = document.getElementById('proxy-ocr-spinner');
+        var badge = document.getElementById('proxy-ocr-badge');
+        var msEl = document.getElementById('proxy-ocr-ms');
+        var wrap = document.getElementById('proxy-ocr-wrap');
+        if (!spinner || !badge || !msEl) return;
+
+        var ocrUrl = (typeof CONFIG !== 'undefined' && CONFIG.OCR_PROXY_URL) ? CONFIG.OCR_PROXY_URL.trim().replace(/\/+$/,'') : '';
+        if (!ocrUrl) {
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            badge.textContent = '— Not configured';
+            badge.className = 'badge rounded-pill bg-secondary';
+            msEl.textContent = 'OCR_PROXY_URL ว่าง (ใช้ API key ต่อเครื่อง)';
+            msEl.style.color = '#6b7280';
+            return;
+        }
+
+        // Reset to loading
+        spinner.style.display = '';
+        badge.style.display = 'none';
+        msEl.textContent = 'กำลังตรวจสอบ...';
+        msEl.style.color = '';
+
+        var start = Date.now();
+        try {
+            var controller = new AbortController();
+            var timer = setTimeout(function() { controller.abort(); }, 10000);
+            // GET → Worker จะตอบ 405 Method not allowed (= Online) หรือ 500 (= ไม่ได้ตั้ง secret)
+            var resp = await fetch(ocrUrl + '/', { method: 'GET', signal: controller.signal });
+            clearTimeout(timer);
+            var ms = Date.now() - start;
+            var data = {};
+            try { data = await resp.json(); } catch(_){}
+
+            spinner.style.display = 'none';
+            badge.style.display = '';
+
+            if (resp.status === 405) {
+                // Expected response → Worker reachable + code ถูกต้อง
+                badge.textContent = '✓ Online';
+                badge.className = 'badge rounded-pill bg-success';
+                msEl.textContent = ms + ' ms';
+                msEl.style.color = ms < 500 ? '#16a34a' : ms < 2000 ? '#f59e0b' : '#dc2626';
+            } else if (resp.status === 500 && data.error && /GEMINI_API_KEY/i.test(data.error)) {
+                badge.textContent = '⚠ No Key';
+                badge.className = 'badge rounded-pill bg-warning text-dark';
+                msEl.textContent = 'Secret GEMINI_API_KEY ไม่ได้ตั้ง';
+                msEl.style.color = '#dc2626';
+            } else {
+                badge.textContent = '⚠ ' + resp.status;
+                badge.className = 'badge rounded-pill bg-warning text-dark';
+                msEl.textContent = (data.error || 'Unexpected response') + ' (' + ms + ' ms)';
+                msEl.style.color = '#dc2626';
+            }
+        } catch(e) {
+            var ms = Date.now() - start;
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            badge.textContent = '✗ Offline';
+            badge.className = 'badge rounded-pill bg-danger';
+            msEl.textContent = e.name === 'AbortError' ? 'Timeout (' + ms + ' ms)' : e.message;
+            msEl.style.color = '#dc2626';
+        }
     }
 
     async function checkOneProxy(name, proxyBase, testUrl) {
@@ -1120,19 +1182,10 @@
         var msEl = document.getElementById('proxy-' + name + '-ms');
         if (!spinner || !badge || !msEl) return;
 
+        // Reset to loading
         spinner.style.display = '';
         badge.style.display = 'none';
         msEl.textContent = 'กำลังตรวจสอบ...';
-
-        if (!proxyBase) {
-            spinner.style.display = 'none';
-            badge.style.display = '';
-            badge.textContent = '— Not configured';
-            badge.className = 'badge rounded-pill bg-secondary';
-            msEl.textContent = 'ยังไม่ได้ตั้งค่า Proxy URL';
-            msEl.style.color = '';
-            return;
-        }
 
         var start = Date.now();
         try {
@@ -1211,6 +1264,7 @@
         document.getElementById('prov-test-result').innerHTML = '';
         document.getElementById('providerModalTitle').textContent = 'เพิ่ม GPS Provider';
 
+        // Populate software dropdown
         var sel = document.getElementById('prov-software');
         sel.innerHTML = '';
         getGpsSoftwareList().forEach(function(sw) {
@@ -1261,6 +1315,7 @@
             if (editId) {
                 res = await _supabase.from('gps_providers').update(data).eq('id', editId);
             } else {
+                // สร้าง ID จากชื่อ
                 var id = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').substring(0, 30);
                 data.id = id;
                 res = await _supabase.from('gps_providers').insert(data);
@@ -1359,6 +1414,7 @@
         try {
             var res = await _supabase.from('gps_vehicles').update({ nickname: nickname.trim() }).eq('id', id);
             if (res.error) throw new Error(res.error.message);
+            // Flash green border to confirm save
             if (inputEl) {
                 inputEl.style.borderColor = '#22c55e';
                 inputEl.style.boxShadow = '0 0 0 2px rgba(34,197,94,0.25)';
@@ -1402,6 +1458,7 @@
 
                 for (var j = 0; j < apiVehicles.length; j++) {
                     var av = apiVehicles[j];
+                    // ตรวจว่ามีอยู่แล้วไหม
                     var existing = await _supabase.from('gps_vehicles')
                         .select('id')
                         .eq('device_id', av.deviceId)
@@ -1409,12 +1466,14 @@
                         .maybeSingle();
 
                     if (existing.data) {
+                        // อัปเดต device_name + synced_at
                         await _supabase.from('gps_vehicles').update({
                             device_name: av.deviceName,
                             synced_at: new Date().toISOString()
                         }).eq('id', existing.data.id);
                         totalUpdated++;
                     } else {
+                        // เพิ่มใหม่
                         await _supabase.from('gps_vehicles').insert({
                             device_id: av.deviceId,
                             device_name: av.deviceName,
