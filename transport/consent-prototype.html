@@ -184,6 +184,52 @@
   }
   .sig-section h6 { font-weight: 700; color: #334155; margin-bottom: 12px; }
 
+  /* Dual signature grid: patient (left) + witness (right) */
+  .sig-dual-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-items: stretch;
+  }
+  @media (max-width: 640px) {
+    .sig-dual-grid { grid-template-columns: 1fr; gap: 12px; }
+  }
+  .sig-col { display: flex; flex-direction: column; }
+  .sig-col-header {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 4px; min-height: 22px; margin-bottom: 6px;
+  }
+  .sig-col-title {
+    font-size: 0.8rem; font-weight: 700; color: #334155;
+  }
+  .sig-name-below {
+    margin-top: 6px; text-align: center;
+    font-size: 0.78rem; color: #475569; font-weight: 600;
+    padding: 3px 8px; border-top: 1px dashed #cbd5e1;
+  }
+  .sig-name-below .sig-name-caret { color: #94a3b8; margin: 0 2px; }
+  .sig-name-input {
+    margin-top: 6px !important;
+    text-align: center; font-weight: 600;
+  }
+  /* Readonly mode: hide empty witness column so old consents print clean */
+  body.consent-readonly .sig-col-witness.is-empty { display: none; }
+  body.consent-readonly .sig-dual-grid.has-empty-witness { grid-template-columns: 1fr; }
+  .witness-req-badge {
+    display: inline-block;
+    background: #fee2e2; color: #991b1b;
+    font-size: 0.68rem; font-weight: 700;
+    padding: 1px 7px; border-radius: 8px;
+    vertical-align: middle;
+  }
+  .witness-opt-badge {
+    display: inline-block;
+    background: #f1f5f9; color: #64748b;
+    font-size: 0.68rem; font-weight: 600;
+    padding: 1px 7px; border-radius: 8px;
+    vertical-align: middle;
+  }
+
   /* Signature preview (inline thumbnail) */
   .sig-preview {
     border: 2px dashed #94a3b8;
@@ -334,6 +380,9 @@
     line-height: 1.5;
   }
   .consent-check-item:hover { background: #f1f5f9; }
+  /* Part 1 master-locked items (c1-c4): cursor default, hover stays flat */
+  #part1 .consent-check-item:not(.highlight-item) { cursor: default; }
+  #part1 .consent-check-item:not(.highlight-item):hover { background: #f8fafc; }
   .consent-check-item.checked {
     background: #f0fdf4; border-color: #86efac; color: #1e293b;
   }
@@ -512,6 +561,19 @@
     .sig-info .avatar { width: 20px !important; height: 20px !important; font-size: 5.5pt !important; }
     .sig-info .sig-name { font-size: 7.5pt !important; }
     .sig-info .sig-role { font-size: 5.5pt !important; }
+
+    /* Dual signature grid (print): keep 50/50 side by side, ultra-compact */
+    .sig-dual-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; align-items: stretch !important; }
+    .sig-col-header { min-height: 0 !important; margin-bottom: 2px !important; gap: 3px !important; }
+    .sig-col-title { font-size: 6.5pt !important; font-weight: 700 !important; }
+    .witness-req-badge, .witness-opt-badge { font-size: 5.5pt !important; padding: 0 4px !important; }
+    .sig-name-below { margin-top: 2px !important; padding: 1px 0 0 !important; font-size: 6pt !important; border-top: 1px dashed #cbd5e1 !important; }
+    .sig-name-input { margin-top: 2px !important; font-size: 6.5pt !important; text-align: center !important; padding: 1px 0 !important; border: none !important; border-bottom: 1px solid #cbd5e1 !important; border-radius: 0 !important; background: transparent !important; height: auto !important; min-height: 0 !important; line-height: 1.2 !important; }
+    /* Hide clear-inline buttons in print (no interactive controls) */
+    .sig-preview .sig-clear-inline { display: none !important; }
+    /* Hide empty witness column when no signature (class toggled by JS) */
+    .sig-col-witness.is-empty { display: none !important; }
+    .sig-dual-grid.has-empty-witness { grid-template-columns: 1fr !important; }
 
     /* ID card photo (mobile version — hidden in print) */
     .idcard-upload-area { min-height: auto !important; padding: 2px !important; }
@@ -776,7 +838,7 @@
           </div>
           <div class="consent-check-item" onclick="toggleConsentCheck(this)">
             <div class="consent-checkbox"><i class="bi bi-check-lg"></i></div>
-            <span data-i18n-html="part1.c4">ข้าพเจ้าไม่มีข้อโต้แย้ง และไม่เรียกร้องค่าเสียหายใดๆ ทั้งสิ้นจากแพทย์/พยาบาล หรือผู้ที่เกี่ยวข้องของบริการรถพยาบาล<span class="consent-company-text"></span></span>
+            <span data-i18n-html="part1.c4">ข้าพเจ้าไม่มีข้อโต้แย้งและยินยอมสละสิทธิ์เรียกร้องค่าเสียหายใดๆทั้งสิ้นอันเกิดจากเหตุสุดวิสัยหรือภาวะแทรกซ้อนที่มิอาจหลีกเลี่ยงได้ตามมาตรฐานวิชาชีพจากแพทย์/พยาบาล หรือผู้ที่เกี่ยวข้องของบริการรถพยาบาล<span class="consent-company-text"></span></span>
           </div>
           <div class="consent-check-item highlight-item" onclick="toggleConsentCheck(this)">
             <div class="consent-checkbox"><i class="bi bi-check-lg"></i></div>
@@ -884,19 +946,51 @@
         <span data-i18n-html="sig.note">ผู้ลงนามรับทราบและยินยอม/ปฏิเสธ <strong>เฉพาะในส่วนที่ทำเครื่องหมาย</strong> ☑ เท่านั้น</span>
       </div>
 
-      <!-- Relative/Patient Signature (tap to open fullscreen) -->
-      <label class="info-label mb-1" data-i18n="sig.label">ลายเซ็น ผู้ป่วย/ญาติผู้ยินยอม</label>
-      <div class="sig-preview" id="sig-preview" onclick="openSigModal()">
-        <div class="sig-placeholder">
-          <i class="bi bi-pen" style="font-size:1.8rem;display:block;margin-bottom:4px;"></i>
-          <span data-i18n="sig.tap">แตะเพื่อลงลายเซ็น</span>
+      <!-- Dual Signature Layout: Patient/Consenter (left) + Witness (right) -->
+      <div class="sig-dual-grid">
+        <!-- LEFT: Patient/Consenter signature -->
+        <div class="sig-col sig-col-patient">
+          <div class="sig-col-header">
+            <span class="sig-col-title" data-i18n="sig.label">ลายเซ็น ผู้ป่วย/ญาติผู้ยินยอม</span>
+          </div>
+          <div class="sig-preview" id="sig-preview" onclick="openSigModal('patient')">
+            <div class="sig-placeholder">
+              <i class="bi bi-pen" style="font-size:1.8rem;display:block;margin-bottom:4px;"></i>
+              <span data-i18n="sig.tap">แตะเพื่อลงลายเซ็น</span>
+            </div>
+            <img id="sig-preview-img" src="" alt="ลายเซ็น">
+            <button class="sig-clear-inline" onclick="event.stopPropagation(); clearSignature();" title="ล้าง"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="sig-name-below" id="sig-patient-name-below">
+            <span class="sig-name-caret">(</span><span id="sig-patient-name-text">&nbsp;</span><span class="sig-name-caret">)</span>
+          </div>
+          <div class="sig-timestamp" id="sig-timestamp">
+            <i class="bi bi-clock-fill"></i>
+            <span data-i18n="sig.signed_at">ลงนามเมื่อ</span>: <span id="sig-timestamp-value"></span>
+          </div>
         </div>
-        <img id="sig-preview-img" src="" alt="ลายเซ็น">
-        <button class="sig-clear-inline" onclick="event.stopPropagation(); clearSignature();" title="ล้าง"><i class="bi bi-x-lg"></i></button>
-      </div>
-      <div class="sig-timestamp" id="sig-timestamp">
-        <i class="bi bi-clock-fill"></i>
-        <span data-i18n="sig.signed_at">ลงนามเมื่อ</span>: <span id="sig-timestamp-value"></span>
+
+        <!-- RIGHT: Witness signature (optional by default; required if DNR active) -->
+        <div class="sig-col sig-col-witness">
+          <div class="sig-col-header">
+            <span class="sig-col-title" data-i18n="sig.witness_label">ลายเซ็นพยาน</span>
+            <span class="witness-req-badge" id="witness-required-badge" style="display:none;" data-i18n="sig.witness_required">จำเป็น (DNR)</span>
+            <span class="witness-opt-badge" id="witness-optional-badge" data-i18n="sig.witness_optional">ถ้ามี</span>
+          </div>
+          <div class="sig-preview" id="sig-preview-witness" onclick="openSigModal('witness')">
+            <div class="sig-placeholder">
+              <i class="bi bi-person-check" style="font-size:1.8rem;display:block;margin-bottom:4px;"></i>
+              <span data-i18n="sig.tap">แตะเพื่อลงลายเซ็น</span>
+            </div>
+            <img id="sig-preview-witness-img" src="" alt="ลายเซ็นพยาน">
+            <button class="sig-clear-inline" onclick="event.stopPropagation(); clearWitnessSignature();" title="ล้าง"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <input type="text" id="c-witness-name" class="form-control form-control-sm sig-name-input" placeholder="ชื่อ-สกุล พยาน" data-i18n-ph="sig.witness_name_ph">
+          <div class="sig-timestamp" id="sig-witness-timestamp">
+            <i class="bi bi-clock-fill"></i>
+            <span data-i18n="sig.signed_at">ลงนามเมื่อ</span>: <span id="sig-witness-timestamp-value"></span>
+          </div>
+        </div>
       </div>
 
       <!-- Staff Info — toggle between login / manual -->
@@ -1053,6 +1147,7 @@ if (IS_EMBED) {
 
     // Apply readonly mode after DOM ready
     if (IS_READONLY) {
+        document.body.classList.add('consent-readonly');
         setTimeout(function() {
             // Disable ALL inputs, selects, textareas
             document.querySelectorAll('input, select, textarea').forEach(function(el) {
@@ -1127,6 +1222,11 @@ if (IS_EMBED) {
                 // Allow native scroll
             }, { passive: true });
         }, 600);
+
+        // After restore completes, collapse empty witness column (old consents without witness)
+        setTimeout(function() {
+            if (typeof updateWitnessEmptyState === 'function') updateWitnessEmptyState();
+        }, 900);
     }
 }
 
@@ -1161,17 +1261,35 @@ if (IS_EMBED) {
 // ===========================
 function togglePart(id) {
     var el = document.getElementById(id);
-    // Part 1 is always required
-    if (id === 'part1') return;
     el.classList.toggle('active');
+    // Part 1 master-toggle: sync c1-c4 (non-highlight items) with active state
+    if (id === 'part1') {
+        syncPart1MasterCheck();
+    }
     validateForm();
+}
+
+// Sync c1-c4 checked state with Part 1 active state
+function syncPart1MasterCheck() {
+    var part1 = document.getElementById('part1');
+    if (!part1) return;
+    var isActive = part1.classList.contains('active');
+    var items = part1.querySelectorAll('.consent-check-item:not(.highlight-item)');
+    items.forEach(function(item) {
+        if (isActive) item.classList.add('checked');
+        else item.classList.remove('checked');
+    });
 }
 
 // ===========================
 // Consent Checklist Toggle
 // ===========================
 function toggleConsentCheck(item) {
+    // Part 1 c1-c4 are locked to the master toggle — only the highlight-item (c5) is free
+    var inPart1 = item.closest && item.closest('#part1');
+    if (inPart1 && !item.classList.contains('highlight-item')) return;
     item.classList.toggle('checked');
+    validateForm();
 }
 
 // ===========================
@@ -1320,6 +1438,7 @@ function selectRel(btn) {
         }
     }
     validateForm();
+    if (typeof syncPatientNameBelow === 'function') syncPatientNameBelow();
 }
 
 // ===========================
@@ -1408,17 +1527,22 @@ function toggleDnr(item) {
         if (cb.checked) otherInput.classList.remove('d-none');
         else otherInput.classList.add('d-none');
     }
+    validateForm();
 }
 
 // ===========================
 // Fullscreen Signature Modal
 // ===========================
-var sigDataUrl = null; // stores confirmed signature as base64 PNG
+var sigDataUrl = null; // patient/consenter sig (base64 PNG)
+var witnessSigDataUrl = null; // witness sig (base64 PNG)
+var witnessSigTimestamp = null;
+var _sigCurrentTarget = 'patient'; // 'patient' | 'witness'
 var _sigDrawing = false;
 var _sigHasStroke = false;
 var _sigCtx = null;
 
-function openSigModal() {
+function openSigModal(target) {
+    _sigCurrentTarget = target || 'patient';
     var modal = document.getElementById('sig-modal');
     var wrap = document.getElementById('sig-canvas-wrap');
     var canvas = document.getElementById('sig-canvas');
@@ -1462,19 +1586,30 @@ var sigTimestamp = null;
 
 function confirmSig() {
     var canvas = document.getElementById('sig-canvas');
-    sigDataUrl = canvas.toDataURL('image/png');
-    sigTimestamp = new Date();
+    var dataUrl = canvas.toDataURL('image/png');
+    var now = new Date();
 
-    // Update preview
-    var preview = document.getElementById('sig-preview');
-    var img = document.getElementById('sig-preview-img');
-    img.src = sigDataUrl;
-    preview.classList.add('has-sig');
-
-    // Show timestamp
-    var tsEl = document.getElementById('sig-timestamp');
-    updateSignatureTimestamp();
-    tsEl.classList.add('show');
+    if (_sigCurrentTarget === 'witness') {
+        witnessSigDataUrl = dataUrl;
+        witnessSigTimestamp = now;
+        var wPreview = document.getElementById('sig-preview-witness');
+        var wImg = document.getElementById('sig-preview-witness-img');
+        if (wImg) wImg.src = dataUrl;
+        if (wPreview) wPreview.classList.add('has-sig');
+        updateWitnessSignatureTimestamp();
+        var wTs = document.getElementById('sig-witness-timestamp');
+        if (wTs) wTs.classList.add('show');
+    } else {
+        sigDataUrl = dataUrl;
+        sigTimestamp = now;
+        var preview = document.getElementById('sig-preview');
+        var img = document.getElementById('sig-preview-img');
+        img.src = sigDataUrl;
+        preview.classList.add('has-sig');
+        var tsEl = document.getElementById('sig-timestamp');
+        updateSignatureTimestamp();
+        tsEl.classList.add('show');
+    }
 
     closeSigModal();
     validateForm();
@@ -1488,6 +1623,24 @@ function clearSignature() {
     document.getElementById('sig-preview-img').src = '';
     document.getElementById('sig-timestamp').classList.remove('show');
     validateForm();
+}
+
+function clearWitnessSignature() {
+    witnessSigDataUrl = null;
+    witnessSigTimestamp = null;
+    var preview = document.getElementById('sig-preview-witness');
+    if (preview) preview.classList.remove('has-sig');
+    var img = document.getElementById('sig-preview-witness-img');
+    if (img) img.src = '';
+    var ts = document.getElementById('sig-witness-timestamp');
+    if (ts) ts.classList.remove('show');
+    validateForm();
+}
+
+function updateWitnessSignatureTimestamp() {
+    if (!witnessSigTimestamp) return;
+    var tsVal = document.getElementById('sig-witness-timestamp-value');
+    if (tsVal) tsVal.textContent = formatDateTimeI18n(witnessSigTimestamp, currentLang);
 }
 
 // Canvas drawing events (attached once on load)
@@ -1598,10 +1751,43 @@ function formatIdInput(input) {
 function formatIdCard(input) { formatIdInput(input); }
 
 // ===========================
+// Witness Requirement (DNR conditional)
+// ===========================
+function isWitnessRequired() {
+    var p3 = document.getElementById('part3');
+    if (!p3 || !p3.classList.contains('active')) return false;
+    // Part 3 active AND at least one DNR item checked
+    var dnrChecked = p3.querySelectorAll('.dnr-item.checked').length;
+    return dnrChecked > 0;
+}
+
+function updateWitnessRequiredBadge() {
+    var req = isWitnessRequired();
+    var reqBadge = document.getElementById('witness-required-badge');
+    var optBadge = document.getElementById('witness-optional-badge');
+    if (reqBadge) reqBadge.style.display = req ? '' : 'none';
+    if (optBadge) optBadge.style.display = req ? 'none' : '';
+}
+
+// Toggle is-empty class on witness column (CSS uses it to hide on readonly/print)
+function updateWitnessEmptyState() {
+    var wCol = document.querySelector('.sig-col-witness');
+    var grid = document.querySelector('.sig-dual-grid');
+    if (!wCol || !grid) return;
+    var wName = (document.getElementById('c-witness-name') || {}).value || '';
+    var isEmpty = !witnessSigDataUrl && !wName.trim();
+    wCol.classList.toggle('is-empty', isEmpty);
+    grid.classList.toggle('has-empty-witness', isEmpty);
+}
+
+// ===========================
 // Form Validation
 // ===========================
 function validateForm() {
+    updateWitnessRequiredBadge();
+    updateWitnessEmptyState();
     var btn = document.getElementById('btn-submit-consent');
+    if (!btn) return;
     var nameOk = document.getElementById('c-consenter-name').value.trim().length > 0;
     var idVal = document.getElementById('c-consenter-id').value.trim();
     var idDigits = idVal.replace(/\D/g, '');
@@ -1609,11 +1795,29 @@ function validateForm() {
     var idOk = idDigits.length === 13 || (idVal.length >= 5 && /[A-Za-z]/.test(idVal));
     var relOk = selectedRel && selectedRel !== '';
     var sigOk = sigDataUrl !== null;
-    btn.disabled = !(nameOk && idOk && relOk && sigOk);
+    // Witness: optional by default, required when Part 3 DNR active with items
+    var witnessOk = true;
+    if (isWitnessRequired()) {
+        var wName = (document.getElementById('c-witness-name') || {}).value || '';
+        witnessOk = witnessSigDataUrl !== null && wName.trim().length > 0;
+    }
+    btn.disabled = !(nameOk && idOk && relOk && sigOk && witnessOk);
 }
 
 document.getElementById('c-consenter-name').addEventListener('input', validateForm);
 document.getElementById('c-consenter-id').addEventListener('input', validateForm);
+var _witnessNameEl = document.getElementById('c-witness-name');
+if (_witnessNameEl) _witnessNameEl.addEventListener('input', validateForm);
+
+// Sync patient name below signature
+function syncPatientNameBelow() {
+    var nameVal = ((document.getElementById('c-consenter-name') || {}).value || '').trim();
+    var tgt = document.getElementById('sig-patient-name-text');
+    var wrap = document.getElementById('sig-patient-name-below');
+    if (tgt) tgt.textContent = nameVal || '\u00A0';
+    if (wrap) wrap.style.display = nameVal ? '' : 'none';
+}
+document.getElementById('c-consenter-name').addEventListener('input', syncPatientNameBelow);
 
 // ===========================
 // Submit
@@ -1655,6 +1859,9 @@ function submitConsent() {
         dnr: [],
         signatureDataUrl: sigDataUrl,
         signatureTimestamp: sigTimestamp ? sigTimestamp.toISOString() : null,
+        witnessName: (document.getElementById('c-witness-name') || {}).value ? document.getElementById('c-witness-name').value.trim() : '',
+        witnessSignatureDataUrl: witnessSigDataUrl,
+        witnessSignatureTimestamp: witnessSigTimestamp ? witnessSigTimestamp.toISOString() : null,
         timestamp: new Date().toISOString(),
         staffInfo: getStaffInfo(),
     };
@@ -1727,7 +1934,7 @@ var I18N = {
     'part1.c1': 'ข้าพเจ้าได้รับคำอธิบายความเสี่ยง จากแพทย์/พยาบาล หรือผู้ที่เกี่ยวข้องในการดูแล นำส่ง และปฐมพยาบาลเบื้องต้น',
     'part1.c2': 'ข้าพเจ้ารับทราบดีว่ามีเหตุที่เป็นสาเหตุอันตรายต่อสุขภาพหรือชีวิตแก่ผู้ป่วย ที่อาจเกิดขึ้นระหว่างการเดินทางนำส่งไปยังจุดหมายได้',
     'part1.c3': 'ข้าพเจ้าได้ยินยอมรับความเสี่ยง หากเกิดผลเสียหรืออันตรายถึงแก่ชีวิตระหว่างการเดินทางนำส่ง',
-    'part1.c4': 'ข้าพเจ้าไม่มีข้อโต้แย้ง และไม่เรียกร้องค่าเสียหายใดๆ ทั้งสิ้นจากแพทย์/พยาบาล หรือผู้ที่เกี่ยวข้องของบริการรถพยาบาล{{company}}',
+    'part1.c4': 'ข้าพเจ้าไม่มีข้อโต้แย้งและยินยอมสละสิทธิ์เรียกร้องค่าเสียหายใดๆทั้งสิ้นอันเกิดจากเหตุสุดวิสัยหรือภาวะแทรกซ้อนที่มิอาจหลีกเลี่ยงได้ตามมาตรฐานวิชาชีพจากแพทย์/พยาบาล หรือผู้ที่เกี่ยวข้องของบริการรถพยาบาล{{company}}',
     'part1.c5': 'ข้าพเจ้ายินยอมให้รถพยาบาล{{company}} นำส่งผู้ป่วยไปยังปลายทางตามความประสงค์ของข้าพเจ้า โดยยินยอมที่จะ<strong style="color:#dc2626;">ไม่ใช้บริการระบบการแพทย์ฉุกเฉินที่ให้บริการในพื้นที่</strong>',
     'part1.footer': 'ทั้งนี้ แพทย์/พยาบาล หรือผู้ที่เกี่ยวข้องของบริการรถพยาบาล{{company}} ได้อธิบายความเสี่ยงแก่ข้าพเจ้า ข้าพเจ้าได้อ่านข้อความในใบยินยอมนี้ และเข้าใจข้อความโดยละเอียด จึงลงลายมือชื่อ หรือลายพิมพ์นิ้วมือให้เป็นหลักฐานเรียบร้อยแล้ว',
     'part2.title': 'ส่วนที่ 2: เปลี่ยนแปลงสถานที่ส่งตัว',
@@ -1748,6 +1955,10 @@ var I18N = {
     'sig.title': 'ลงลายมือชื่อ',
     'sig.note': 'ผู้ลงนามรับทราบและยินยอม/ปฏิเสธ <strong>เฉพาะในส่วนที่ทำเครื่องหมาย</strong> ☑ เท่านั้น',
     'sig.label': 'ลายเซ็น ผู้ป่วย/ญาติผู้ยินยอม',
+    'sig.witness_label': 'ลายเซ็นพยาน',
+    'sig.witness_required': 'จำเป็น (DNR)',
+    'sig.witness_optional': 'ถ้ามี',
+    'sig.witness_name_ph': 'ชื่อ-สกุล พยาน',
     'sig.tap': 'แตะเพื่อลงลายเซ็น',
     'sig.staff': 'ผู้ให้ข้อมูล / เจ้าหน้าที่',
     'staff.from_login': 'จาก Login', 'staff.manual': 'กรอกเอง',
@@ -1790,7 +2001,7 @@ var I18N = {
     'part1.c1': 'I have been informed of the risks by the attending doctor, nurse, or relevant personnel regarding patient care, transport, and first aid.',
     'part1.c2': 'I understand that there are risks to the patient\'s health or life that may arise during transport to the destination.',
     'part1.c3': 'I accept all risks, including injury or death, that may occur during the transport.',
-    'part1.c4': 'I waive any right to dispute or claim damages against the doctor, nurse, or personnel of{{company}} ambulance service.',
+    'part1.c4': 'I raise no objection and consent to waive any claim for damages arising from force majeure or unavoidable complications in accordance with professional standards, against the doctor, nurse, or personnel of{{company}} ambulance service.',
     'part1.c5': 'I consent to{{company}} ambulance service transporting the patient to the destination at my request, and I agree <strong style="color:#dc2626;">not to use the local emergency medical service system</strong>.',
     'part1.footer': 'The attending doctor, nurse, or personnel of{{company}} ambulance service have explained the risks to me. I have read and fully understood this consent form and hereby affix my signature or fingerprint as evidence.',
     'part2.title': 'Part 2: Destination Change',
@@ -1811,6 +2022,10 @@ var I18N = {
     'sig.title': 'Signature',
     'sig.note': 'The signatory acknowledges consent/refusal <strong>only for the checked sections</strong> ☑',
     'sig.label': 'Patient / Consenter Signature',
+    'sig.witness_label': 'Witness Signature',
+    'sig.witness_required': 'Required (DNR)',
+    'sig.witness_optional': 'Optional',
+    'sig.witness_name_ph': 'Witness full name',
     'sig.tap': 'Tap to sign',
     'sig.staff': 'Information Provider / Staff',
     'staff.from_login': 'From Login', 'staff.manual': 'Enter Manually',
@@ -1853,7 +2068,7 @@ var I18N = {
     'part1.c1': '本人已收到医生/护士或相关人员关于护理、转运和急救的风险说明。',
     'part1.c2': '本人了解在转运途中可能存在危及患者健康或生命的风险。',
     'part1.c3': '本人接受转运途中可能发生的伤害或死亡风险。',
-    'part1.c4': '本人不会向{{company}}救护车服务的医生/护士或相关人员提出任何争议或损害赔偿。',
+    'part1.c4': '本人无异议，并同意放弃就{{company}}救护车服务的医生/护士或相关人员因不可抗力或依专业标准无法避免的并发症所引起的任何损害赔偿的权利。',
     'part1.c5': '本人同意{{company}}救护车按本人要求将患者转运至目的地，并同意<strong style="color:#dc2626;">不使用当地紧急医疗服务系统</strong>。',
     'part1.footer': '{{company}}救护车服务的医生/护士或相关人员已向本人说明相关风险。本人已阅读并完全理解本同意书的内容，特此签名或按指纹作为证据。',
     'part2.title': '第2部分：变更目的地',
@@ -1874,6 +2089,10 @@ var I18N = {
     'sig.title': '签名',
     'sig.note': '签名人仅对<strong>已勾选的部分</strong> ☑ 表示同意/拒绝',
     'sig.label': '患者/同意人签名',
+    'sig.witness_label': '见证人签名',
+    'sig.witness_required': '必填 (DNR)',
+    'sig.witness_optional': '可选',
+    'sig.witness_name_ph': '见证人姓名',
     'sig.tap': '点击签名',
     'sig.staff': '信息提供者/工作人员',
     'staff.from_login': '从登录获取', 'staff.manual': '手动输入',
@@ -1916,7 +2135,7 @@ var I18N = {
     'part1.c1': 'ကျွန်ုပ်သည် ဆရာဝန်/သူနာပြု သို့မဟုတ် သက်ဆိုင်ရာပုဂ္ဂိုလ်ထံမှ ဆေးဘက်ဆိုင်ရာ အန္တရာယ်ရှင်းလင်းချက်ကို ရရှိပြီးဖြစ်ပါသည်။',
     'part1.c2': 'သယ်ယူပို့ဆောင်မှုအတွင်း လူနာ၏ကျန်းမာရေး သို့မဟုတ် အသက်အန္တရာယ်ရှိနိုင်ကြောင်း ကျွန်ုပ်သိရှိပါသည်။',
     'part1.c3': 'သယ်ယူပို့ဆောင်မှုအတွင်း ထိခိုက်ဒဏ်ရာရခြင်း သို့မဟုတ် သေဆုံးနိုင်ခြင်း အန္တရာယ်ကို ကျွန်ုပ်လက်ခံပါသည်။',
-    'part1.c4': '{{company}} လူနာတင်ယာဉ်ဝန်ဆောင်မှု၏ ဆရာဝန်/သူနာပြု သို့မဟုတ် သက်ဆိုင်ရာပုဂ္ဂိုလ်များအပေါ် မည်သည့်နစ်နာကြေးမျှ တောင်းဆိုမည်မဟုတ်ပါ။',
+    'part1.c4': 'ကျွန်ုပ်သည် ကန့်ကွက်ခြင်းမရှိဘဲ၊ မလွှဲမရှောင်သာသော အခြေအနေ သို့မဟုတ် ကျင့်ဝတ်ပညာရပ်ဆိုင်ရာ စံချိန်စံညွှန်းများအရ ရှောင်လွှဲ၍မရသော နောက်ဆက်တွဲ ဆေးဘက်ဆိုင်ရာ ပြဿနာများကြောင့် ဖြစ်ပေါ်လာသော မည်သည့် လျော်ကြေးကိုမဆို {{company}} လူနာတင်ယာဉ်ဝန်ဆောင်မှု၏ ဆရာဝန်/သူနာပြု သို့မဟုတ် သက်ဆိုင်ရာပုဂ္ဂိုလ်များထံမှ တောင်းဆိုပိုင်ခွင့်ကို စွန့်လွှတ်ရန် သဘောတူပါသည်။',
     'part1.c5': 'ကျွန်ုပ်၏တောင်းဆိုချက်အတိုင်း {{company}} လူနာတင်ယာဉ်ဖြင့် လူနာကိုပို့ဆောင်ရန် သဘောတူပြီး <strong style="color:#dc2626;">ဒေသတွင်းအရေးပေါ်ဆေးဘက်ဝန်ဆောင်မှုကို အသုံးမပြုရန်</strong> သဘောတူပါသည်။',
     'part1.footer': '{{company}} လူနာတင်ယာဉ်ဝန်ဆောင်မှု၏ ဆရာဝန်/သူနာပြုများက ကျွန်ုပ်အား အန္တရာယ်များကို ရှင်းပြပြီးဖြစ်ပါသည်။ ဤသဘောတူညီချက်ကို ဖတ်ရှုနားလည်ပြီး လက်မှတ်ရေးထိုး သို့မဟုတ် လက်ဗွေနှိပ်၍ အထောက်အထားအဖြစ် တင်ပြပါသည်။',
     'part2.title': 'အပိုင်း ၂: သွားမည့်နေရာပြောင်းလဲ',
@@ -1937,6 +2156,10 @@ var I18N = {
     'sig.title': 'လက်မှတ်',
     'sig.note': 'လက်မှတ်ရေးထိုးသူသည် <strong>အမှန်ခြစ်ထားသောအပိုင်းများသာ</strong> ☑ သဘောတူ/ငြင်းဆိုပါသည်',
     'sig.label': 'လူနာ/သဘောတူညီသူ လက်မှတ်',
+    'sig.witness_label': 'သက်သေ လက်မှတ်',
+    'sig.witness_required': 'လိုအပ် (DNR)',
+    'sig.witness_optional': 'ရွေးချယ်ခွင့်',
+    'sig.witness_name_ph': 'သက်သေ အမည်',
     'sig.tap': 'လက်မှတ်ထိုးရန် နှိပ်ပါ',
     'sig.staff': 'အချက်အလက်ပေးသူ/ဝန်ထမ်း',
     'staff.from_login': 'Login မှရယူ', 'staff.manual': 'ကိုယ်တိုင်ထည့်ပါ',
@@ -1994,6 +2217,7 @@ function switchLang(lang) {
     // Update dates to match current language
     updateHeaderDate();
     updateSignatureTimestamp();
+    updateWitnessSignatureTimestamp();
 }
 
 // ===========================
@@ -2042,7 +2266,7 @@ function restoreConsentData(cd) {
     });
     var dnrOther = document.getElementById('c-dnr-other');
     if (dnrOther) { dnrOther.value = ''; dnrOther.classList.add('d-none'); }
-    // Signature
+    // Signature (patient + witness)
     sigDataUrl = null;
     var sigPreviewR = document.getElementById('sig-preview');
     var sigImgR = document.getElementById('sig-preview-img');
@@ -2050,6 +2274,17 @@ function restoreConsentData(cd) {
     if (sigPreviewR) sigPreviewR.classList.remove('has-sig');
     var tsElR = document.getElementById('sig-timestamp');
     if (tsElR) tsElR.classList.remove('show');
+    // Witness reset
+    witnessSigDataUrl = null;
+    witnessSigTimestamp = null;
+    var wNameR = document.getElementById('c-witness-name');
+    if (wNameR) wNameR.value = '';
+    var wPrevR = document.getElementById('sig-preview-witness');
+    var wImgR = document.getElementById('sig-preview-witness-img');
+    if (wImgR) wImgR.src = '';
+    if (wPrevR) wPrevR.classList.remove('has-sig');
+    var wTsR = document.getElementById('sig-witness-timestamp');
+    if (wTsR) wTsR.classList.remove('show');
     // ID card photo
     idCardPhotoDataUrl = null;
     var photoR = document.getElementById('idcard-preview');
@@ -2124,7 +2359,15 @@ function restoreConsentData(cd) {
             if (cd.parts[pid]) el.classList.add('active');
             else el.classList.remove('active');
         });
+        // Part 1: follow saved state if present, else default to active
+        var p1 = document.getElementById('part1');
+        if (p1) {
+            if (cd.parts.part1 === false) p1.classList.remove('active');
+            else p1.classList.add('active');
+        }
     }
+    // Force c1-c4 to match part1 master (overrides any stale per-item state)
+    syncPart1MasterCheck();
 
     // 5) Destination change
     if (cd.destChange) {
@@ -2163,6 +2406,25 @@ function restoreConsentData(cd) {
             updateSignatureTimestamp();
             var tsEl = document.getElementById('sig-timestamp');
             if (tsEl) tsEl.classList.add('show');
+        }
+    }
+
+    // 7b) Witness
+    if (cd.witnessName) {
+        var wNameIn = document.getElementById('c-witness-name');
+        if (wNameIn) wNameIn.value = cd.witnessName;
+    }
+    if (cd.witnessSignatureDataUrl) {
+        witnessSigDataUrl = cd.witnessSignatureDataUrl;
+        var wPrev = document.getElementById('sig-preview-witness');
+        var wImg = document.getElementById('sig-preview-witness-img');
+        if (wImg) wImg.src = cd.witnessSignatureDataUrl;
+        if (wPrev) wPrev.classList.add('has-sig');
+        if (cd.witnessSignatureTimestamp) {
+            witnessSigTimestamp = new Date(cd.witnessSignatureTimestamp);
+            updateWitnessSignatureTimestamp();
+            var wTs = document.getElementById('sig-witness-timestamp');
+            if (wTs) wTs.classList.add('show');
         }
     }
 
@@ -2208,6 +2470,10 @@ function restoreConsentData(cd) {
             });
         }
     }
+
+    // Refresh witness-required badge + submit button state
+    validateForm();
+    syncPatientNameBelow();
 }
 
 // Listen for restore-consent-data from parent
@@ -2222,6 +2488,15 @@ window.addEventListener('message', function(e) {
 // ===========================
 initPatientInfo();
 initStaffInfo();
+syncPart1MasterCheck();
+updateWitnessRequiredBadge();
+updateWitnessEmptyState();
+syncPatientNameBelow();
+
+// Ensure empty-witness class is set before native print so print CSS can hide it
+window.addEventListener('beforeprint', function() {
+    if (typeof updateWitnessEmptyState === 'function') updateWitnessEmptyState();
+});
 
 // Manual staff name input listener
 document.getElementById('staff-manual-name').addEventListener('input', updateManualStaffPrint);
