@@ -34,6 +34,14 @@
     .status-badge.on { background: #dcfce7; color: #16a34a; }
     .status-badge.off { background: #fee2e2; color: #dc2626; }
 
+    .btn-camera {
+      background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%); color: #fff;
+      border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem;
+      box-shadow: 0 2px 8px rgba(220,38,38,0.3);
+    }
+    .btn-camera:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,0.4); }
+    .btn-camera:active { transform: translateY(0); }
+
     #map { width: 100%; height: calc(100vh - 110px); min-height: 300px; }
 
     .expire-bar {
@@ -72,13 +80,18 @@
     </div>
 
     <div class="info-bar">
-      <div>
+      <div style="flex:1; min-width:0;">
         <div class="vehicle-name" id="vehicleName">--</div>
-        <div class="info-item" id="vehicleAddr">--</div>
+        <div class="info-item text-truncate" id="vehicleAddr">--</div>
       </div>
-      <div class="text-end">
-        <span class="status-badge off" id="statusBadge">OFFLINE</span><br>
-        <span class="speed-badge" id="speedDisplay">-- km/h</span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="btnCamera" class="btn-camera" style="display:none;" onclick="openShareCamera()">
+          <i class="bi bi-camera-video-fill me-1"></i>เปิดกล้อง
+        </button>
+        <div class="text-end">
+          <span class="status-badge off" id="statusBadge">OFFLINE</span><br>
+          <span class="speed-badge" id="speedDisplay">-- km/h</span>
+        </div>
       </div>
     </div>
 
@@ -103,6 +116,7 @@
     var _supabase = null;
     var _tokenData = null;
     var _providerData = null;
+    var _vehicleName = null;
     var _marker = null;
     var _map = null;
     var _refreshInterval = null;
@@ -138,9 +152,23 @@
 
         _providerData = pRes.data;
 
+        // Fetch vehicle info (for friendly name instead of device_id)
+        try {
+          var vRes = await _supabase.from('gps_vehicles').select('nickname, device_name')
+            .eq('device_id', _tokenData.device_id).eq('provider', _tokenData.provider).limit(1);
+          if (vRes.data && vRes.data.length > 0) {
+            _vehicleName = vRes.data[0].nickname || vRes.data[0].device_name || null;
+          }
+        } catch(e) { console.warn('vehicle lookup:', e.message); }
+
         // Show main view
         document.getElementById('loadingView').style.display = 'none';
         document.getElementById('mainView').style.display = '';
+
+        // Camera button: show only if token allows
+        if (_tokenData.allow_camera) {
+          document.getElementById('btnCamera').style.display = '';
+        }
 
         // Set header info
         document.getElementById('headerReason').textContent = _tokenData.reason || '';
@@ -169,17 +197,21 @@
       }
     }
 
+    function displayName() {
+      return _vehicleName || ('Device: ' + _tokenData.device_id);
+    }
+
     async function fetchStatus() {
       try {
         var statuses = await gpsGetStatus(_providerData, _tokenData.device_id);
         if (statuses.length === 0) {
-          document.getElementById('vehicleName').textContent = 'Device: ' + _tokenData.device_id;
+          document.getElementById('vehicleName').textContent = displayName();
           document.getElementById('vehicleAddr').textContent = 'ไม่พบข้อมูลสถานะ';
           return;
         }
 
         var s = statuses[0];
-        document.getElementById('vehicleName').textContent = 'Device: ' + _tokenData.device_id;
+        document.getElementById('vehicleName').textContent = displayName();
         document.getElementById('vehicleAddr').textContent = s.address || '--';
         document.getElementById('speedDisplay').textContent = s.speed.toFixed(1) + ' km/h';
 
@@ -230,6 +262,24 @@
       var m = Math.floor((diff % 3600000) / 60000);
       var s = Math.floor((diff % 60000) / 1000);
       document.getElementById('expireText').textContent = 'เหลือ ' + h + ' ชม. ' + m + ' น. ' + s + ' วิ.';
+    }
+
+    function openShareCamera() {
+      if (!_tokenData || !_tokenData.allow_camera) {
+        alert('ลิงก์นี้ไม่มีสิทธิ์เปิดกล้อง');
+        return;
+      }
+      if (!_providerData || typeof gpsGetCameraUrl !== 'function') {
+        alert('ไม่สามารถสร้าง URL กล้องได้');
+        return;
+      }
+      try {
+        var url = gpsGetCameraUrl(_providerData, _tokenData.device_id);
+        if (!url) { alert('Provider นี้ไม่รองรับกล้อง'); return; }
+        window.open(url, 'shareCamera_' + _tokenData.device_id, 'width=1100,height=850');
+      } catch(e) {
+        alert('เปิดกล้องไม่สำเร็จ: ' + e.message);
+      }
     }
 
     function showError(title, msg) {

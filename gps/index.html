@@ -183,6 +183,17 @@
             <label class="form-label small fw-medium">เหตุผล</label>
             <input type="text" id="share-reason" class="form-control" placeholder="เช่น แชร์ให้ญาติผู้ป่วยติดตาม">
           </div>
+          <div class="mb-3 p-2 rounded-3" style="background:#fff7ed; border:1px solid #fed7aa;">
+            <div class="form-check mb-0">
+              <input class="form-check-input" type="checkbox" id="share-allow-camera">
+              <label class="form-check-label small fw-medium" for="share-allow-camera">
+                <i class="bi bi-camera-video me-1 text-warning"></i>อนุญาตให้เปิดกล้องได้
+              </label>
+            </div>
+            <div class="text-muted mt-1" style="font-size:0.7rem;">
+              <i class="bi bi-info-circle me-1"></i>ผู้ที่มีลิงก์จะเปิดดูกล้องภายในรถได้ตลอดอายุลิงก์
+            </div>
+          </div>
           <div id="share-result" style="display:none;" class="alert alert-success">
             <div class="fw-bold mb-1">สร้างลิงก์สำเร็จ!</div>
             <input type="text" id="share-url" class="form-control form-control-sm mb-2" readonly>
@@ -488,6 +499,7 @@
       document.getElementById('share-vehicle-name').value = vehicleName;
       document.getElementById('share-result').style.display = 'none';
       document.getElementById('share-reason').value = '';
+      document.getElementById('share-allow-camera').checked = false;
       document.getElementById('btnCreateShare').disabled = false;
       new bootstrap.Modal(document.getElementById('shareModal')).show();
     }
@@ -505,10 +517,12 @@
       try {
         var token = 'TK-' + crypto.randomUUID().substring(0, 8).toUpperCase();
         var expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+        var allowCamera = document.getElementById('share-allow-camera').checked;
 
         await _supabase.from('gps_shared_tokens').insert({
           token: token, device_id: deviceId, provider: providerId,
-          expires_at: expiresAt, created_by: getUserName(), reason: reason
+          expires_at: expiresAt, created_by: getUserName(), reason: reason,
+          allow_camera: allowCamera
         });
 
         var shareUrl = window.location.origin + CONFIG.BASE_URL + '/gps/share.html?token=' + token;
@@ -518,7 +532,7 @@
         await _supabase.from('activity_log').insert({
           username: getUserName(), role: getUserRole(),
           action: 'GPS_SHARE_CREATE',
-          target: deviceId, details: 'Token: ' + token + ', Hours: ' + hours + ', Reason: ' + reason
+          target: deviceId, details: 'Token: ' + token + ', Hours: ' + hours + ', Reason: ' + reason + (allowCamera ? ', Camera: ON' : '')
         });
 
         loadSharedTokens();
@@ -536,8 +550,24 @@
       });
     }
 
+    // Cache device_id → vehicle name (nickname || device_name || device_id)
+    var _vehicleNameCache = {};
+    async function loadVehicleNameCache() {
+      try {
+        var res = await _supabase.from('gps_vehicles').select('device_id, nickname, device_name');
+        (res.data || []).forEach(function(v) {
+          _vehicleNameCache[v.device_id] = v.nickname || v.device_name || v.device_id;
+        });
+      } catch(e) { console.warn('vehicle name cache:', e.message); }
+    }
+
+    function vehicleNameFor(deviceId) {
+      return _vehicleNameCache[deviceId] || deviceId;
+    }
+
     async function loadSharedTokens() {
       try {
+        if (Object.keys(_vehicleNameCache).length === 0) await loadVehicleNameCache();
         var res = await _supabase.from('gps_shared_tokens').select('*')
           .order('created_at', { ascending: false }).limit(20);
         var tokens = res.data || [];
@@ -551,18 +581,52 @@
         tokens.forEach(function(t) {
           var expired = new Date(t.expires_at) < now;
           var status = t.status === 'Active' && !expired ? 'Active' : 'Expired';
+          var isActive = status === 'Active';
+          var vName = vehicleNameFor(t.device_id);
+          var camBadge = t.allow_camera
+            ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.6rem;"><i class="bi bi-camera-video-fill me-1"></i>กล้อง</span>'
+            : '';
           html += '<div class="token-row">' +
-            '<div>' +
-              '<div class="fw-medium">' + esc(t.token) + '</div>' +
-              '<div class="text-muted" style="font-size:0.7rem;">' + esc(t.reason || '-') + ' &bull; ' + esc(t.created_by || '') + '</div>' +
+            '<div style="flex:1; min-width:0;">' +
+              '<div class="fw-medium text-truncate"><i class="bi bi-truck text-primary me-1"></i>' + esc(vName) + camBadge + '</div>' +
+              '<div class="text-muted text-truncate" style="font-size:0.7rem;">' + esc(t.token) + ' &bull; ' + esc(t.reason || '-') + '</div>' +
+              '<div class="text-muted text-truncate" style="font-size:0.66rem;">โดย ' + esc(t.created_by || '-') + ' &bull; หมดอายุ ' + new Date(t.expires_at).toLocaleString('th-TH', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + '</div>' +
             '</div>' +
-            '<div class="text-end">' +
-              '<span class="badge ' + (status === 'Active' ? 'bg-success' : 'bg-secondary') + '">' + status + '</span>' +
-              (status === 'Active' ? '<br><button class="btn btn-outline-danger btn-sm py-0 px-1 mt-1" style="font-size:0.65rem;" onclick="revokeToken(\'' + t.id + '\')">Revoke</button>' : '') +
+            '<div class="text-end ms-2" style="flex-shrink:0;">' +
+              '<span class="badge ' + (isActive ? 'bg-success' : 'bg-secondary') + '">' + status + '</span>' +
+              (isActive
+                ? '<div class="btn-group btn-group-sm mt-1" style="display:flex;">' +
+                    '<button class="btn btn-outline-primary py-0 px-1" style="font-size:0.65rem;" onclick="copyTokenLink(\'' + esc(t.token) + '\')" title="Copy link"><i class="bi bi-clipboard"></i></button>' +
+                    '<button class="btn btn-outline-' + (t.allow_camera ? 'warning' : 'secondary') + ' py-0 px-1" style="font-size:0.65rem;" onclick="toggleTokenCamera(\'' + t.id + '\',' + (t.allow_camera ? 'false' : 'true') + ')" title="' + (t.allow_camera ? 'ปิดกล้อง' : 'เปิดกล้อง') + '"><i class="bi bi-camera-video' + (t.allow_camera ? '-fill' : '-off') + '"></i></button>' +
+                    '<button class="btn btn-outline-danger py-0 px-1" style="font-size:0.65rem;" onclick="revokeToken(\'' + t.id + '\')" title="Revoke"><i class="bi bi-x-lg"></i></button>' +
+                  '</div>'
+                : '') +
             '</div></div>';
         });
         el.innerHTML = html;
       } catch(e) { console.error(e); }
+    }
+
+    function copyTokenLink(token) {
+      var url = window.location.origin + CONFIG.BASE_URL + '/gps/share.html?token=' + token;
+      navigator.clipboard.writeText(url).then(function() {
+        Swal.fire({ icon: 'success', title: 'Copied!', text: url, timer: 1500, showConfirmButton: false });
+      }).catch(function() {
+        Swal.fire({ icon: 'info', title: 'Share URL', html: '<code style="font-size:0.8rem; word-break:break-all;">' + url + '</code>' });
+      });
+    }
+
+    async function toggleTokenCamera(id, newValue) {
+      try {
+        await _supabase.from('gps_shared_tokens').update({ allow_camera: newValue }).eq('id', id);
+        await _supabase.from('activity_log').insert({
+          username: getUserName(), role: getUserRole(),
+          action: 'GPS_SHARE_TOGGLE_CAM',
+          target: id, details: 'Camera: ' + (newValue ? 'ON' : 'OFF')
+        });
+        Swal.fire({ icon: 'success', title: newValue ? 'เปิดกล้องแล้ว' : 'ปิดกล้องแล้ว', timer: 1000, showConfirmButton: false });
+        loadSharedTokens();
+      } catch(e) { Swal.fire('Error', e.message, 'error'); }
     }
 
     async function revokeToken(id) {
