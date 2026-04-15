@@ -7,106 +7,319 @@
   <meta name="description" content="ดูตำแหน่งรถแบบ real-time ผ่านลิงก์แชร์">
   <meta name="theme-color" content="#1e3a5f">
   <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
+    :root {
+      --navy-900: #0f2444;
+      --navy-800: #163056;
+      --navy-700: #1e3a5f;
+      --navy-600: #264973;
+      --navy-500: #2563eb;
+      --navy-50:  #eff4fb;
+      --red-700:  #b91c1c;
+      --red-600:  #dc2626;
+      --red-500:  #ef4444;
+      --red-50:   #fef2f2;
+      --slate-50: #f8fafc;
+      --slate-100:#f1f5f9;
+      --slate-200:#e2e8f0;
+      --slate-300:#cbd5e1;
+      --slate-400:#94a3b8;
+      --slate-500:#64748b;
+      --slate-600:#475569;
+      --slate-700:#334155;
+      --slate-800:#1e293b;
+      --slate-900:#0f172a;
+      --green-600:#16a34a;
+      --green-500:#22c55e;
+      --amber-500:#f59e0b;
+    }
+
     * { font-family: 'Sarabun', sans-serif; }
-    body { margin: 0; background: #f0f2f5; }
+    html, body { margin: 0; padding: 0; background: var(--slate-50); color: var(--slate-800); }
 
+    /* ============== Header ============== */
     .share-header {
-      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-      color: #fff; padding: 12px 16px;
-      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 100%);
+      color: #fff;
+      padding: 14px 18px 16px;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(15,36,68,0.18);
     }
-    .share-header h6 { margin: 0; font-weight: 700; font-size: 1rem; }
-    .share-header .sub { font-size: 0.75rem; opacity: 0.8; }
+    .share-header::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+      background: linear-gradient(90deg, var(--red-600), var(--red-500), transparent);
+    }
+    .share-header-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--red-600), var(--red-700));
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(220,38,38,0.35);
+    }
+    .brand-mark i { color: #fff; font-size: 17px; }
+    .brand-title { font-size: 0.95rem; font-weight: 800; letter-spacing: 0.2px; line-height: 1.1; }
+    .brand-sub { font-size: 0.68rem; opacity: 0.72; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; }
 
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(220,38,38,0.18);
+      border: 1px solid rgba(239,68,68,0.4);
+      color: #fecaca;
+      padding: 4px 10px; border-radius: 100px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px;
+    }
+    .live-pill .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--red-500);
+      animation: sharePulse 1.4s ease-in-out infinite;
+    }
+    @keyframes sharePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+      50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+
+    .share-reason {
+      margin-top: 8px; font-size: 0.78rem; opacity: 0.85;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .share-reason i { opacity: 0.7; margin-right: 5px; }
+
+    /* ============== Info Bar ============== */
     .info-bar {
-      background: #fff; padding: 10px 16px; border-bottom: 1px solid #e2e8f0;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      background: #fff;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--slate-200);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
     }
-    .info-bar .vehicle-name { font-weight: 700; font-size: 1rem; color: #1e293b; }
-    .info-bar .info-item { font-size: 0.8rem; color: #64748b; }
-    .info-bar .speed-badge { font-size: 1.1rem; font-weight: 700; color: #f59e0b; }
-    .info-bar .status-badge { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-    .status-badge.on { background: #dcfce7; color: #16a34a; }
-    .status-badge.off { background: #fee2e2; color: #dc2626; }
+    .vehicle-info { flex: 1; min-width: 0; }
+    .vehicle-name {
+      font-weight: 800; font-size: 1.05rem; color: var(--slate-900);
+      display: flex; align-items: center; gap: 8px;
+      line-height: 1.2;
+    }
+    .vehicle-name i { color: var(--navy-700); font-size: 1rem; }
+    .vehicle-addr {
+      margin-top: 4px;
+      font-size: 0.78rem; color: var(--slate-500);
+      display: flex; align-items: center; gap: 5px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vehicle-addr i { font-size: 0.75rem; color: var(--slate-400); flex-shrink: 0; }
 
+    .metrics {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .metric-box {
+      text-align: right; line-height: 1.1;
+    }
+    .metric-label {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.6px;
+      color: var(--slate-400); text-transform: uppercase; margin-bottom: 2px;
+    }
+    .speed-display {
+      font-size: 1.4rem; font-weight: 800; color: var(--slate-900);
+      font-variant-numeric: tabular-nums; line-height: 1;
+    }
+    .speed-display .unit { font-size: 0.7rem; color: var(--slate-500); font-weight: 600; margin-left: 3px; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.68rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 100px;
+      letter-spacing: 0.4px;
+    }
+    .status-badge.on  { background: #dcfce7; color: #15803d; }
+    .status-badge.idle{ background: #fef3c7; color: #b45309; }
+    .status-badge.off { background: #fee2e2; color: #b91c1c; }
+    .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .status-badge.on .dot  { background: var(--green-500); animation: sharePulse 1.6s ease-in-out infinite; }
+    .status-badge.idle .dot{ background: var(--amber-500); }
+    .status-badge.off .dot { background: #94a3b8; }
+
+    /* ============== Camera Button ============== */
     .btn-camera {
-      background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%); color: #fff;
-      border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem;
-      box-shadow: 0 2px 8px rgba(220,38,38,0.3);
+      background: linear-gradient(135deg, var(--red-600), var(--red-700));
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 700; font-size: 0.85rem;
+      box-shadow: 0 3px 10px rgba(220,38,38,0.3);
+      transition: all 0.2s ease;
+      display: inline-flex; align-items: center; gap: 7px;
+      letter-spacing: 0.2px;
     }
-    .btn-camera:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,0.4); }
+    .btn-camera:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(220,38,38,0.42); }
     .btn-camera:active { transform: translateY(0); }
+    .btn-camera i { font-size: 0.95rem; }
 
-    #map { width: 100%; height: calc(100vh - 110px); min-height: 300px; }
+    /* ============== Map ============== */
+    .map-wrap { position: relative; }
+    #map {
+      width: 100%;
+      height: calc(100vh - 140px);
+      min-height: 320px;
+    }
+    .leaflet-container { background: var(--slate-100); }
 
     .expire-bar {
-      position: absolute; bottom: 12px; left: 12px; z-index: 999;
-      background: rgba(0,0,0,0.75); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 0.75rem;
+      position: absolute; bottom: 14px; left: 14px; z-index: 999;
+      background: rgba(15,36,68,0.92);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 100px;
+      font-size: 0.76rem; font-weight: 600;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+      display: inline-flex; align-items: center; gap: 7px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .expire-bar i { color: var(--amber-500); }
+
+    .map-brand {
+      position: absolute; top: 12px; right: 12px; z-index: 999;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      padding: 5px 10px; border-radius: 8px;
+      font-size: 0.66rem; font-weight: 700;
+      color: var(--navy-700);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      letter-spacing: 0.5px;
     }
 
+    /* ============== Error Page ============== */
     .error-page {
-      display: flex; align-items: center; justify-content: center; min-height: 100vh;
-      flex-direction: column; text-align: center; padding: 40px;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; flex-direction: column;
+      text-align: center; padding: 40px 24px;
+      background: var(--slate-50);
     }
-    .error-page i { font-size: 4rem; color: #94a3b8; margin-bottom: 16px; }
-    .error-page h4 { color: #475569; font-weight: 700; }
-    .error-page p { color: #94a3b8; max-width: 400px; }
+    .error-icon {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--red-50), #fff);
+      border: 2px solid var(--red-500);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 18px rgba(220,38,38,0.12);
+    }
+    .error-icon i { font-size: 2.4rem; color: var(--red-600); }
+    .error-page h4 { color: var(--slate-800); font-weight: 800; margin-bottom: 8px; }
+    .error-page p { color: var(--slate-500); max-width: 380px; font-size: 0.88rem; line-height: 1.5; }
+
+    /* ============== Loading ============== */
+    .loading-page {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; flex-direction: column;
+      background: var(--slate-50);
+    }
+    .loading-spinner {
+      width: 54px; height: 54px;
+      border: 4px solid var(--slate-200);
+      border-top-color: var(--navy-700);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 18px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-page h5 { color: var(--slate-500); font-weight: 600; font-size: 0.9rem; }
+
+    /* ============== Popup (Leaflet) ============== */
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 8px 26px rgba(15,36,68,0.18);
+    }
+    .leaflet-popup-content { margin: 0; min-width: 200px; }
+    .popup-head {
+      background: linear-gradient(135deg, var(--navy-800), var(--navy-700));
+      color: #fff; padding: 10px 14px;
+      font-weight: 700; font-size: 0.88rem;
+    }
+    .popup-body { padding: 10px 14px; font-size: 0.8rem; color: var(--slate-700); }
+
+    /* ============== Mobile ============== */
+    @media (max-width: 640px) {
+      .share-header { padding: 12px 14px 14px; }
+      .brand-title { font-size: 0.88rem; }
+      .info-bar { padding: 12px 14px; }
+      .vehicle-name { font-size: 0.98rem; }
+      .speed-display { font-size: 1.25rem; }
+      .btn-camera { padding: 9px 14px; font-size: 0.8rem; }
+      #map { height: calc(100vh - 150px); }
+      .expire-bar { font-size: 0.72rem; padding: 7px 12px; bottom: 10px; left: 10px; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Error Page (hidden by default) -->
+  <!-- Error Page -->
   <div id="errorPage" class="error-page" style="display:none;">
-    <i class="bi bi-shield-lock"></i>
+    <div class="error-icon"><i class="bi bi-shield-exclamation"></i></div>
     <h4 id="errorTitle">ลิงก์ไม่ถูกต้อง</h4>
     <p id="errorMsg">ลิงก์แชร์นี้ไม่ถูกต้อง หมดอายุ หรือถูกยกเลิกแล้ว</p>
   </div>
 
-  <!-- Main View (hidden by default) -->
+  <!-- Main View -->
   <div id="mainView" style="display:none;">
     <div class="share-header">
-      <div>
-        <h6><i class="bi bi-broadcast me-2"></i>GPS Tracking — Shared View</h6>
-        <div class="sub" id="headerReason"></div>
+      <div class="share-header-top">
+        <div class="brand">
+          <div class="brand-mark"><i class="bi bi-broadcast-pin"></i></div>
+          <div>
+            <div class="brand-title">GPS Tracking</div>
+            <div class="brand-sub">Shared Live View</div>
+          </div>
+        </div>
+        <div class="live-pill">
+          <span class="live-dot"></span> LIVE
+        </div>
       </div>
-      <div class="text-end">
-        <div class="sub" id="headerExpiry"></div>
-      </div>
+      <div class="share-reason" id="headerReason"></div>
     </div>
 
     <div class="info-bar">
-      <div style="flex:1; min-width:0;">
-        <div class="vehicle-name" id="vehicleName">--</div>
-        <div class="info-item text-truncate" id="vehicleAddr">--</div>
+      <div class="vehicle-info">
+        <div class="vehicle-name"><i class="bi bi-truck"></i><span id="vehicleName">--</span></div>
+        <div class="vehicle-addr"><i class="bi bi-geo-alt"></i><span id="vehicleAddr">--</span></div>
       </div>
-      <div class="d-flex align-items-center gap-2">
+      <div class="metrics">
         <button id="btnCamera" class="btn-camera" style="display:none;" onclick="openShareCamera()">
-          <i class="bi bi-camera-video-fill me-1"></i>เปิดกล้อง
+          <i class="bi bi-camera-video-fill"></i>เปิดกล้อง
         </button>
-        <div class="text-end">
-          <span class="status-badge off" id="statusBadge">OFFLINE</span><br>
-          <span class="speed-badge" id="speedDisplay">-- km/h</span>
+        <div class="metric-box">
+          <div class="metric-label">Speed</div>
+          <div class="speed-display"><span id="speedDisplay">0.0</span><span class="unit">km/h</span></div>
+          <div style="margin-top:4px;">
+            <span class="status-badge off" id="statusBadge"><span class="dot"></span>OFFLINE</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <div style="position:relative;">
+    <div class="map-wrap">
       <div id="map"></div>
-      <div class="expire-bar" id="expireBar">
-        <i class="bi bi-clock me-1"></i> <span id="expireText">--</span>
+      <div class="map-brand">REAL-TIME · 10s</div>
+      <div class="expire-bar">
+        <i class="bi bi-clock-history"></i>
+        <span id="expireText">--</span>
       </div>
     </div>
   </div>
 
   <!-- Loading -->
-  <div id="loadingView" class="error-page">
-    <div class="spinner-border text-primary mb-3" style="width:48px; height:48px;"></div>
-    <h5 class="text-muted">กำลังโหลด...</h5>
+  <div id="loadingView" class="loading-page">
+    <div class="loading-spinner"></div>
+    <h5>กำลังเชื่อมต่อ...</h5>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -122,7 +335,6 @@
     var _refreshInterval = null;
 
     async function init() {
-      // Create Supabase client here (after supabase-js UMD has loaded)
       _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
       var params = new URLSearchParams(window.location.search);
@@ -131,7 +343,6 @@
       if (!token) return showError('ลิงก์ไม่ถูกต้อง', 'ไม่พบ token ใน URL');
 
       try {
-        // Fetch token
         var res = await _supabase.from('gps_shared_tokens').select('*')
           .eq('token', token).eq('status', 'Active').single();
 
@@ -139,12 +350,10 @@
 
         _tokenData = res.data;
 
-        // Check expiry
         if (new Date(_tokenData.expires_at) < new Date()) {
           return showError('ลิงก์หมดอายุ', 'ลิงก์แชร์นี้หมดอายุแล้ว กรุณาขอลิงก์ใหม่');
         }
 
-        // Fetch provider
         var pRes = await _supabase.from('gps_providers').select('*')
           .eq('id', _tokenData.provider).eq('is_active', true).single();
 
@@ -152,7 +361,6 @@
 
         _providerData = pRes.data;
 
-        // Fetch vehicle info (for friendly name instead of device_id)
         try {
           var vRes = await _supabase.from('gps_vehicles').select('nickname, device_name')
             .eq('device_id', _tokenData.device_id).eq('provider', _tokenData.provider).limit(1);
@@ -161,33 +369,28 @@
           }
         } catch(e) { console.warn('vehicle lookup:', e.message); }
 
-        // Show main view
         document.getElementById('loadingView').style.display = 'none';
         document.getElementById('mainView').style.display = '';
 
-        // Camera button: show only if token allows
         if (_tokenData.allow_camera) {
           document.getElementById('btnCamera').style.display = '';
         }
 
-        // Set header info
-        document.getElementById('headerReason').textContent = _tokenData.reason || '';
-        var expStr = new Date(_tokenData.expires_at).toLocaleString('th-TH');
-        document.getElementById('headerExpiry').textContent = 'หมดอายุ: ' + expStr;
+        document.getElementById('headerReason').textContent = _tokenData.reason
+          ? '\u00A0' + _tokenData.reason
+          : '';
+        if (_tokenData.reason) {
+          document.getElementById('headerReason').innerHTML =
+            '<i class="bi bi-info-circle"></i>' + escapeHtml(_tokenData.reason);
+        }
 
-        // Init map
-        _map = L.map('map').setView([15.87, 100.99], 6);
+        _map = L.map('map', { zoomControl: true }).setView([15.87, 100.99], 6);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; CartoDB', maxZoom: 19
         }).addTo(_map);
 
-        // Fetch GPS status
         await fetchStatus();
-
-        // Auto refresh every 10 seconds
         _refreshInterval = setInterval(fetchStatus, 10000);
-
-        // Update expire countdown
         updateExpireCountdown();
         setInterval(updateExpireCountdown, 1000);
 
@@ -195,6 +398,12 @@
         console.error(e);
         showError('เกิดข้อผิดพลาด', e.message);
       }
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function displayName() {
@@ -211,24 +420,40 @@
         }
 
         var s = statuses[0];
+        var speedNum = Number(s.speed) || 0;
         document.getElementById('vehicleName').textContent = displayName();
         document.getElementById('vehicleAddr').textContent = s.address || '--';
-        document.getElementById('speedDisplay').textContent = s.speed.toFixed(1) + ' km/h';
+        document.getElementById('speedDisplay').textContent = speedNum.toFixed(1);
 
         var badge = document.getElementById('statusBadge');
-        if (s.online) {
-          badge.textContent = 'ONLINE';
-          badge.className = 'status-badge on';
-        } else {
-          badge.textContent = 'OFFLINE';
+        if (!s.online) {
+          badge.innerHTML = '<span class="dot"></span>OFFLINE';
           badge.className = 'status-badge off';
+        } else if (speedNum < 1) {
+          badge.innerHTML = '<span class="dot"></span>IDLE';
+          badge.className = 'status-badge idle';
+        } else {
+          badge.innerHTML = '<span class="dot"></span>ONLINE';
+          badge.className = 'status-badge on';
         }
 
         if (s.lat && s.lng && !(s.lat === 0 && s.lng === 0)) {
-          var color = !s.online ? '#ef4444' : s.speed > 1 ? '#22c55e' : '#f59e0b';
+          var ringColor = !s.online ? '#94a3b8' : (speedNum < 1 ? '#f59e0b' : '#22c55e');
+          var pulseRing = (s.online && speedNum > 1)
+            ? '<div style="position:absolute;top:-6px;left:-6px;width:52px;height:52px;border-radius:50%;background:' + ringColor + ';opacity:0.3;animation:sharePulseRing 1.6s ease-out infinite;"></div>'
+            : '';
+
+          var iconHtml =
+            '<div style="position:relative;width:40px;height:40px;">' +
+              pulseRing +
+              '<div style="position:relative;width:40px;height:40px;background:linear-gradient(135deg,#163056,#1e3a5f);border:3px solid ' + ringColor + ';border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 3px 10px rgba(15,36,68,0.35);">' +
+                '<i class="bi bi-truck"></i>' +
+              '</div>' +
+            '</div>';
+
           var icon = L.divIcon({
             className: '',
-            html: '<div style="width:40px;height:40px;background:' + color + ';border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 10px rgba(0,0,0,0.3);">&#x1F691;</div>',
+            html: iconHtml,
             iconSize: [40, 40], iconAnchor: [20, 20]
           });
 
@@ -237,7 +462,7 @@
             _marker.setIcon(icon);
           } else {
             _marker = L.marker([s.lat, s.lng], { icon: icon }).addTo(_map);
-            _map.setView([s.lat, s.lng], 14);
+            _map.setView([s.lat, s.lng], 15);
           }
         }
 
@@ -245,6 +470,13 @@
         console.warn('fetchStatus error:', e.message);
       }
     }
+
+    // Inject pulse ring keyframe
+    (function(){
+      var st = document.createElement('style');
+      st.textContent = '@keyframes sharePulseRing { 0% { transform:scale(1); opacity:0.5; } 100% { transform:scale(1.8); opacity:0; } }';
+      document.head.appendChild(st);
+    })();
 
     function updateExpireCountdown() {
       if (!_tokenData) return;
@@ -261,7 +493,11 @@
       var h = Math.floor(diff / 3600000);
       var m = Math.floor((diff % 3600000) / 60000);
       var s = Math.floor((diff % 60000) / 1000);
-      document.getElementById('expireText').textContent = 'เหลือ ' + h + ' ชม. ' + m + ' น. ' + s + ' วิ.';
+      var txt;
+      if (h >= 1) txt = 'เหลือ ' + h + ' ชม. ' + m + ' น.';
+      else if (m >= 1) txt = 'เหลือ ' + m + ' น. ' + s + ' วิ.';
+      else txt = 'เหลือ ' + s + ' วินาที';
+      document.getElementById('expireText').textContent = txt;
     }
 
     function openShareCamera() {
@@ -290,7 +526,7 @@
       document.getElementById('errorMsg').textContent = msg;
     }
 
-    // Need Supabase for share page
+    // Load Supabase UMD, then init
     var script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
     script.onload = init;

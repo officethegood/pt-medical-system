@@ -18,56 +18,430 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
-    .gps-layout { display: grid; grid-template-columns: 340px 1fr; height: calc(100vh - 56px); overflow: hidden; }
-    @media (max-width: 768px) { .gps-layout { grid-template-columns: 1fr; height: auto; } }
+    /* ============================================================
+       GPS Fleet — Enterprise Design (Navy + Red palette)
+       ============================================================ */
+    :root {
+      --navy-900: #0f2847;
+      --navy-700: #1e3a5f;
+      --navy-500: #2c5282;
+      --navy-50:  #eff4fb;
+      --red-700:  #b91c1c;
+      --red-600:  #dc2626;
+      --red-500:  #ef4444;
+      --red-50:   #fef2f2;
+      --slate-50: #f8fafc;
+      --slate-100:#f1f5f9;
+      --slate-200:#e2e8f0;
+      --slate-300:#cbd5e1;
+      --slate-400:#94a3b8;
+      --slate-500:#64748b;
+      --slate-600:#475569;
+      --slate-700:#334155;
+      --slate-900:#0f172a;
+      --green-600:#16a34a;
+      --amber-500:#f59e0b;
+    }
 
-    .vehicle-panel { background: #f8f9fa; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 12px; }
-    .vehicle-panel .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    body { background: var(--slate-50); }
+
+    .gps-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      height: calc(100vh - 56px);
+      overflow: hidden;
+    }
+    @media (max-width: 992px) {
+      .gps-layout { grid-template-columns: 320px 1fr; }
+    }
+    @media (max-width: 768px) {
+      .gps-layout { grid-template-columns: 1fr; height: auto; }
+      .vehicle-panel { max-height: 50vh; border-right: none !important; border-bottom: 1px solid var(--slate-200); }
+      .map-container { height: 60vh; min-height: 400px; }
+    }
+
+    /* ==================== LEFT PANEL ==================== */
+    .vehicle-panel {
+      background: #fff;
+      border-right: 1px solid var(--slate-200);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    .vehicle-panel::-webkit-scrollbar { width: 6px; }
+    .vehicle-panel::-webkit-scrollbar-thumb { background: var(--slate-300); border-radius: 3px; }
+
+    .panel-section-header {
+      position: sticky; top: 0; z-index: 5;
+      background: #fff;
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--slate-100);
+    }
+    .panel-title {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .panel-title h5 {
+      margin: 0; font-size: 1rem; font-weight: 700; color: var(--navy-900);
+      letter-spacing: -0.01em;
+    }
+    .panel-title .count-pill {
+      background: var(--navy-50); color: var(--navy-700);
+      padding: 2px 10px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: 600;
+    }
+    .panel-search {
+      position: relative;
+    }
+    .panel-search input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+    }
+    .panel-search input:focus {
+      outline: none; background: #fff;
+      border-color: var(--navy-500);
+      box-shadow: 0 0 0 3px rgba(30,58,95,0.08);
+    }
+    .panel-search i {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      color: var(--slate-400); font-size: 0.9rem;
+    }
+
+    .filter-tabs {
+      display: flex; gap: 4px; margin-top: 10px;
+    }
+    .filter-tab {
+      flex: 1;
+      padding: 5px 0;
+      background: transparent;
+      border: 1px solid var(--slate-200);
+      border-radius: 6px;
+      font-size: 0.72rem; font-weight: 600;
+      color: var(--slate-500);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-tab:hover { background: var(--slate-50); color: var(--slate-700); }
+    .filter-tab.active {
+      background: var(--navy-700); color: #fff; border-color: var(--navy-700);
+    }
+
+    /* ==================== VEHICLE CARDS ==================== */
+    .vehicle-list { padding: 8px 12px 12px; flex: 1; }
 
     .v-card {
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
-      padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
-      border-left: 4px solid #94a3b8;
+      position: relative;
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
-    .v-card:hover { border-color: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.15); }
-    .v-card.active { border-color: #2563eb; background: #eff6ff; }
-    .v-card.online { border-left-color: #22c55e; }
-    .v-card.offline { border-left-color: #ef4444; }
-    .v-card .v-name { font-weight: 700; font-size: 0.95rem; color: #1e293b; }
-    .v-card .v-sub { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
-    .v-card .v-speed { font-size: 1.1rem; font-weight: 700; color: #f59e0b; }
-    .v-card .v-status { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
-    .v-card .v-status.on { background: #dcfce7; color: #16a34a; }
-    .v-card .v-status.off { background: #fee2e2; color: #dc2626; }
-    .v-card .v-actions { display: flex; gap: 4px; margin-top: 6px; }
-    .v-card .v-addr { font-size: 0.72rem; color: #94a3b8; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .v-card:hover {
+      border-color: var(--navy-500);
+      box-shadow: 0 2px 10px rgba(30,58,95,0.08);
+      transform: translateY(-1px);
+    }
+    .v-card.active {
+      border-color: var(--navy-700);
+      background: var(--navy-50);
+      box-shadow: 0 0 0 3px rgba(30,58,95,0.08);
+    }
 
-    .btn-cam { background: #f59e0b; color: #fff; border: none; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
-    .btn-cam:hover { background: #d97706; color: #fff; }
-    .btn-hls { background: #8b5cf6; color: #fff; border: none; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
-    .btn-hls:hover { background: #7c3aed; color: #fff; }
-    .btn-share { background: #06b6d4; color: #fff; border: none; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
-    .btn-share:hover { background: #0891b2; color: #fff; }
+    .v-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 8px;
+    }
+    .v-identity { flex: 1; min-width: 0; }
+    .v-plate {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 1rem; font-weight: 700;
+      color: var(--navy-900);
+      letter-spacing: -0.01em;
+    }
+    .v-plate-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--slate-400); flex-shrink: 0;
+    }
+    .v-card.online .v-plate-dot {
+      background: var(--green-600);
+      box-shadow: 0 0 0 0 rgba(22,163,74,0.6);
+      animation: pulseGreen 2s infinite;
+    }
+    .v-card.idle .v-plate-dot { background: var(--amber-500); }
 
-    .map-container { position: relative; }
+    @keyframes pulseGreen {
+      0%   { box-shadow: 0 0 0 0 rgba(22,163,74,0.55); }
+      70%  { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+      100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
+    }
+
+    .v-sub {
+      font-size: 0.72rem; color: var(--slate-500); margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .v-metric { text-align: right; flex-shrink: 0; }
+    .v-speed-value {
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--navy-900);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .v-speed-unit {
+      font-size: 0.65rem; color: var(--slate-400);
+      font-weight: 600; margin-top: 2px;
+    }
+    .v-status-label {
+      display: inline-block; font-size: 0.64rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-top: 4px; padding: 1px 6px; border-radius: 4px;
+    }
+    .v-status-label.on { background: #dcfce7; color: #15803d; }
+    .v-status-label.idle { background: #fef3c7; color: #92400e; }
+    .v-status-label.off { background: var(--slate-100); color: var(--slate-500); }
+
+    .v-address {
+      font-size: 0.74rem; color: var(--slate-600);
+      margin-top: 8px; padding-top: 8px;
+      border-top: 1px dashed var(--slate-200);
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .v-address i { color: var(--slate-400); font-size: 0.75rem; flex-shrink: 0; }
+
+    .v-actions {
+      display: flex; gap: 6px; margin-top: 10px;
+    }
+    .v-action {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 6px 8px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 7px;
+      color: var(--slate-700);
+      font-size: 0.72rem; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .v-action:hover { background: var(--navy-700); color: #fff; border-color: var(--navy-700); }
+    .v-action.action-cam:hover { background: var(--red-600); border-color: var(--red-600); }
+    .v-action.action-share:hover { background: var(--navy-500); border-color: var(--navy-500); }
+    .v-action i { font-size: 0.85rem; }
+
+    /* ==================== SHARE TOKENS SECTION ==================== */
+    .tokens-section {
+      border-top: 1px solid var(--slate-200);
+      padding: 14px 16px;
+      background: var(--slate-50);
+    }
+    .tokens-section .section-title {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .tokens-section h6 {
+      margin: 0; font-size: 0.85rem; font-weight: 700;
+      color: var(--navy-900);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .token-card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.15s;
+    }
+    .token-card:hover { border-color: var(--slate-300); }
+    .token-card.expired { opacity: 0.5; }
+    .token-card.has-camera { border-left: 3px solid var(--red-600); }
+
+    .token-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-bottom: 4px;
+    }
+    .token-vehicle {
+      font-size: 0.85rem; font-weight: 700; color: var(--navy-900);
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .token-status {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em;
+      padding: 2px 7px; border-radius: 4px;
+      flex-shrink: 0; text-transform: uppercase;
+    }
+    .token-status.active { background: #dcfce7; color: #15803d; }
+    .token-status.expired { background: var(--slate-100); color: var(--slate-500); }
+
+    .token-meta { font-size: 0.7rem; color: var(--slate-500); line-height: 1.5; }
+    .token-id-mono { font-family: 'Courier New', monospace; color: var(--slate-600); }
+
+    .token-actions {
+      display: flex; gap: 4px; margin-top: 8px;
+    }
+    .token-btn {
+      flex: 1;
+      padding: 4px 6px;
+      background: transparent;
+      border: 1px solid var(--slate-200);
+      border-radius: 6px;
+      font-size: 0.7rem; font-weight: 600;
+      color: var(--slate-600);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 3px;
+      transition: all 0.12s;
+    }
+    .token-btn:hover { background: var(--slate-100); color: var(--navy-900); }
+    .token-btn.btn-cam-on { color: var(--red-600); border-color: var(--red-50); background: var(--red-50); }
+    .token-btn.btn-cam-on:hover { background: var(--red-600); color: #fff; border-color: var(--red-600); }
+    .token-btn.btn-revoke:hover { background: var(--red-600); color: #fff; border-color: var(--red-600); }
+
+    /* ==================== MAP ==================== */
+    .map-container { position: relative; background: var(--slate-100); }
     #map { width: 100%; height: 100%; min-height: 400px; }
 
     .map-controls {
-      position: absolute; top: 12px; right: 12px; z-index: 999;
+      position: absolute; top: 16px; right: 16px; z-index: 999;
       display: flex; gap: 6px;
+      background: rgba(255,255,255,0.96);
+      padding: 6px;
+      border-radius: 12px;
+      box-shadow: 0 2px 14px rgba(15,40,71,0.1), 0 1px 3px rgba(15,40,71,0.06);
+      border: 1px solid var(--slate-200);
+      backdrop-filter: blur(6px);
     }
-    .map-controls .btn { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-      padding: 6px 12px; font-size: 0.8rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    .map-controls .btn.active-toggle { background: #22c55e; color: #fff; border-color: #22c55e; }
+    .map-ctrl-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.78rem; font-weight: 600;
+      color: var(--slate-700);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .map-ctrl-btn:hover { background: var(--slate-100); color: var(--navy-900); }
+    .map-ctrl-btn.active-toggle { background: var(--green-600); color: #fff; }
+    .map-ctrl-btn i { font-size: 0.9rem; }
 
-    .refresh-indicator {
-      position: absolute; bottom: 12px; left: 12px; z-index: 999;
-      background: rgba(0,0,0,0.7); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem;
+    .live-indicator {
+      position: absolute; bottom: 16px; left: 16px; z-index: 999;
+      background: rgba(15,40,71,0.92);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 100px;
+      font-size: 0.74rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 14px rgba(15,40,71,0.25);
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--red-500);
+      animation: pulseRed 1.5s infinite;
+    }
+    @keyframes pulseRed {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
 
-    /* Share Token Modal */
-    .token-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
-    .token-row:last-child { border-bottom: none; }
+    /* ==================== MODAL OVERRIDES ==================== */
+    .modal-content.pro-modal {
+      border: none;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(15,40,71,0.2);
+    }
+    .pro-modal .modal-header {
+      background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-900) 100%);
+      color: #fff;
+      padding: 18px 22px;
+      border: none;
+    }
+    .pro-modal .modal-header h6 {
+      margin: 0; font-weight: 700; font-size: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pro-modal .modal-header .btn-close {
+      filter: invert(1); opacity: 0.8;
+    }
+    .pro-modal .modal-body { padding: 22px; }
+
+    .field-label {
+      display: block; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--slate-600); margin-bottom: 6px;
+    }
+
+    .segmented-group {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+    }
+    .segmented-btn {
+      padding: 8px 0;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 7px;
+      font-size: 0.8rem; font-weight: 600;
+      color: var(--slate-600);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .segmented-btn:hover { background: var(--slate-100); }
+    .segmented-btn.active {
+      background: var(--navy-700); color: #fff; border-color: var(--navy-700);
+    }
+
+    .camera-toggle-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: var(--red-50);
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .camera-toggle-card:hover { border-color: var(--red-500); }
+    .camera-toggle-card input { margin: 0; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--red-600); }
+    .camera-toggle-card .toggle-content { flex: 1; }
+    .camera-toggle-card .toggle-label {
+      font-size: 0.88rem; font-weight: 700; color: var(--red-700);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .camera-toggle-card .toggle-desc {
+      font-size: 0.72rem; color: var(--slate-600); margin-top: 2px;
+    }
+
+    .share-result {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 16px;
+    }
+    .share-result-label {
+      font-size: 0.72rem; font-weight: 700; color: #15803d;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+    }
+    .share-result input {
+      background: #fff; border: 1px solid #86efac; font-size: 0.8rem;
+      font-family: 'Courier New', monospace;
+    }
+
+    .empty-state {
+      text-align: center; padding: 40px 16px;
+      color: var(--slate-400);
+    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 8px; display: block; opacity: 0.4; }
+    .empty-state p { font-size: 0.85rem; margin: 0; }
   </style>
 </head>
 <body>
@@ -115,24 +489,39 @@
   <!-- ==================== MAIN LAYOUT ==================== -->
   <div class="gps-layout">
 
-    <!-- Left: Vehicle List -->
+    <!-- Left: Vehicle Panel -->
     <div class="vehicle-panel" id="vehiclePanel">
-      <div class="panel-header">
-        <h6 class="fw-bold mb-0"><i class="bi bi-truck me-1 text-primary"></i> Vehicles <span class="badge bg-primary rounded-pill" id="vehicle-count">0</span></h6>
-        <button class="btn btn-sm btn-outline-primary" onclick="manualRefresh()" title="Refresh">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
+      <div class="panel-section-header">
+        <div class="panel-title">
+          <h5><i class="bi bi-broadcast-pin" style="color:var(--red-600);"></i> Fleet <span class="count-pill" id="vehicle-count">0</span></h5>
+          <button class="map-ctrl-btn" style="background:var(--slate-100); padding:5px 9px;" onclick="manualRefresh()" title="รีเฟรช">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+        <div class="panel-search">
+          <i class="bi bi-search"></i>
+          <input type="text" id="vehicleSearch" placeholder="ค้นหาทะเบียน / ชื่อรถ..." oninput="filterVehicles()">
+        </div>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all" onclick="setVehicleFilter('all')">ทั้งหมด</button>
+          <button class="filter-tab" data-filter="online" onclick="setVehicleFilter('online')">Online</button>
+          <button class="filter-tab" data-filter="offline" onclick="setVehicleFilter('offline')">Offline</button>
+        </div>
       </div>
-      <div id="vehicleList">
-        <div class="text-center py-5 text-muted">
-          <div class="spinner-border spinner-border-sm"></div>
-          <div class="small mt-2">กำลังโหลด...</div>
+
+      <div class="vehicle-list" id="vehicleList">
+        <div class="empty-state">
+          <div class="spinner-border spinner-border-sm" style="color:var(--navy-500);"></div>
+          <p class="mt-2">กำลังโหลด...</p>
         </div>
       </div>
 
       <!-- Share Token Manager (Admin) -->
-      <div id="tokenManagerSection" style="display:none;" class="mt-3 pt-3 border-top">
-        <h6 class="fw-bold mb-2"><i class="bi bi-share me-1 text-info"></i> Shared Links</h6>
+      <div id="tokenManagerSection" class="tokens-section" style="display:none;">
+        <div class="section-title">
+          <h6><i class="bi bi-link-45deg" style="color:var(--red-600);"></i> Shared Links</h6>
+          <span class="count-pill" id="token-count" style="background:#fee2e2; color:var(--red-700);">0</span>
+        </div>
         <div id="tokenList"></div>
       </div>
     </div>
@@ -140,15 +529,22 @@
     <!-- Right: Map -->
     <div class="map-container">
       <div id="map"></div>
+
       <div class="map-controls">
-        <button class="btn" onclick="manualRefresh()" title="Refresh ตำแหน่ง"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</button>
-        <button class="btn" onclick="fitAllMarkers()" title="แสดงทุกคัน"><i class="bi bi-arrows-fullscreen me-1"></i> ทั้งหมด</button>
-        <button class="btn" id="btnAutoRefresh" onclick="toggleAutoRefresh()" title="Auto refresh ทุก 5 วินาที">
-          <i class="bi bi-arrow-repeat me-1"></i> Auto: <span id="autoLabel">OFF</span>
+        <button class="map-ctrl-btn" onclick="manualRefresh()" title="รีเฟรชตำแหน่ง">
+          <i class="bi bi-arrow-clockwise"></i><span class="d-none d-md-inline">รีเฟรช</span>
+        </button>
+        <button class="map-ctrl-btn" onclick="fitAllMarkers()" title="ซูมดูทุกคัน">
+          <i class="bi bi-arrows-fullscreen"></i><span class="d-none d-md-inline">ทั้งหมด</span>
+        </button>
+        <button class="map-ctrl-btn" id="btnAutoRefresh" onclick="toggleAutoRefresh()" title="Auto refresh 5 วินาที">
+          <i class="bi bi-arrow-repeat"></i><span class="d-none d-md-inline">Auto</span> <span id="autoLabel" style="font-size:0.68rem;">OFF</span>
         </button>
       </div>
-      <div class="refresh-indicator" id="refreshIndicator" style="display:none;">
-        <i class="bi bi-arrow-repeat me-1"></i> <span id="refreshText">Updating...</span>
+
+      <div class="live-indicator" id="refreshIndicator" style="display:none;">
+        <span class="live-dot"></span>
+        <span id="refreshText">Live</span>
       </div>
     </div>
 
@@ -156,53 +552,61 @@
 
   <!-- ==================== SHARE TOKEN MODAL ==================== -->
   <div class="modal fade" id="shareModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content border-0 shadow rounded-4">
-        <div class="modal-header border-0">
-          <h6 class="modal-title fw-bold"><i class="bi bi-share me-2 text-info"></i>สร้างลิงก์แชร์ GPS</h6>
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content pro-modal">
+        <div class="modal-header">
+          <h6><i class="bi bi-share-fill"></i>สร้างลิงก์แชร์ GPS</h6>
           <button class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="share-device-id">
           <input type="hidden" id="share-provider-id">
+
           <div class="mb-3">
-            <label class="form-label small fw-medium">รถ</label>
-            <input type="text" id="share-vehicle-name" class="form-control" disabled>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-medium">ระยะเวลา</label>
-            <select id="share-hours" class="form-select">
-              <option value="1">1 ชั่วโมง</option>
-              <option value="3">3 ชั่วโมง</option>
-              <option value="6" selected>6 ชั่วโมง</option>
-              <option value="12">12 ชั่วโมง</option>
-              <option value="24">24 ชั่วโมง</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-medium">เหตุผล</label>
-            <input type="text" id="share-reason" class="form-control" placeholder="เช่น แชร์ให้ญาติผู้ป่วยติดตาม">
-          </div>
-          <div class="mb-3 p-2 rounded-3" style="background:#fff7ed; border:1px solid #fed7aa;">
-            <div class="form-check mb-0">
-              <input class="form-check-input" type="checkbox" id="share-allow-camera">
-              <label class="form-check-label small fw-medium" for="share-allow-camera">
-                <i class="bi bi-camera-video me-1 text-warning"></i>อนุญาตให้เปิดกล้องได้
-              </label>
+            <label class="field-label">รถที่จะแชร์</label>
+            <div style="padding:10px 14px; background:var(--navy-50); border:1px solid #cbd5e1; border-radius:8px; font-weight:700; color:var(--navy-900); display:flex; align-items:center; gap:8px;">
+              <i class="bi bi-truck" style="color:var(--navy-700);"></i>
+              <span id="share-vehicle-name-display">--</span>
             </div>
-            <div class="text-muted mt-1" style="font-size:0.7rem;">
-              <i class="bi bi-info-circle me-1"></i>ผู้ที่มีลิงก์จะเปิดดูกล้องภายในรถได้ตลอดอายุลิงก์
-            </div>
+            <input type="hidden" id="share-vehicle-name">
           </div>
-          <div id="share-result" style="display:none;" class="alert alert-success">
-            <div class="fw-bold mb-1">สร้างลิงก์สำเร็จ!</div>
-            <input type="text" id="share-url" class="form-control form-control-sm mb-2" readonly>
-            <button class="btn btn-sm btn-primary" onclick="copyShareUrl()"><i class="bi bi-clipboard me-1"></i> Copy</button>
+
+          <div class="mb-3">
+            <label class="field-label">ระยะเวลาลิงก์</label>
+            <div class="segmented-group" id="share-hours-group">
+              <button type="button" class="segmented-btn" data-h="1">1 ชม.</button>
+              <button type="button" class="segmented-btn" data-h="3">3 ชม.</button>
+              <button type="button" class="segmented-btn active" data-h="6">6 ชม.</button>
+              <button type="button" class="segmented-btn" data-h="12">12 ชม.</button>
+              <button type="button" class="segmented-btn" data-h="24">24 ชม.</button>
+            </div>
+            <input type="hidden" id="share-hours" value="6">
+          </div>
+
+          <div class="mb-3">
+            <label class="field-label">เหตุผล</label>
+            <input type="text" id="share-reason" class="form-control" placeholder="เช่น แชร์ให้ญาติผู้ป่วยติดตาม" style="border-radius:8px;">
+          </div>
+
+          <label class="camera-toggle-card" for="share-allow-camera">
+            <input type="checkbox" id="share-allow-camera">
+            <div class="toggle-content">
+              <div class="toggle-label"><i class="bi bi-camera-video-fill"></i>อนุญาตให้เปิดกล้อง</div>
+              <div class="toggle-desc">ผู้รับลิงก์สามารถดูกล้องภายในรถได้ตลอดอายุลิงก์</div>
+            </div>
+          </label>
+
+          <div id="share-result" class="share-result" style="display:none;">
+            <div class="share-result-label"><i class="bi bi-check-circle-fill"></i>ลิงก์พร้อมใช้งาน</div>
+            <div class="d-flex gap-2">
+              <input type="text" id="share-url" class="form-control form-control-sm" readonly>
+              <button class="btn btn-sm" style="background:var(--navy-700); color:#fff; font-weight:600; padding:4px 14px; border-radius:7px;" onclick="copyShareUrl()"><i class="bi bi-clipboard me-1"></i>Copy</button>
+            </div>
           </div>
         </div>
-        <div class="modal-footer border-0">
-          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
-          <button class="btn btn-info btn-sm text-white" id="btnCreateShare" onclick="createShareToken()">
+        <div class="modal-footer border-0 px-4 pb-4 pt-0">
+          <button class="btn btn-sm" data-bs-dismiss="modal" style="background:var(--slate-100); color:var(--slate-700); font-weight:600; padding:8px 18px; border-radius:7px;">ยกเลิก</button>
+          <button class="btn btn-sm" id="btnCreateShare" onclick="createShareToken()" style="background:var(--red-600); color:#fff; font-weight:600; padding:8px 18px; border-radius:7px;">
             <i class="bi bi-link-45deg me-1"></i> สร้างลิงก์
           </button>
         </div>
@@ -347,43 +751,89 @@
     // =============================================
     // RENDER VEHICLE LIST
     // =============================================
+    // Filter + search state
+    var _vehicleFilter = 'all'; // 'all' | 'online' | 'offline'
+    var _vehicleSearch = '';
+
+    function setVehicleFilter(f) {
+      _vehicleFilter = f;
+      document.querySelectorAll('.filter-tab').forEach(function(t) {
+        t.classList.toggle('active', t.dataset.filter === f);
+      });
+      renderVehicleList();
+    }
+
+    function filterVehicles() {
+      _vehicleSearch = (document.getElementById('vehicleSearch').value || '').toLowerCase().trim();
+      renderVehicleList();
+    }
+
     function renderVehicleList() {
       var el = document.getElementById('vehicleList');
       if (_vehicles.length === 0) {
-        el.innerHTML = '<div class="text-center py-4 text-muted small">ไม่พบรถ — ตรวจสอบ Admin GPS Settings</div>';
+        el.innerHTML = '<div class="empty-state"><i class="bi bi-truck"></i><p>ไม่พบรถ<br><span style="font-size:0.75rem;">ตรวจสอบ Admin → GPS Settings</span></p></div>';
+        return;
+      }
+
+      // Apply filter + search
+      var filtered = _vehicles.filter(function(v) {
+        var key = v.device_id + '_' + v.provider;
+        var s = _statuses[key];
+        var online = s ? s.online : false;
+        if (_vehicleFilter === 'online' && !online) return false;
+        if (_vehicleFilter === 'offline' && online) return false;
+        if (_vehicleSearch) {
+          var hay = ((v.nickname || '') + ' ' + (v.device_name || '') + ' ' + v.device_id).toLowerCase();
+          if (hay.indexOf(_vehicleSearch) === -1) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        el.innerHTML = '<div class="empty-state"><i class="bi bi-search"></i><p>ไม่พบรถที่ตรงเงื่อนไข</p></div>';
         return;
       }
 
       var html = '';
-      _vehicles.forEach(function(v) {
+      filtered.forEach(function(v) {
         var key = v.device_id + '_' + v.provider;
         var s = _statuses[key];
         var online = s ? s.online : false;
-        var speed = s ? s.speed.toFixed(1) : '--';
-        var addr = s ? s.address : '--';
-        var provName = v.gps_providers ? v.gps_providers.name : '';
+        var speedNum = s ? s.speed : 0;
+        var isIdle = online && speedNum < 1;
+        var speed = s ? speedNum.toFixed(1) : '--';
+        var addr = s ? (s.address || '—') : '—';
         var displayName = v.nickname || v.device_name || v.device_id;
 
-        html += '<div class="v-card ' + (online ? 'online' : 'offline') + (_selectedKey === key ? ' active' : '') + '" onclick="focusVehicle(\'' + key + '\')">' +
-          '<div class="d-flex justify-content-between align-items-start">' +
-            '<div>' +
-              '<div class="v-name">' + esc(displayName) + '</div>' +
-              '<div class="v-sub">' + esc(v.device_name || '') + ' &bull; ' + esc(provName) + '</div>' +
+        var statusClass = !s ? 'offline' : (online ? (isIdle ? 'idle' : 'online') : 'offline');
+        var statusLabel = !s ? 'OFFLINE' : (online ? (isIdle ? 'IDLE' : 'LIVE') : 'OFFLINE');
+        var statusLabelClass = !s ? 'off' : (online ? (isIdle ? 'idle' : 'on') : 'off');
+
+        html += '<div class="v-card ' + statusClass + (_selectedKey === key ? ' active' : '') + '" onclick="focusVehicle(\'' + key + '\')">' +
+          '<div class="v-top">' +
+            '<div class="v-identity">' +
+              '<div class="v-plate"><span class="v-plate-dot"></span>' + esc(displayName) + '</div>' +
+              '<div class="v-sub">' + esc(v.device_id) + '</div>' +
             '</div>' +
-            '<div class="text-end">' +
-              '<span class="v-status ' + (online ? 'on' : 'off') + '">' + (online ? 'ONLINE' : 'OFFLINE') + '</span><br>' +
-              '<span class="v-speed">' + speed + ' km/h</span>' +
+            '<div class="v-metric">' +
+              '<div class="v-speed-value">' + speed + '</div>' +
+              '<div class="v-speed-unit">km/h</div>' +
+              '<div class="v-status-label ' + statusLabelClass + '">' + statusLabel + '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="v-addr">' + esc(addr) + '</div>' +
+          '<div class="v-address" title="' + esc(addr) + '"><i class="bi bi-geo-alt"></i><span>' + esc(addr) + '</span></div>' +
           '<div class="v-actions">' +
-            '<button class="btn-cam" onclick="event.stopPropagation(); openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')"><i class="bi bi-camera-video-fill me-1"></i>Camera</button>' +
-            '<button class="btn-hls" onclick="event.stopPropagation(); openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')"><i class="bi bi-play-circle-fill me-1"></i>HLS</button>' +
-            (_isAdmin ? '<button class="btn-share" onclick="event.stopPropagation(); showShareModal(\'' + v.provider + '\',\'' + v.device_id + '\',\'' + esc(displayName) + '\')"><i class="bi bi-share-fill me-1"></i>Share</button>' : '') +
+            '<button class="v-action action-cam" onclick="event.stopPropagation(); openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" title="เปิดกล้อง"><i class="bi bi-camera-video-fill"></i><span>กล้อง</span></button>' +
+            '<button class="v-action" onclick="event.stopPropagation(); openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" title="HLS stream"><i class="bi bi-play-circle-fill"></i><span>Stream</span></button>' +
+            (_isAdmin ? '<button class="v-action action-share" onclick="event.stopPropagation(); showShareModal(\'' + v.provider + '\',\'' + v.device_id + '\',\'' + esc(displayName) + '\')" title="สร้างลิงก์แชร์"><i class="bi bi-share-fill"></i><span>แชร์</span></button>' : '') +
           '</div>' +
         '</div>';
       });
       el.innerHTML = html;
+
+      // Update count pill (show filtered/total if filter active)
+      var countEl = document.getElementById('vehicle-count');
+      if (countEl) countEl.textContent = (_vehicleFilter !== 'all' || _vehicleSearch) ? (filtered.length + '/' + _vehicles.length) : _vehicles.length;
     }
 
     // =============================================
@@ -401,17 +851,37 @@
         var online = s.online;
         var speed = s.speed;
 
-        var popupHtml = '<div style="min-width:200px;">' +
-          '<b>' + esc(displayName) + '</b><br>' +
-          '<span style="font-size:0.8rem;color:#666;">Device: ' + esc(v.device_id) + '</span><br>' +
-          '<span style="font-size:0.85rem;">Speed: <b>' + speed.toFixed(1) + ' km/h</b></span><br>' +
-          '<span style="font-size:0.85rem;">Status: ' + (online ? '<span style="color:green;">Online</span>' : '<span style="color:red;">Offline</span>') + '</span><br>' +
-          '<span style="font-size:0.8rem;color:#888;">' + esc(s.address) + '</span><br>' +
-          '<span style="font-size:0.75rem;color:#aaa;">GPS: ' + esc(s.gpsTime) + '</span><br>' +
-          '<div style="margin-top:6px;">' +
-            '<button onclick="openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" style="padding:3px 8px;border:none;background:#f59e0b;color:#fff;border-radius:4px;font-size:0.75rem;cursor:pointer;margin-right:4px;">Camera</button>' +
-            '<button onclick="openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" style="padding:3px 8px;border:none;background:#8b5cf6;color:#fff;border-radius:4px;font-size:0.75rem;cursor:pointer;">HLS</button>' +
-          '</div></div>';
+        var isIdlePop = online && speed < 1;
+        var statusColorPop = !online ? '#94a3b8' : (isIdlePop ? '#f59e0b' : '#16a34a');
+        var statusTextPop = !online ? 'OFFLINE' : (isIdlePop ? 'IDLE' : 'LIVE');
+
+        var popupHtml = '<div style="min-width:230px; font-family:Sarabun,sans-serif;">' +
+          '<div style="padding:12px 14px; background:linear-gradient(135deg,#1e3a5f 0%,#0f2847 100%); color:#fff; border-radius:8px 8px 0 0; margin:-10px -10px 0;">' +
+            '<div style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:6px;">' +
+              '<span style="width:7px; height:7px; border-radius:50%; background:' + statusColorPop + '; display:inline-block;"></span>' +
+              esc(displayName) +
+            '</div>' +
+            '<div style="font-size:0.7rem; opacity:0.75; margin-top:2px; font-family:monospace;">' + esc(v.device_id) + '</div>' +
+          '</div>' +
+          '<div style="padding:10px 4px 4px;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0;">' +
+              '<span style="font-size:0.7rem; color:#64748b; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;">Speed</span>' +
+              '<span style="font-size:1.1rem; font-weight:700; color:#0f2847;">' + speed.toFixed(1) + ' <span style="font-size:0.65rem; color:#94a3b8;">km/h</span></span>' +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-top:1px dashed #e2e8f0;">' +
+              '<span style="font-size:0.7rem; color:#64748b; font-weight:700; letter-spacing:0.04em; text-transform:uppercase;">Status</span>' +
+              '<span style="font-size:0.75rem; font-weight:700; color:' + statusColorPop + ';">' + statusTextPop + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.72rem; color:#475569; margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0; line-height:1.4;">' +
+              '<i class="bi bi-geo-alt" style="color:#94a3b8;"></i> ' + esc(s.address || '—') +
+            '</div>' +
+            '<div style="font-size:0.65rem; color:#94a3b8; margin-top:4px;">GPS: ' + esc(s.gpsTime || '--') + '</div>' +
+            '<div style="display:flex; gap:6px; margin-top:10px;">' +
+              '<button onclick="openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" style="flex:1; padding:6px 0; border:none; background:#dc2626; color:#fff; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="bi bi-camera-video-fill"></i> กล้อง</button>' +
+              '<button onclick="openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" style="flex:1; padding:6px 0; border:none; background:#1e3a5f; color:#fff; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="bi bi-play-circle-fill"></i> Stream</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
 
         if (_markers[key]) {
           _markers[key].setLatLng([s.lat, s.lng]);
@@ -430,13 +900,33 @@
     }
 
     function makeIcon(online, speed) {
-      var color = !online ? '#ef4444' : speed > 1 ? '#22c55e' : '#f59e0b';
+      var isIdle = online && speed < 1;
+      var ringColor = !online ? '#94a3b8' : (isIdle ? '#f59e0b' : '#16a34a');
+      var pulse = online && !isIdle
+        ? '<div style="position:absolute; inset:-6px; border-radius:50%; background:' + ringColor + '; opacity:0.3; animation: mapPulse 1.8s infinite;"></div>'
+        : '';
       return L.divIcon({
         className: '',
-        html: '<div style="width:34px;height:34px;background:' + color + ';border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">&#x1F691;</div>',
-        iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20]
+        html:
+          '<div style="position:relative; width:40px; height:40px;">' +
+            pulse +
+            '<div style="position:absolute; inset:0; background:linear-gradient(135deg,#1e3a5f 0%,#0f2847 100%); border:3px solid ' + ringColor + '; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(15,40,71,0.35);">' +
+              '<i class="bi bi-truck-front-fill" style="color:#fff; font-size:16px;"></i>' +
+            '</div>' +
+          '</div>',
+        iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -24]
       });
     }
+
+    // Inject pulse keyframe for map markers (once)
+    (function(){
+      if (!document.getElementById('map-pulse-keyframe')) {
+        var st = document.createElement('style');
+        st.id = 'map-pulse-keyframe';
+        st.textContent = '@keyframes mapPulse { 0%,100% { transform:scale(1); opacity:0.35; } 50% { transform:scale(1.25); opacity:0; } }';
+        document.head.appendChild(st);
+      }
+    })();
 
     function fitAllMarkers() {
       _selectedKey = null;
@@ -497,12 +987,32 @@
       document.getElementById('share-device-id').value = deviceId;
       document.getElementById('share-provider-id').value = providerId;
       document.getElementById('share-vehicle-name').value = vehicleName;
+      var nameDisplay = document.getElementById('share-vehicle-name-display');
+      if (nameDisplay) nameDisplay.textContent = vehicleName;
       document.getElementById('share-result').style.display = 'none';
       document.getElementById('share-reason').value = '';
       document.getElementById('share-allow-camera').checked = false;
+      document.getElementById('share-hours').value = '6';
+      // Reset segmented buttons
+      document.querySelectorAll('#share-hours-group .segmented-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.h === '6');
+      });
       document.getElementById('btnCreateShare').disabled = false;
       new bootstrap.Modal(document.getElementById('shareModal')).show();
     }
+
+    // Wire segmented hour buttons
+    (function bindShareHourButtons() {
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('#share-hours-group .segmented-btn');
+        if (!btn) return;
+        document.querySelectorAll('#share-hours-group .segmented-btn').forEach(function(b) {
+          b.classList.remove('active');
+        });
+        btn.classList.add('active');
+        document.getElementById('share-hours').value = btn.dataset.h;
+      });
+    })();
 
     async function createShareToken() {
       var deviceId = document.getElementById('share-device-id').value;
@@ -572,36 +1082,44 @@
           .order('created_at', { ascending: false }).limit(20);
         var tokens = res.data || [];
         var el = document.getElementById('tokenList');
+        var countEl = document.getElementById('token-count');
+        if (countEl) countEl.textContent = tokens.filter(function(t){ return t.status === 'Active' && new Date(t.expires_at) > new Date(); }).length;
+
         if (tokens.length === 0) {
-          el.innerHTML = '<div class="text-muted small">ไม่มี shared links</div>';
+          el.innerHTML = '<div class="empty-state" style="padding:20px 0;"><i class="bi bi-link-45deg" style="font-size:1.8rem;"></i><p style="font-size:0.78rem;">ยังไม่มีลิงก์แชร์</p></div>';
           return;
         }
         var now = new Date();
         var html = '';
         tokens.forEach(function(t) {
           var expired = new Date(t.expires_at) < now;
-          var status = t.status === 'Active' && !expired ? 'Active' : 'Expired';
-          var isActive = status === 'Active';
+          var isActive = t.status === 'Active' && !expired;
+          var statusText = isActive ? 'Active' : (t.status === 'Revoked' ? 'Revoked' : 'Expired');
           var vName = vehicleNameFor(t.device_id);
-          var camBadge = t.allow_camera
-            ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.6rem;"><i class="bi bi-camera-video-fill me-1"></i>กล้อง</span>'
+
+          var expDate = new Date(t.expires_at);
+          var expStr = expDate.toLocaleString('th-TH', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+          var camIcon = t.allow_camera
+            ? '<i class="bi bi-camera-video-fill" style="color:var(--red-600); font-size:0.75rem;" title="เปิดกล้องได้"></i>'
             : '';
-          html += '<div class="token-row">' +
-            '<div style="flex:1; min-width:0;">' +
-              '<div class="fw-medium text-truncate"><i class="bi bi-truck text-primary me-1"></i>' + esc(vName) + camBadge + '</div>' +
-              '<div class="text-muted text-truncate" style="font-size:0.7rem;">' + esc(t.token) + ' &bull; ' + esc(t.reason || '-') + '</div>' +
-              '<div class="text-muted text-truncate" style="font-size:0.66rem;">โดย ' + esc(t.created_by || '-') + ' &bull; หมดอายุ ' + new Date(t.expires_at).toLocaleString('th-TH', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + '</div>' +
+
+          html += '<div class="token-card' + (!isActive ? ' expired' : '') + (t.allow_camera ? ' has-camera' : '') + '">' +
+            '<div class="token-header">' +
+              '<div class="token-vehicle"><i class="bi bi-truck" style="color:var(--navy-500); font-size:0.8rem;"></i>' + esc(vName) + camIcon + '</div>' +
+              '<span class="token-status ' + (isActive ? 'active' : 'expired') + '">' + statusText + '</span>' +
             '</div>' +
-            '<div class="text-end ms-2" style="flex-shrink:0;">' +
-              '<span class="badge ' + (isActive ? 'bg-success' : 'bg-secondary') + '">' + status + '</span>' +
-              (isActive
-                ? '<div class="btn-group btn-group-sm mt-1" style="display:flex;">' +
-                    '<button class="btn btn-outline-primary py-0 px-1" style="font-size:0.65rem;" onclick="copyTokenLink(\'' + esc(t.token) + '\')" title="Copy link"><i class="bi bi-clipboard"></i></button>' +
-                    '<button class="btn btn-outline-' + (t.allow_camera ? 'warning' : 'secondary') + ' py-0 px-1" style="font-size:0.65rem;" onclick="toggleTokenCamera(\'' + t.id + '\',' + (t.allow_camera ? 'false' : 'true') + ')" title="' + (t.allow_camera ? 'ปิดกล้อง' : 'เปิดกล้อง') + '"><i class="bi bi-camera-video' + (t.allow_camera ? '-fill' : '-off') + '"></i></button>' +
-                    '<button class="btn btn-outline-danger py-0 px-1" style="font-size:0.65rem;" onclick="revokeToken(\'' + t.id + '\')" title="Revoke"><i class="bi bi-x-lg"></i></button>' +
-                  '</div>'
-                : '') +
-            '</div></div>';
+            '<div class="token-meta">' +
+              '<span class="token-id-mono">' + esc(t.token) + '</span> · ' + esc(t.reason || '-') +
+              '<br>โดย ' + esc(t.created_by || '-') + ' · หมดอายุ ' + expStr +
+            '</div>' +
+            (isActive
+              ? '<div class="token-actions">' +
+                  '<button class="token-btn" onclick="copyTokenLink(\'' + esc(t.token) + '\')" title="Copy link"><i class="bi bi-clipboard"></i>Copy</button>' +
+                  '<button class="token-btn ' + (t.allow_camera ? 'btn-cam-on' : '') + '" onclick="toggleTokenCamera(\'' + t.id + '\',' + (t.allow_camera ? 'false' : 'true') + ')" title="' + (t.allow_camera ? 'ปิดกล้อง' : 'เปิดกล้อง') + '"><i class="bi bi-camera-video' + (t.allow_camera ? '-fill' : '') + '"></i>' + (t.allow_camera ? 'ปิด' : 'เปิด') + '</button>' +
+                  '<button class="token-btn btn-revoke" onclick="revokeToken(\'' + t.id + '\')" title="Revoke"><i class="bi bi-x-circle"></i>ยกเลิก</button>' +
+                '</div>'
+              : '') +
+          '</div>';
         });
         el.innerHTML = html;
       } catch(e) { console.error(e); }
