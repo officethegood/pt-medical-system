@@ -89,6 +89,35 @@
       padding: 2px 10px; border-radius: 12px;
       font-size: 0.75rem; font-weight: 600;
     }
+    .panel-refresh-group {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .last-update-chip {
+      font-size: 0.68rem; font-weight: 600;
+      color: var(--slate-500);
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      padding: 3px 8px; border-radius: 100px;
+      display: inline-flex; align-items: center; gap: 4px;
+      line-height: 1;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .last-update-chip.fresh {
+      color: var(--green-600);
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+    .last-update-chip.stale {
+      color: var(--amber-500);
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .last-update-chip .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor;
+    }
+    .last-update-chip.fresh .dot { animation: pulseGreen 2s infinite; }
     .panel-search {
       position: relative;
     }
@@ -494,9 +523,14 @@
       <div class="panel-section-header">
         <div class="panel-title">
           <h5><i class="bi bi-broadcast-pin" style="color:var(--red-600);"></i> Fleet <span class="count-pill" id="vehicle-count">0</span></h5>
-          <button class="map-ctrl-btn" style="background:var(--slate-100); padding:5px 9px;" onclick="manualRefresh()" title="รีเฟรช">
-            <i class="bi bi-arrow-clockwise"></i>
-          </button>
+          <div class="panel-refresh-group">
+            <span class="last-update-chip" id="lastUpdateChip" title="เวลารีเฟรชล่าสุด">
+              <span class="dot"></span><span id="lastUpdateText">--</span>
+            </span>
+            <button class="map-ctrl-btn" style="background:var(--slate-100); padding:5px 9px;" onclick="manualRefresh()" title="รีเฟรช">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
         </div>
         <div class="panel-search">
           <i class="bi bi-search"></i>
@@ -635,6 +669,8 @@
     var _autoInterval = null;
     var _selectedKey = null; // "deviceId_providerId"
     var _isAdmin = false;
+    var _lastRefreshAt = null; // Date of last successful fetch
+    var _lastUpdateTicker = null;
 
     // =============================================
     // MAP INIT
@@ -681,6 +717,10 @@
       // Auto refresh ON by default
       toggleAutoRefresh();
 
+      // Live-tick "last updated" label every second
+      if (_lastUpdateTicker) clearInterval(_lastUpdateTicker);
+      _lastUpdateTicker = setInterval(updateLastRefreshChip, 1000);
+
       // Load shared tokens
       if (_isAdmin) loadSharedTokens();
     }
@@ -721,9 +761,41 @@
       renderVehicleList();
       updateMapMarkers();
 
-      var now = new Date().toLocaleTimeString('th-TH');
+      _lastRefreshAt = new Date();
+      var now = _lastRefreshAt.toLocaleTimeString('th-TH');
       document.getElementById('refreshText').textContent = 'Updated ' + now;
       setTimeout(function() { indicator.style.display = 'none'; }, 2000);
+
+      updateLastRefreshChip();
+    }
+
+    // Tick relative time every second
+    function updateLastRefreshChip() {
+      var chip = document.getElementById('lastUpdateChip');
+      var txt  = document.getElementById('lastUpdateText');
+      if (!chip || !txt) return;
+
+      if (!_lastRefreshAt) {
+        txt.textContent = 'รอข้อมูล';
+        chip.className = 'last-update-chip';
+        return;
+      }
+
+      var diffSec = Math.floor((Date.now() - _lastRefreshAt.getTime()) / 1000);
+      var timeStr = _lastRefreshAt.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+      var label;
+      if (diffSec < 5)       label = 'เพิ่งอัปเดต';
+      else if (diffSec < 60) label = diffSec + ' วิ';
+      else if (diffSec < 3600) label = Math.floor(diffSec/60) + ' นาที';
+      else label = timeStr;
+
+      txt.textContent = label;
+      chip.title = 'รีเฟรชล่าสุด: ' + timeStr;
+
+      chip.className = 'last-update-chip' +
+        (diffSec < 15 ? ' fresh' :
+         diffSec > 60 ? ' stale' : '');
     }
 
     function manualRefresh() {
