@@ -1,0 +1,15 @@
+# Cloudflare Worker config for TheGood OCR Proxy
+# Deploy: cd cloudflare && wrangler deploy
+# See docs/THEGOOD_OCR_WORKER_SETUP.html for full setup instructions
+
+name = "thegood-ocr-proxy"
+main = "ocr-proxy-worker.js"
+compatibility_date = "2024-11-01"
+
+# Optional: restrict origins that can call the proxy
+# สำหรับ production ให้ uncomment และตั้งเป็นโดเมน TheGood:
+# [vars]
+# ALLOWED_ORIGINS = "https://officethegood.github.io"
+
+# GEMINI_API_KEY must be set as a SECRET (not a var) — via CLI:
+#   wrangler secret put GEMINI_API_KEY

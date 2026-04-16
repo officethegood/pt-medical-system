@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>TheGood OCR Worker Setup — PT Medical System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: 'Sarabun', sans-serif;
+    color: #1e293b; background: #f1f5f9;
+    margin: 0; font-size: 11.5pt; line-height: 1.55;
+  }
+  .page {
+    max-width: 210mm; margin: 14mm auto;
+    background: #fff; padding: 18mm 16mm;
+    box-shadow: 0 4px 20px rgba(15,36,68,0.08);
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1e3a5f; color: #fff;
+    padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .toolbar h6 { margin: 0; font-weight: 700; font-size: 0.95rem; }
+  .btn-print {
+    background: #dc2626; color: #fff; border: none;
+    padding: 7px 16px; border-radius: 6px; font-weight: 600;
+    cursor: pointer; font-size: 0.85rem; font-family: inherit;
+  }
+  .btn-print:hover { background: #b91c1c; }
+
+  .cover {
+    text-align: center;
+    padding: 25mm 0 15mm;
+    border-bottom: 4px solid #dc2626;
+    margin-bottom: 10mm;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #1e3a5f, #f38020);
+    color: #fff; padding: 2mm 5mm; border-radius: 100px;
+    font-size: 10pt; font-weight: 600; margin-bottom: 8mm;
+  }
+  .cover h1 {
+    font-size: 26pt; font-weight: 800;
+    margin: 0 0 4mm; color: #1e3a5f; letter-spacing: -0.02em;
+  }
+  .cover .sub { font-size: 13pt; color: #64748b; font-weight: 500; }
+
+  h1, h2, h3, h4 { color: #1e3a5f; font-weight: 700; }
+  h2 {
+    font-size: 16pt; margin: 12mm 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid #f38020;
+    display: flex; align-items: center; gap: 3mm;
+  }
+  h2 .num {
+    background: #f38020; color: #fff;
+    width: 9mm; height: 9mm; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11pt; font-weight: 700;
+  }
+  h3 { font-size: 13pt; margin: 6mm 0 2mm; }
+  h4 { font-size: 11.5pt; margin: 4mm 0 1.5mm; color: #475569; }
+
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 7mm; }
+  li { margin-bottom: 1.5mm; }
+
+  .callout {
+    padding: 3mm 5mm; border-radius: 2mm;
+    margin: 3mm 0; font-size: 10.5pt;
+    border-left: 4px solid;
+  }
+  .callout.info    { background: #eff6ff; border-color: #2563eb; }
+  .callout.warn    { background: #fffbeb; border-color: #f59e0b; }
+  .callout.danger  { background: #fef2f2; border-color: #dc2626; }
+  .callout.success { background: #f0fdf4; border-color: #16a34a; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 2mm 0 4mm; font-size: 10pt;
+  }
+  th {
+    background: #1e3a5f; color: #fff;
+    padding: 2mm 3mm; text-align: left; font-weight: 600;
+  }
+  td {
+    border: 1px solid #e2e8f0;
+    padding: 2mm 3mm; vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  code {
+    background: #f1f5f9; padding: 0.5mm 1.5mm;
+    border-radius: 1mm; font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt; color: #dc2626;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0;
+    padding: 3mm 4mm; border-radius: 2mm;
+    overflow-x: auto; font-size: 9.5pt;
+    font-family: 'Consolas', 'Courier New', monospace;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  .step-box {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 3mm; padding: 4mm 5mm; margin: 3mm 0;
+  }
+  .step-box .step-title {
+    font-weight: 700; color: #1e3a5f;
+    font-size: 11.5pt; margin-bottom: 2mm;
+  }
+  .kbd {
+    background: #334155; color: #fff;
+    padding: 0.5mm 2mm; border-radius: 1mm;
+    font-family: 'Consolas', monospace;
+    font-size: 9.5pt;
+  }
+
+  .arch-flow {
+    display: flex; align-items: center; gap: 3mm;
+    flex-wrap: wrap; justify-content: center;
+    padding: 5mm; background: #f8fafc;
+    border-radius: 3mm; margin: 4mm 0;
+  }
+  .arch-node {
+    background: #fff; border: 2px solid #2563eb;
+    padding: 3mm 5mm; border-radius: 3mm;
+    font-weight: 600; font-size: 10pt;
+    text-align: center;
+  }
+  .arch-node.primary { border-color: #16a34a; background: #f0fdf4; }
+  .arch-node.proxy { border-color: #f38020; background: #fff7ed; }
+  .arch-node.target { border-color: #dc2626; background: #fef2f2; }
+  .arch-arrow { font-size: 14pt; color: #64748b; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .page { box-shadow: none; margin: 0; max-width: 100%; padding: 10mm; }
+    h2 { page-break-after: avoid; }
+    .step-box, .callout, pre, table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h6>☁️ TheGood OCR Worker Setup — PT Medical System</h6>
+  <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / Save as PDF</button>
+</div>
+
+<div class="page">
+
+  <div class="cover">
+    <div class="badge">CLOUDFLARE WORKER · TheGood</div>
+    <h1>TheGood OCR Proxy Setup</h1>
+    <div class="sub">Deploy Gemini OCR proxy บน Cloudflare Worker แบบแยกจาก Supwilai</div>
+  </div>
+
+  <h2 id="s0"><span class="num">0</span>ภาพรวม</h2>
+
+  <p>
+    <b>ทำไมต้องแยก Worker?</b> ตอนนี้ TheGood ใช้ Worker ของ Supwilai ซึ่งหมายความว่า:
+  </p>
+  <ul>
+    <li>💰 Gemini bill ไปที่ Supwilai</li>
+    <li>🔒 ข้อมูลบัตร ปชช. ผ่าน infrastructure Supwilai</li>
+    <li>⚠️ ถ้า Supwilai ปิด worker → TheGood OCR พังด้วย</li>
+  </ul>
+
+  <p><b>หลัง deploy ของ TheGood เอง:</b></p>
+  <ul>
+    <li>💳 Gemini bill ของ TheGood เอง</li>
+    <li>🔒 ข้อมูล flow ภายใน infrastructure ของ TheGood</li>
+    <li>🚀 Cold start = 0 (Cloudflare always warm)</li>
+    <li>🆓 Free tier 100,000 req/วัน (เพียงพอแน่นอน)</li>
+  </ul>
+
+  <div class="arch-flow">
+    <div class="arch-node primary">📱<br>TheGood Web App<br><small>(HTTPS)</small></div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node proxy">☁️<br>Cloudflare Worker<br><small>thegood-ocr-proxy.workers.dev</small></div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node target">🤖<br>Google Gemini API<br><small>(TheGood's API key)</small></div>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>สิ่งที่ต้องเตรียมก่อนเริ่ม</h2>
+  <table>
+    <tr><th style="width:30%">รายการ</th><th>คำอธิบาย</th></tr>
+    <tr><td>Google account</td><td>สำหรับสร้าง Gemini API key (ฟรี)</td></tr>
+    <tr><td>Cloudflare account</td><td>สมัครฟรีที่ cloudflare.com (ไม่ต้องใช้ credit card)</td></tr>
+    <tr><td>Node.js</td><td>ติดตั้ง Node 18+ (ใช้รัน wrangler CLI)</td></tr>
+    <tr><td>Terminal</td><td>PowerShell / cmd / bash</td></tr>
+  </table>
+
+  <h2 id="s2"><span class="num">2</span>ขอ Gemini API Key</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 2.1 — เปิด Google AI Studio</div>
+    <ol>
+      <li>ไป <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></li>
+      <li>Login ด้วย Google account</li>
+      <li>กด <span class="kbd">Create API key</span></li>
+      <li>เลือก / สร้าง Google Cloud project ใหม่ (เช่น <code>thegood-ocr</code>)</li>
+      <li>Copy key ที่ได้ (ขึ้นต้น <code>AIzaSy...</code>) <b>เก็บไว้ที่ปลอดภัย</b></li>
+    </ol>
+  </div>
+
+  <div class="callout warn">
+    <strong>⚠️ Security</strong>
+    <ul style="margin:1mm 0 0;">
+      <li>API key นี้ <b>ห้าม</b> commit ลง Git</li>
+      <li>ห้าม paste ในแชต/อีเมล/Slack</li>
+      <li>จะอยู่ใน Cloudflare Worker เป็น <b>encrypted secret</b> เท่านั้น</li>
+    </ul>
+  </div>
+
+  <h2 id="s3"><span class="num">3</span>สร้าง Cloudflare Account</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 3.1 — สมัคร Cloudflare</div>
+    <ol>
+      <li>ไป <a href="https://dash.cloudflare.com/sign-up/workers-and-pages" target="_blank">dash.cloudflare.com/sign-up/workers-and-pages</a></li>
+      <li>กรอก email + password → verify email</li>
+      <li>เลือก Free plan (ไม่ต้องใส่ credit card)</li>
+    </ol>
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>ติดตั้ง Wrangler CLI</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 4.1 — ติดตั้ง Node.js (ถ้ายังไม่มี)</div>
+    <ol>
+      <li>ไป <a href="https://nodejs.org/" target="_blank">nodejs.org</a> → download LTS version</li>
+      <li>ติดตั้ง (เลือก default options)</li>
+      <li>เปิด PowerShell / Terminal ใหม่ → ทดสอบ:
+<pre><code>node --version
+npm --version</code></pre>
+      ควรขึ้น v18.x ขึ้นไป</li>
+    </ol>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 4.2 — ติดตั้ง wrangler</div>
+<pre><code>npm install -g wrangler</code></pre>
+    <p>(Windows: อาจต้อง run PowerShell as Administrator)</p>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 4.3 — Login</div>
+<pre><code>wrangler login</code></pre>
+    <ol>
+      <li>Browser จะเปิด Cloudflare login page</li>
+      <li>Login → Authorize Wrangler</li>
+      <li>กลับมาที่ terminal → ควรเห็น "Successfully logged in"</li>
+    </ol>
+  </div>
+
+  <h2 id="s5"><span class="num">5</span>Deploy Worker</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 5.1 — Clone หรือ Download repo</div>
+    <p>ถ้ามี Git installed:</p>
+<pre><code>git clone https://github.com/officethegood/pt-medical-system.git
+cd pt-medical-system/cloudflare</code></pre>
+    <p>หรือ download ZIP จาก GitHub แล้ว extract → เข้าโฟลเดอร์ <code>cloudflare/</code></p>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 5.2 — ตั้ง Secret (Gemini API Key)</div>
+<pre><code>wrangler secret put GEMINI_API_KEY</code></pre>
+    <p>เมื่อถาม → paste Gemini API key (<code>AIzaSy...</code>) → กด Enter</p>
+    <p>ผล: <code>✨ Success! Uploaded secret GEMINI_API_KEY</code></p>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 5.3 — Deploy</div>
+<pre><code>wrangler deploy</code></pre>
+    <p>จะได้ผลลัพธ์ประมาณ:</p>
+<pre><code>Total Upload: 2.34 KiB / gzip: 0.98 KiB
+Uploaded thegood-ocr-proxy (2.15 sec)
+Deployed thegood-ocr-proxy triggers (0.37 sec)
+  https://thegood-ocr-proxy.&lt;your-subdomain&gt;.workers.dev</code></pre>
+    <p><b>Copy URL ที่ได้</b> — จะเอาไปใส่ใน webapp ต่อ</p>
+  </div>
+
+  <h2 id="s6"><span class="num">6</span>ทดสอบ Worker</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 6.1 — Test ง่ายๆ จาก terminal</div>
+<pre><code>curl -X POST https://thegood-ocr-proxy.&lt;your-subdomain&gt;.workers.dev ^
+  -H "Content-Type: application/json" ^
+  -d "{\"contents\":[{\"parts\":[{\"text\":\"Hello\"}]}]}"</code></pre>
+    <p>ควรได้ response JSON จาก Gemini พร้อม generated text</p>
+    <p><b>ถ้าได้ error:</b></p>
+    <table>
+      <tr><th>Error</th><th>สาเหตุ + แก้</th></tr>
+      <tr><td>500: missing GEMINI_API_KEY secret</td><td>ยังไม่ได้ตั้ง secret → ทำ Step 5.2 อีกครั้ง</td></tr>
+      <tr><td>403: Origin not allowed</td><td>ถ้าตั้ง ALLOWED_ORIGINS → ลบออกตอน dev (ดู Step 8)</td></tr>
+      <tr><td>400: Invalid request body</td><td>JSON format ผิด</td></tr>
+    </table>
+  </div>
+
+  <h2 id="s7"><span class="num">7</span>เปลี่ยน URL ใน PT Medical System</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 7.1 — แก้ config.js</div>
+    <p>เปิดไฟล์ <code>shared/config.js</code> ใน TheGood repo:</p>
+<pre><code>OCR_PROXY_URL: 'https://thegood-ocr-proxy.&lt;your-subdomain&gt;.workers.dev'</code></pre>
+    <p>Commit + push:</p>
+<pre><code>git add shared/config.js
+git commit -m "feat(thegood): switch OCR to own Cloudflare Worker"
+git push</code></pre>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 7.2 — รอ GitHub Pages deploy 1-2 นาที</div>
+    <p>ทดสอบ: เปิด TheGood webapp → Transport → สร้างเคสใหม่ → ถ่าย/อัพโหลดภาพบัตร ปชช. → กด OCR</p>
+    <p>✅ ถ้าได้ข้อมูลบัตรออกมา = Worker ของ TheGood ทำงานแล้ว</p>
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>Production Hardening (แนะนำ)</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 8.1 — จำกัด Origin</div>
+    <p>แก้ <code>cloudflare/wrangler.toml</code>:</p>
+<pre><code>[vars]
+ALLOWED_ORIGINS = "https://officethegood.github.io"</code></pre>
+    <p>Deploy ใหม่:</p>
+<pre><code>wrangler deploy</code></pre>
+    <p>หลังจากนี้ มีเฉพาะ webapp TheGood ที่เรียก worker ได้</p>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 8.2 — ตั้ง Gemini quota/budget</div>
+    <ol>
+      <li>ไป <a href="https://console.cloud.google.com/billing/budgets" target="_blank">console.cloud.google.com/billing/budgets</a></li>
+      <li>สร้าง budget alert เช่น $5/เดือน → email alert</li>
+      <li>ป้องกัน bill แพงถ้าโดน abuse</li>
+    </ol>
+  </div>
+
+  <h2 id="s9"><span class="num">9</span>Maintenance</h2>
+
+  <table>
+    <tr><th style="width:30%">งาน</th><th>คำสั่ง</th></tr>
+    <tr><td>Update worker code</td><td><code>wrangler deploy</code></td></tr>
+    <tr><td>Rotate API key</td><td><code>wrangler secret put GEMINI_API_KEY</code></td></tr>
+    <tr><td>ดู logs real-time</td><td><code>wrangler tail</code></td></tr>
+    <tr><td>ดู usage stats</td><td>Cloudflare Dashboard → Workers & Pages → thegood-ocr-proxy → Metrics</td></tr>
+    <tr><td>ปิด worker ชั่วคราว</td><td>Dashboard → Settings → Triggers → disable</td></tr>
+  </table>
+
+  <div class="callout success" style="margin-top:6mm;">
+    <strong>🎉 เสร็จแล้ว!</strong>
+    <br>TheGood มี OCR proxy แยกของตัวเองเรียบร้อย — infra อิสระจาก Supwilai 100%
+  </div>
+
+  <h2 id="s10"><span class="num">10</span>Troubleshooting</h2>
+  <table>
+    <tr><th>อาการ</th><th>แก้</th></tr>
+    <tr>
+      <td><code>wrangler: command not found</code></td>
+      <td>ยังไม่ได้ติดตั้ง wrangler → ทำ Step 4.2 / เปิด terminal ใหม่</td>
+    </tr>
+    <tr>
+      <td>Deploy ช้า/timeout</td>
+      <td>ลอง <code>wrangler deploy --verbose</code> ดู error — บางครั้ง network issue แค่รันใหม่</td>
+    </tr>
+    <tr>
+      <td>OCR ยังใช้ Supwilai's worker</td>
+      <td>ยังไม่ได้แก้ config.js หรือยังไม่ refresh → F5 webapp</td>
+    </tr>
+    <tr>
+      <td>Gemini ตอบ 429 Too Many Requests</td>
+      <td>Free Gemini = 15 req/min — ใช้ถี่เกินต้อง upgrade หรือรอ</td>
+    </tr>
+    <tr>
+      <td>CORS error</td>
+      <td>ALLOWED_ORIGINS ไม่ตรง — ตรวจว่าโดเมน webapp ตรงกับที่ตั้งไว้</td>
+    </tr>
+  </table>
+
+  <div class="callout info" style="margin-top:8mm;">
+    <strong>📞 Reference</strong>
+    <br>Cloudflare Workers docs: <a href="https://developers.cloudflare.com/workers/" target="_blank">developers.cloudflare.com/workers</a>
+    <br>Gemini API docs: <a href="https://ai.google.dev/" target="_blank">ai.google.dev</a>
+    <br>Worker source code: <code>cloudflare/ocr-proxy-worker.js</code>
+  </div>
+
+</div>
+
+</body>
+</html>
