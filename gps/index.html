@@ -653,6 +653,7 @@
   <script src="../shared/config.js"></script>
   <script src="../shared/auth.js"></script>
   <script src="../shared/gps-providers.js"></script>
+  <script src="../shared/map-config.js"></script>
   <script>
     // =============================================
     // SUPABASE INIT
@@ -676,9 +677,10 @@
     // MAP INIT
     // =============================================
     var map = L.map('map').setView([15.87, 100.99], 6);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; CartoDB', maxZoom: 19
-    }).addTo(map);
+    // Tile layer is attached asynchronously by MapConfig — uses Google Maps
+    // (via GoogleMutant plugin) if Admin enabled it and provided API key,
+    // otherwise falls back to CartoDB Light tiles.
+    MapConfig.load(_supabase).then(function() { return MapConfig.createTileLayer(map); });
 
     // =============================================
     // INIT

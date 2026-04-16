@@ -28,6 +28,7 @@
   <script src="../shared/auth.js"></script>
   <script src="../shared/realtime.js"></script>
   <script src="../shared/cloudinary.js"></script>
+  <script src="../shared/map-config.js"></script>
 
   <!-- shared_splash.html — Splash/Loading Screen -->
   <div id="splash-screen" style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); transition: opacity 0.4s ease;">
@@ -73,7 +74,7 @@
             <button type="button" class="btn btn-sm rounded-pill-end sys-tog active" id="sys-tog-location" title="PT Location" style="min-width:40px;">
               <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
             </button>
-            <button type="button" class="btn btn-sm rounded-pill-end sys-tog d-none" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px;">
+            <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px; display:none;">
               <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
             </button>
           </div>
@@ -337,26 +338,24 @@
 
     async function loadAppSettings() {
       try {
-        var { data } = await _supabase.from('settings').select('*');
-        if (data) {
-          data.forEach(function(s) {
-            if (s.key === 'APP_LOGO_URL' && s.value) {
-              var logoUrl = typeof s.value === 'string' ? s.value : (s.value.url || '');
-              if (logoUrl) {
-                var logoEl = document.getElementById('navbar-logo');
-                if (logoEl) { logoEl.src = logoUrl; logoEl.style.display = ''; }
-                var iconEl = document.getElementById('navbar-icon');
-                if (iconEl) iconEl.style.display = 'none';
-              }
+        var res = await _supabase.from('settings').select('*');
+        (res.data || []).forEach(function(s) {
+          if (s.key === 'APP_LOGO_URL' && s.value) {
+            var logoUrl = typeof s.value === 'string' ? s.value : (s.value.url || '');
+            if (logoUrl) {
+              var logoEl = document.getElementById('navbar-logo');
+              if (logoEl) { logoEl.src = logoUrl; logoEl.style.display = ''; }
+              var iconEl = document.getElementById('navbar-icon');
+              if (iconEl) iconEl.style.display = 'none';
             }
-            if (s.key === 'GPS_ENABLED' && s.value === '1') {
-              var gpsBtn = document.getElementById('sys-tog-gps');
-              if (gpsBtn) gpsBtn.classList.remove('d-none');
-              var locBtn = document.getElementById('sys-tog-location');
-              if (locBtn) locBtn.classList.remove('rounded-pill-end');
-            }
-          });
-        }
+          }
+          if (s.key === 'GPS_ENABLED' && s.value === '1') {
+            var gpsBtn = document.getElementById('sys-tog-gps');
+            if (gpsBtn) gpsBtn.style.display = '';
+            var locBtn = document.getElementById('sys-tog-location');
+            if (locBtn) locBtn.classList.remove('rounded-pill-end');
+          }
+        });
       } catch(e) { /* ignore */ }
     }
 
@@ -868,7 +867,14 @@
       var mapEl = document.getElementById('loc-map'); if (!mapEl) return;
       if (!loc_leafletMap) {
         loc_leafletMap = L.map('loc-map').setView([15.7, 100.1], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(loc_leafletMap);
+        // Tile layer via MapConfig: uses Google Maps if Admin enabled it,
+        // else falls back to OSM tiles.
+        MapConfig.load(_supabase).then(function() {
+          return MapConfig.createTileLayer(loc_leafletMap, {
+            fallbackUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            fallbackAttribution: '&copy; OpenStreetMap'
+          });
+        });
       } else if (loc_markersCluster) { loc_leafletMap.removeLayer(loc_markersCluster); }
       loc_markersCluster = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50 });
       var bounds = [];

@@ -2061,6 +2061,7 @@
     </div>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../shared/map-config.js"></script>
     <script>
     // =============================================
     // GPS Modal Logic
@@ -2085,9 +2086,8 @@
             document.getElementById('gpsModal').removeEventListener('shown.bs.modal', initMap);
             if (!_gpsModalMap) {
                 _gpsModalMap = L.map('gps-modal-map').setView([15.87, 100.99], 6);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; CartoDB', maxZoom: 19
-                }).addTo(_gpsModalMap);
+                // Tile layer via MapConfig (Google Maps if Admin enabled + key, else CartoDB)
+                MapConfig.load(_supabase).then(function() { return MapConfig.createTileLayer(_gpsModalMap); });
             } else {
                 _gpsModalMap.invalidateSize();
             }
