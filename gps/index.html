@@ -1315,7 +1315,9 @@
                   '<button class="token-btn ' + (t.allow_camera ? 'btn-cam-on' : '') + '" onclick="toggleTokenCamera(\'' + t.id + '\',' + (t.allow_camera ? 'false' : 'true') + ')" title="' + (t.allow_camera ? 'ปิดกล้อง' : 'เปิดกล้อง') + '"><i class="bi bi-camera-video' + (t.allow_camera ? '-fill' : '') + '"></i>' + (t.allow_camera ? 'ปิด' : 'เปิด') + '</button>' +
                   '<button class="token-btn btn-revoke" onclick="revokeToken(\'' + t.id + '\')" title="Revoke"><i class="bi bi-x-circle"></i>ยกเลิก</button>' +
                 '</div>'
-              : '') +
+              : '<div class="token-actions">' +
+                  '<button class="token-btn btn-revoke" onclick="deleteToken(\'' + t.id + '\')" title="Delete"><i class="bi bi-trash-fill"></i>ลบ</button>' +
+                '</div>') +
           '</div>';
         });
         el.innerHTML = html;
@@ -1349,6 +1351,32 @@
         await _supabase.from('gps_shared_tokens').update({ status: 'Revoked' }).eq('id', id);
         loadSharedTokens();
       } catch(e) { console.error(e); }
+    }
+
+    /**
+     * Permanently delete a share token (admin only, expired/revoked tokens).
+     * Requires confirmation — deletion is irreversible.
+     */
+    async function deleteToken(id) {
+      var confirm = await Swal.fire({
+        title: 'ลบลิงก์แชร์?',
+        text: 'ลบแล้วไม่สามารถกู้คืนได้',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'ลบ',
+        cancelButtonText: 'ยกเลิก'
+      });
+      if (!confirm.isConfirmed) return;
+      try {
+        var res = await _supabase.from('gps_shared_tokens').delete().eq('id', id);
+        if (res.error) throw res.error;
+        loadSharedTokens();
+        Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1200, showConfirmButton: false });
+      } catch(e) {
+        console.error('[deleteToken]', e);
+        Swal.fire('ผิดพลาด', 'ลบไม่สำเร็จ: ' + (e.message || JSON.stringify(e)), 'error');
+      }
     }
 
     // =============================================

@@ -385,7 +385,17 @@
         Swal.close();
       } catch (err) {
         Swal.close();
-        Swal.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้: ' + err.message, 'error');
+        // Extract a useful message. Supabase errors may carry `.message` on the
+        // returned error object OR throw something non-standard; fall back to
+        // JSON / String so the dialog never just says "undefined".
+        var msg = '';
+        if (err && err.message) msg = err.message;
+        else if (err && err.details) msg = err.details;
+        else if (err && err.hint) msg = err.hint;
+        else if (typeof err === 'string') msg = err;
+        else { try { msg = JSON.stringify(err); } catch(_) { msg = String(err); } }
+        console.error('[loc_fetchData] Failed:', err);
+        Swal.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้: ' + msg, 'error');
       }
     }
 
