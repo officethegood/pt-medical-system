@@ -139,6 +139,52 @@ body {
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 
+/* ===== Triage Buttons — ensure readable contrast in all states ===== */
+/* "ฉุกเฉิน" (Emergency) — pink, not red */
+.btn-triage-emergency {
+    color: #d63384 !important;
+    border: 1px solid #d63384 !important;
+    background-color: transparent !important;
+}
+.btn-triage-emergency:hover {
+    color: #fff !important;
+    background-color: #d63384 !important;
+    border-color: #d63384 !important;
+}
+.btn-check:checked + .btn-triage-emergency,
+.btn-check:active + .btn-triage-emergency {
+    color: #fff !important;
+    background-color: #d63384 !important;
+    border-color: #d63384 !important;
+    font-weight: 700 !important;
+}
+
+/* "เร่งด่วน" (Urgent) — darker yellow for readability */
+.btn-triage-urgent {
+    color: #b54708 !important;
+    border: 1px solid #f59e0b !important;
+    background-color: transparent !important;
+}
+.btn-triage-urgent:hover {
+    color: #000 !important;
+    background-color: #fbbf24 !important;
+    border-color: #f59e0b !important;
+}
+.btn-check:checked + .btn-triage-urgent,
+.btn-check:active + .btn-triage-urgent {
+    color: #000 !important;
+    background-color: #fbbf24 !important;
+    border-color: #f59e0b !important;
+    font-weight: 700 !important;
+}
+
+/* Force white text on all selected danger/success triage buttons */
+.btn-check:checked + .btn-outline-danger,
+.btn-check:checked + .btn-outline-success {
+    color: #fff !important;
+    font-weight: 700 !important;
+}
+
 /* Force 24-hour time format (en-GB locale on all type=time) */
 input[type="time"] { font-variant-numeric: tabular-nums; }
 /* Suppress AM/PM picker: Chromium uses host locale unless lang set; we set on each input */
