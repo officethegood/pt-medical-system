@@ -408,6 +408,9 @@
                     <a href="docs/README-ITSupport.html" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill">
                       <i class="bi bi-file-earmark-text me-1"></i> คู่มือ IT Support (PDF-ready)
                     </a>
+                    <a href="docs/IMPROVEMENT_PLAN.html" target="_blank" class="btn btn-outline-danger btn-sm rounded-pill">
+                      <i class="bi bi-clipboard-check me-1"></i> Plan ปรับปรุงระบบ
+                    </a>
                     <a href="docs/MULTI_DEVICE_WORKFLOW.html" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill">
                       <i class="bi bi-phone-flip me-1"></i> Multi-Device Workflow
                     </a>
@@ -556,6 +559,60 @@
                       <span class="text-muted small" id="admin-gps-last-sync"></span>
                     </div>
                     <div id="admin-gps-vehicles-list"></div>
+
+                    <!-- Map Provider -->
+                    <h6 class="fw-bold text-secondary mt-4 mb-2"><i class="bi bi-map me-1"></i> Map Provider</h6>
+                    <p class="text-muted small mb-2">เลือกแผนที่สำหรับหน้า GPS / PT Location / Monitor</p>
+                    <div class="d-flex gap-3 mb-2 flex-wrap">
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="admin-map-provider" id="map-provider-leaflet" value="leaflet"
+                          onchange="saveAdminSetting('MAP_PROVIDER', 'leaflet'); toggleMapProviderConfig();">
+                        <label class="form-check-label fw-medium" for="map-provider-leaflet">
+                          <i class="bi bi-globe me-1 text-success"></i> Leaflet (OpenStreetMap)
+                          <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">ฟรี</span>
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="admin-map-provider" id="map-provider-google" value="google"
+                          onchange="saveAdminSetting('MAP_PROVIDER', 'google'); toggleMapProviderConfig();">
+                        <label class="form-check-label fw-medium" for="map-provider-google">
+                          <i class="bi bi-google me-1 text-primary"></i> Google Maps
+                          <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">ต้องมี API Key</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="admin-map-google-config" style="display:none;">
+                      <div class="row g-2 mb-2">
+                        <div class="col-md-8">
+                          <label class="form-label small fw-medium">Google Maps API Key</label>
+                          <div class="input-group input-group-sm">
+                            <input type="password" id="admin-gmap-key" class="form-control" placeholder="AIzaSy..."
+                              onchange="saveAdminSetting('GOOGLE_MAPS_API_KEY', this.value)">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleGmapKeyVisibility()" title="แสดง/ซ่อน">
+                              <i class="bi bi-eye" id="gmap-key-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-info" type="button" onclick="testGoogleMapsKey()" title="ทดสอบ Key">
+                              <i class="bi bi-check2-circle"></i> ทดสอบ
+                            </button>
+                          </div>
+                          <div class="form-text">
+                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank">console.cloud.google.com</a>
+                            — เปิด Maps JavaScript API แล้วจำกัด referrer ให้โดเมนของคุณ
+                          </div>
+                          <div id="gmap-key-test-result" class="small mt-1"></div>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label small fw-medium">Map Type</label>
+                          <select id="admin-gmap-type" class="form-select form-select-sm"
+                            onchange="saveAdminSetting('GOOGLE_MAPS_TYPE', this.value)">
+                            <option value="roadmap">Roadmap (ถนน)</option>
+                            <option value="satellite">Satellite (ดาวเทียม)</option>
+                            <option value="hybrid">Hybrid (รวม)</option>
+                            <option value="terrain">Terrain (ภูมิประเทศ)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -884,6 +941,20 @@
                 var locBtn = document.getElementById('sys-tog-location');
                 if (locBtn) locBtn.classList.remove('rounded-pill-end');
             }
+
+            // Map provider settings
+            var mapProvider = settings['MAP_PROVIDER'] || 'leaflet';
+            var mpLeaflet = document.getElementById('map-provider-leaflet');
+            var mpGoogle = document.getElementById('map-provider-google');
+            if (mpLeaflet && mpGoogle) {
+                mpLeaflet.checked = (mapProvider === 'leaflet');
+                mpGoogle.checked = (mapProvider === 'google');
+            }
+            var gmapKey = document.getElementById('admin-gmap-key');
+            if (gmapKey) gmapKey.value = settings['GOOGLE_MAPS_API_KEY'] || '';
+            var gmapType = document.getElementById('admin-gmap-type');
+            if (gmapType) gmapType.value = settings['GOOGLE_MAPS_TYPE'] || 'roadmap';
+            toggleMapProviderConfig();
 
             var logoUrl = (settings['APP_LOGO_URL'] || '').trim();
             var previewEl = document.getElementById('admin-logo-img');
@@ -1436,6 +1507,70 @@
         var enabled = document.getElementById('admin-gps-enabled').checked;
         var cfg = document.getElementById('admin-gps-config');
         if (cfg) cfg.style.display = enabled ? '' : 'none';
+    }
+
+    function toggleMapProviderConfig() {
+        var googleRadio = document.getElementById('map-provider-google');
+        var cfg = document.getElementById('admin-map-google-config');
+        if (cfg) cfg.style.display = (googleRadio && googleRadio.checked) ? '' : 'none';
+    }
+
+    function toggleGmapKeyVisibility() {
+        var input = document.getElementById('admin-gmap-key');
+        var eye = document.getElementById('gmap-key-eye');
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (eye) { eye.classList.remove('bi-eye'); eye.classList.add('bi-eye-slash'); }
+        } else {
+            input.type = 'password';
+            if (eye) { eye.classList.remove('bi-eye-slash'); eye.classList.add('bi-eye'); }
+        }
+    }
+
+    async function testGoogleMapsKey() {
+        var keyInput = document.getElementById('admin-gmap-key');
+        var resultEl = document.getElementById('gmap-key-test-result');
+        if (!keyInput || !resultEl) return;
+        var key = (keyInput.value || '').trim();
+        if (!key) {
+            resultEl.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> กรุณาใส่ API key ก่อน</span>';
+            return;
+        }
+        resultEl.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm"></span> กำลังทดสอบ...</span>';
+        try {
+            // Load Maps JS API in a sandboxed way: if callback fires → valid; error event → invalid
+            var existing = document.getElementById('gmap-test-script');
+            if (existing) existing.remove();
+            delete window.__gmapTestCallback;
+            var done = false;
+            var timeout = setTimeout(function() {
+                if (done) return; done = true;
+                resultEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ทดสอบไม่สำเร็จ (timeout) — อาจเป็น key ผิด, ไม่ได้เปิด Maps JavaScript API, หรือถูกจำกัด referrer</span>';
+            }, 8000);
+            window.__gmapTestCallback = function() {
+                if (done) return; done = true;
+                clearTimeout(timeout);
+                if (window.google && window.google.maps) {
+                    resultEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Key ใช้งานได้ — Google Maps โหลดสำเร็จ</span>';
+                } else {
+                    resultEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> Callback ทำงานแต่ google.maps ไม่พร้อม</span>';
+                }
+            };
+            var s = document.createElement('script');
+            s.id = 'gmap-test-script';
+            s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&callback=__gmapTestCallback&v=weekly';
+            s.async = true;
+            s.defer = true;
+            s.onerror = function() {
+                if (done) return; done = true;
+                clearTimeout(timeout);
+                resultEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> โหลด Google Maps ไม่สำเร็จ — key อาจผิด หรือโดเมนนี้ไม่ได้รับอนุญาต</span>';
+            };
+            document.head.appendChild(s);
+        } catch(e) {
+            resultEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ข้อผิดพลาด: ' + (e.message || e) + '</span>';
+        }
     }
 
     async function loadGpsAdminData() {
