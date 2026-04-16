@@ -204,11 +204,32 @@
       animation: pulseGreen 2s infinite;
     }
     .v-card.idle .v-plate-dot { background: var(--amber-500); }
+    .v-card.overspeed {
+      border-color: #dc2626;
+      background: #fef2f2;
+      box-shadow: 0 0 0 2px rgba(220,38,38,0.15);
+    }
+    .v-card.overspeed.active {
+      background: #fee2e2;
+      box-shadow: 0 0 0 3px rgba(220,38,38,0.25);
+    }
+    .v-card.overspeed .v-plate-dot {
+      background: #dc2626;
+      animation: pulseRed 1s infinite;
+    }
+    .v-card.overspeed .v-speed-value {
+      color: #dc2626;
+    }
 
     @keyframes pulseGreen {
       0%   { box-shadow: 0 0 0 0 rgba(22,163,74,0.55); }
       70%  { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
       100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
+    }
+    @keyframes pulseRed {
+      0%   { box-shadow: 0 0 0 0 rgba(220,38,38,0.7); }
+      70%  { box-shadow: 0 0 0 10px rgba(220,38,38,0); }
+      100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
     }
 
     .v-sub {
@@ -235,6 +256,7 @@
     .v-status-label.on { background: #dcfce7; color: #15803d; }
     .v-status-label.idle { background: #fef3c7; color: #92400e; }
     .v-status-label.off { background: var(--slate-100); color: var(--slate-500); }
+    .v-status-label.over { background: #fee2e2; color: #991b1b; }
 
     .v-address {
       font-size: 0.74rem; color: var(--slate-600);
@@ -577,6 +599,9 @@
         <button class="map-ctrl-btn" id="btnFindHospitals" onclick="openNearestHospitalsModal()" title="ค้นหา รพ./ปั้มน้ำมัน/สถานที่ ใกล้รถคันที่เลือก" style="display:none;">
           <i class="bi bi-geo-alt-fill" style="color:#dc3545;"></i><span class="d-none d-md-inline">ค้นหาใกล้รถ</span>
         </button>
+        <button class="map-ctrl-btn" id="btnClearSearch" onclick="clearHospitalMarkers(true)" title="ล้างผลค้นหาออกจากแผนที่" style="display:none;">
+          <i class="bi bi-x-circle-fill" style="color:#64748b;"></i><span class="d-none d-md-inline">ล้าง</span>
+        </button>
       </div>
 
       <div class="live-indicator" id="refreshIndicator" style="display:none;">
@@ -741,6 +766,7 @@
     var _isAdmin = false;
     var _lastRefreshAt = null; // Date of last successful fetch
     var _lastUpdateTicker = null;
+    var OVERSPEED_THRESHOLD = 120; // km/h — flag vehicle as overspeed at/above
 
     // =============================================
     // MAP INIT
@@ -945,13 +971,15 @@
         var online = s ? s.online : false;
         var speedNum = s ? s.speed : 0;
         var isIdle = online && speedNum < 1;
+        var isOverspeed = online && speedNum >= OVERSPEED_THRESHOLD;
         var speed = s ? speedNum.toFixed(1) : '--';
         var addr = s ? (s.address || '—') : '—';
         var displayName = v.nickname || v.device_name || v.device_id;
 
-        var statusClass = !s ? 'offline' : (online ? (isIdle ? 'idle' : 'online') : 'offline');
-        var statusLabel = !s ? 'OFFLINE' : (online ? (isIdle ? 'IDLE' : 'LIVE') : 'OFFLINE');
-        var statusLabelClass = !s ? 'off' : (online ? (isIdle ? 'idle' : 'on') : 'off');
+        // Priority: offline > overspeed > idle > online
+        var statusClass = !s ? 'offline' : (online ? (isOverspeed ? 'overspeed' : (isIdle ? 'idle' : 'online')) : 'offline');
+        var statusLabel = !s ? 'OFFLINE' : (online ? (isOverspeed ? 'OVERSPEED' : (isIdle ? 'IDLE' : 'LIVE')) : 'OFFLINE');
+        var statusLabelClass = !s ? 'off' : (online ? (isOverspeed ? 'over' : (isIdle ? 'idle' : 'on')) : 'off');
 
         // Prefer cached reverse-geocoded Thai admin names if available
         var geoLabel = getCachedGeoLabel(s && s.lat, s && s.lng);
@@ -1000,8 +1028,9 @@
         var speed = s.speed;
 
         var isIdlePop = online && speed < 1;
-        var statusColorPop = !online ? '#94a3b8' : (isIdlePop ? '#f59e0b' : '#16a34a');
-        var statusTextPop = !online ? 'OFFLINE' : (isIdlePop ? 'IDLE' : 'LIVE');
+        var isOverspeedPop = online && speed >= OVERSPEED_THRESHOLD;
+        var statusColorPop = !online ? '#94a3b8' : (isOverspeedPop ? '#dc2626' : (isIdlePop ? '#f59e0b' : '#16a34a'));
+        var statusTextPop = !online ? 'OFFLINE' : (isOverspeedPop ? 'OVERSPEED' : (isIdlePop ? 'IDLE' : 'LIVE'));
 
         var popupHtml = '<div style="min-width:230px; font-family:Sarabun,sans-serif;">' +
           '<div style="padding:12px 14px; background:linear-gradient(135deg,#1e3a5f 0%,#0f2847 100%); color:#fff; border-radius:8px 8px 0 0; margin:-10px -10px 0;">' +
@@ -1049,9 +1078,18 @@
 
     function makeIcon(online, speed) {
       var isIdle = online && speed < 1;
-      var ringColor = !online ? '#94a3b8' : (isIdle ? '#f59e0b' : '#16a34a');
-      var pulse = online && !isIdle
-        ? '<div style="position:absolute; inset:-6px; border-radius:50%; background:' + ringColor + '; opacity:0.3; animation: mapPulse 1.8s infinite;"></div>'
+      var isOverspeed = online && speed >= OVERSPEED_THRESHOLD;
+      // Color priority: offline > overspeed (red) > idle (amber) > online (green)
+      var ringColor = !online ? '#94a3b8' : (isOverspeed ? '#dc2626' : (isIdle ? '#f59e0b' : '#16a34a'));
+      // Pulse when moving (online + not idle). Overspeed pulses faster.
+      var pulse = '';
+      if (online && !isIdle) {
+        var pulseDuration = isOverspeed ? '0.9s' : '1.8s';
+        pulse = '<div style="position:absolute; inset:-6px; border-radius:50%; background:' + ringColor + '; opacity:' + (isOverspeed ? '0.45' : '0.3') + '; animation: mapPulse ' + pulseDuration + ' infinite;"></div>';
+      }
+      // Overspeed badge: red ! triangle on top-right of icon
+      var badge = isOverspeed
+        ? '<div style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; background:#dc2626; border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:900; z-index:2;">!</div>'
         : '';
       return L.divIcon({
         className: '',
@@ -1061,6 +1099,7 @@
             '<div style="position:absolute; inset:0; background:linear-gradient(135deg,#1e3a5f 0%,#0f2847 100%); border:3px solid ' + ringColor + '; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(15,40,71,0.35);">' +
               '<i class="bi bi-truck-front-fill" style="color:#fff; font-size:16px;"></i>' +
             '</div>' +
+            badge +
           '</div>',
         iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -24]
       });
@@ -1078,6 +1117,8 @@
 
     function fitAllMarkers() {
       _selectedKey = null;
+      // Clear any hospital search result when resetting to "ทั้งหมด"
+      if (_hospitalMarkers && _hospitalMarkers.length) clearHospitalMarkers();
       var bounds = [];
       Object.keys(_markers).forEach(function(k) { bounds.push(_markers[k].getLatLng()); });
       if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
@@ -1088,6 +1129,11 @@
     // FOCUS VEHICLE
     // =============================================
     function focusVehicle(key) {
+      // Switching vehicle → drop any previous nearby-search result from the
+      // map so dispatcher doesn't see stale route for a different vehicle
+      if (_selectedKey && key !== _selectedKey && _hospitalMarkers && _hospitalMarkers.length) {
+        clearHospitalMarkers();
+      }
       _selectedKey = key;
       var m = _markers[key];
       if (m) {
@@ -1582,6 +1628,10 @@
     function plotHospitalMarker(idx) {
       var h = (window._hospitalsCache || [])[idx];
       if (!h) return;
+      // Clear any previous hospital marker + route line first so the map only
+      // shows the current selection. Without this, each click adds another
+      // pin until the map is cluttered.
+      clearHospitalMarkers();
       var icon = L.divIcon({
         className: '',
         html: '<div style="width:32px; height:32px; background:#dc2626; border:3px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 3px 10px rgba(220,38,38,0.5);">🏥</div>',
@@ -1690,15 +1740,30 @@
       }
 
       marker.openPopup();
+      // Show the "ล้าง" button so dispatcher can clear the search result
+      showClearButton();
       // Close modal so user can see the map
       var modalEl = document.getElementById('hospitalsModal');
       var modal = bootstrap.Modal.getInstance(modalEl);
       if (modal) modal.hide();
     }
 
-    function clearHospitalMarkers() {
+    function clearHospitalMarkers(recenterOnVehicle) {
       _hospitalMarkers.forEach(function(m) { map.removeLayer(m); });
       _hospitalMarkers = [];
+      // Hide the "ล้าง" button once nothing is plotted
+      var clearBtn = document.getElementById('btnClearSearch');
+      if (clearBtn) clearBtn.style.display = 'none';
+      // Optionally pan back to the selected vehicle so dispatcher's view
+      // is not stuck on the last destination.
+      if (recenterOnVehicle && _selectedKey && _markers[_selectedKey]) {
+        map.setView(_markers[_selectedKey].getLatLng(), 16);
+      }
+    }
+
+    function showClearButton() {
+      var clearBtn = document.getElementById('btnClearSearch');
+      if (clearBtn) clearBtn.style.display = '';
     }
 
     // Radius button wiring
