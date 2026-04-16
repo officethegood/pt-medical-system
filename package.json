@@ -20,6 +20,7 @@
   "homepage": "https://github.com/supwilaimedical/pt-medical-system#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
-    "csv-parse": "^6.2.1"
+    "csv-parse": "^6.2.1",
+    "docx": "^9.6.1"
   }
 }

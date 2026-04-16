@@ -750,7 +750,7 @@
       </div>
       <!-- ID Card Photo (mobile: inline here) -->
       <div class="mb-2 idcard-mobile-wrap">
-        <label class="info-label mb-1"><i class="bi bi-credit-card-2-front me-1"></i><span data-i18n="consenter.photo">รูปบัตรประชาชน (ถ้ามี)</span></label>
+        <label class="info-label mb-1"><i class="bi bi-credit-card-2-front me-1"></i><span data-i18n="consenter.photo">รูปบัตรประชาชน / Passport / เอกสารราชการ</span> <span id="idcard-optional-badge" class="badge bg-secondary" style="font-size:0.65rem;vertical-align:middle;">ถ้ามี</span><span id="idcard-required-badge" class="badge bg-danger" style="font-size:0.65rem;vertical-align:middle;display:none;" data-i18n="consenter.photo_required">จำเป็น (DNR)</span></label>
         <div class="idcard-upload-area" id="idcard-upload-area" onclick="document.getElementById('idcard-file').click()">
           <div class="upload-placeholder">
             <i class="bi bi-camera" style="font-size:1.3rem;display:block;margin-bottom:2px;"></i>
@@ -783,7 +783,7 @@
       <!-- Print right column: ID card photo -->
       <div class="print-top-right">
         <div class="print-idcard-box">
-          <div class="print-idcard-label" data-i18n="consenter.print_photo">รูปบัตรประชาชนผู้ยินยอม</div>
+          <div class="print-idcard-label" data-i18n="consenter.print_photo">รูปเอกสารราชการผู้ยินยอม</div>
           <img id="idcard-preview-print" src="" alt="บัตรประชาชน">
           <div class="print-idcard-empty" data-i18n="consenter.no_photo">ไม่มีรูปแนบ</div>
         </div>
@@ -1713,6 +1713,7 @@ function handleIdCardPhoto(input) {
             document.getElementById('idcard-upload-area').classList.add('has-photo');
             // Sync to print column
             document.getElementById('idcard-preview-print').src = idCardPhotoDataUrl;
+            validateForm();
         };
         img.src = e.target.result;
     };
@@ -1727,6 +1728,7 @@ function removeIdCardPhoto() {
     document.getElementById('idcard-preview').src = '';
     document.getElementById('idcard-upload-area').classList.remove('has-photo');
     document.getElementById('idcard-preview-print').src = '';
+    validateForm();
 }
 
 // ===========================
@@ -1753,12 +1755,18 @@ function formatIdCard(input) { formatIdInput(input); }
 // ===========================
 // Witness Requirement (DNR conditional)
 // ===========================
-function isWitnessRequired() {
+function isDnrActive() {
     var p3 = document.getElementById('part3');
     if (!p3 || !p3.classList.contains('active')) return false;
-    // Part 3 active AND at least one DNR item checked
-    var dnrChecked = p3.querySelectorAll('.dnr-item.checked').length;
-    return dnrChecked > 0;
+    return p3.querySelectorAll('.dnr-item.checked').length > 0;
+}
+
+function isWitnessRequired() {
+    return isDnrActive();
+}
+
+function isIdCardPhotoRequired() {
+    return isDnrActive();
 }
 
 function updateWitnessRequiredBadge() {
@@ -1767,6 +1775,19 @@ function updateWitnessRequiredBadge() {
     var optBadge = document.getElementById('witness-optional-badge');
     if (reqBadge) reqBadge.style.display = req ? '' : 'none';
     if (optBadge) optBadge.style.display = req ? 'none' : '';
+}
+
+function updateIdCardRequiredBadge() {
+    var req = isIdCardPhotoRequired();
+    var reqBadge = document.getElementById('idcard-required-badge');
+    var optBadge = document.getElementById('idcard-optional-badge');
+    if (reqBadge) reqBadge.style.display = req ? '' : 'none';
+    if (optBadge) optBadge.style.display = req ? 'none' : '';
+    // Highlight upload area border when required but missing
+    var area = document.getElementById('idcard-upload-area');
+    if (area) {
+        area.classList.toggle('border-danger', req && !idCardPhotoDataUrl);
+    }
 }
 
 // Toggle is-empty class on witness column (CSS uses it to hide on readonly/print)
@@ -1785,6 +1806,7 @@ function updateWitnessEmptyState() {
 // ===========================
 function validateForm() {
     updateWitnessRequiredBadge();
+    updateIdCardRequiredBadge();
     updateWitnessEmptyState();
     var btn = document.getElementById('btn-submit-consent');
     if (!btn) return;
@@ -1801,7 +1823,12 @@ function validateForm() {
         var wName = (document.getElementById('c-witness-name') || {}).value || '';
         witnessOk = witnessSigDataUrl !== null && wName.trim().length > 0;
     }
-    btn.disabled = !(nameOk && idOk && relOk && sigOk && witnessOk);
+    // ID Card Photo: optional by default, required when DNR active
+    var idCardPhotoOk = true;
+    if (isIdCardPhotoRequired()) {
+        idCardPhotoOk = idCardPhotoDataUrl !== null;
+    }
+    btn.disabled = !(nameOk && idOk && relOk && sigOk && witnessOk && idCardPhotoOk);
 }
 
 document.getElementById('c-consenter-name').addEventListener('input', validateForm);
@@ -1916,10 +1943,11 @@ var I18N = {
     'consenter.name': 'ชื่อ-สกุล ผู้ยินยอม', 'consenter.name_ph': 'กรอกชื่อ-สกุล',
     'consenter.id': 'เลขบัตร ปชช. / Passport No.',
     'consenter.id_ph': 'เลขบัตร 13 หลัก หรือ Passport',
-    'consenter.photo': 'รูปบัตรประชาชน (ถ้ามี)',
+    'consenter.photo': 'รูปบัตรประชาชน / Passport / เอกสารราชการ',
+    'consenter.photo_required': 'จำเป็น (DNR)',
     'consenter.photo_action': 'ถ่ายรูป หรือ เลือกจากไฟล์',
     'consenter.rel': 'ความสัมพันธ์กับผู้ป่วย',
-    'consenter.print_photo': 'รูปบัตรประชาชนผู้ยินยอม',
+    'consenter.print_photo': 'รูปเอกสารราชการผู้ยินยอม',
     'consenter.no_photo': 'ไม่มีรูปแนบ',
     'rel.self': 'ผู้ป่วยเอง', 'rel.parent': 'บิดา/มารดา', 'rel.spouse': 'คู่สมรส',
     'rel.child': 'บุตร', 'rel.sibling': 'พี่น้อง', 'rel.other': 'อื่นๆ...',
@@ -1983,10 +2011,11 @@ var I18N = {
     'consenter.name': 'Consenter Name', 'consenter.name_ph': 'Enter full name',
     'consenter.id': 'National ID / Passport No.',
     'consenter.id_ph': '13-digit ID or Passport',
-    'consenter.photo': 'ID Card Photo (optional)',
+    'consenter.photo': 'ID Card / Passport / Official Document Photo',
+    'consenter.photo_required': 'Required (DNR)',
     'consenter.photo_action': 'Take photo or choose file',
     'consenter.rel': 'Relationship to Patient',
-    'consenter.print_photo': 'Consenter ID Card Photo',
+    'consenter.print_photo': 'Consenter ID / Passport Photo',
     'consenter.no_photo': 'No photo attached',
     'rel.self': 'Patient', 'rel.parent': 'Parent', 'rel.spouse': 'Spouse',
     'rel.child': 'Child', 'rel.sibling': 'Sibling', 'rel.other': 'Other...',
@@ -2050,10 +2079,11 @@ var I18N = {
     'consenter.name': '同意人姓名', 'consenter.name_ph': '请输入姓名',
     'consenter.id': '身份证 / 护照号码',
     'consenter.id_ph': '13位身份证号或护照号',
-    'consenter.photo': '身份证照片（可选）',
+    'consenter.photo': '身份证 / 护照 / 官方证件照片',
+    'consenter.photo_required': '必填 (DNR)',
     'consenter.photo_action': '拍照或选择文件',
     'consenter.rel': '与患者关系',
-    'consenter.print_photo': '同意人身份证照片',
+    'consenter.print_photo': '同意人证件照片',
     'consenter.no_photo': '未附照片',
     'rel.self': '患者本人', 'rel.parent': '父/母', 'rel.spouse': '配偶',
     'rel.child': '子女', 'rel.sibling': '兄弟姐妹', 'rel.other': '其他...',
@@ -2117,10 +2147,11 @@ var I18N = {
     'consenter.name': 'သဘောတူညီသူအမည်', 'consenter.name_ph': 'အမည်ထည့်ပါ',
     'consenter.id': 'မှတ်ပုံတင် / Passport နံပါတ်',
     'consenter.id_ph': 'မှတ်ပုံတင် ၁၃ လုံး သို့မဟုတ် Passport',
-    'consenter.photo': 'မှတ်ပုံတင်ဓာတ်ပုံ (ရှိလျှင်)',
+    'consenter.photo': 'မှတ်ပုံတင် / နိုင်ငံကူးလက်မှတ် / တရားဝင်စာရွက်စာတမ်းဓာတ်ပုံ',
+    'consenter.photo_required': 'လိုအပ်သည် (DNR)',
     'consenter.photo_action': 'ဓာတ်ပုံရိုက်ပါ သို့ ဖိုင်ရွေးပါ',
     'consenter.rel': 'လူနာနှင့်ဆက်နွယ်မှု',
-    'consenter.print_photo': 'သဘောတူညီသူ မှတ်ပုံတင်ဓာတ်ပုံ',
+    'consenter.print_photo': 'သဘောတူညီသူ စာရွက်စာတမ်းဓာတ်ပုံ',
     'consenter.no_photo': 'ဓာတ်ပုံမပါ',
     'rel.self': 'လူနာကိုယ်တိုင်', 'rel.parent': 'မိဘ', 'rel.spouse': 'အိမ်ထောင်ဖက်',
     'rel.child': 'သား/သမီး', 'rel.sibling': 'မောင်နှမ', 'rel.other': 'အခြား...',
