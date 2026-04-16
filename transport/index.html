@@ -571,7 +571,7 @@
               <!-- Initial Vitals -->
               <div class="card p-4 mb-4 island-card">
                 <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                  <h5 class="card-title fw-bold text-dark m-0"><i class="bi bi-activity text-danger me-2"></i> สัญญาณชีพแรกรับ (ER / จุดเกิดเหตุ)</h5>
+                  <h5 class="card-title fw-bold text-dark m-0"><i class="bi bi-activity text-danger me-2"></i> สัญญาณชีพแรกรับ (ต้นทาง / จุดเกิดเหตุ)</h5>
                   <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold shadow-sm no-print" id="btn-record-init-vitals" onclick="openInitVitalsPopup()">
                     <i class="bi bi-plus-circle-fill me-1"></i> บันทึก V/S แรกรับ
                   </button>
@@ -1254,8 +1254,11 @@
             manualOpt.textContent = '[ พิมพ์เอง ]';
             sel.appendChild(manualOpt);
 
-            sel.style.display = '';
-            manualInput.style.display = 'none';
+            // Preserve whatever the main form currently has (in case a case was
+            // already loaded before this async function resolved). Without this,
+            // the manual input gets hidden while holding a value → user sees
+            // an empty dropdown and thinks the vehicle number was lost.
+            syncMainFormVehicleSelector();
 
             // Populate edit modal dropdown (same data)
             populateModalVehicleDropdown();
@@ -1293,6 +1296,49 @@
         } else {
             manualInput.style.display = 'none';
             manualInput.value = '';
+        }
+    }
+
+    /**
+     * Keep the main-form vehicle dropdown in sync with the current
+     * op_unit_no value. Call this after loading case data so the
+     * dropdown displays the saved vehicle (previously it stayed blank
+     * while the value sat invisibly in the hidden manual input).
+     *
+     * Safe to call before loadGpsVehicleDropdown resolves — it just
+     * no-ops if the select isn't populated yet, and loadGpsVehicleDropdown
+     * re-calls this when it finishes.
+     */
+    function syncMainFormVehicleSelector() {
+        var sel = document.getElementById('vehicle-select');
+        var manualInput = document.querySelector('input[name="op_unit_no"]');
+        if (!sel || !manualInput) return;
+        var currentUnit = manualInput.value || '';
+        // If select hasn't been populated yet (only default "-- เลือกรถ --"),
+        // just make sure the manual input is visible so the saved value isn't hidden.
+        if (sel.options.length <= 1) {
+            manualInput.style.display = '';
+            return;
+        }
+        var matched = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === currentUnit && currentUnit !== '__manual__') {
+                matched = true; break;
+            }
+        }
+        if (matched && currentUnit) {
+            sel.value = currentUnit;
+            sel.style.display = '';
+            manualInput.style.display = 'none';
+        } else if (currentUnit) {
+            // Value exists but doesn't match any fleet vehicle → manual mode
+            sel.value = '__manual__';
+            sel.style.display = '';
+            manualInput.style.display = '';
+        } else {
+            sel.value = '';
+            sel.style.display = '';
+            manualInput.style.display = 'none';
         }
     }
 
@@ -2063,6 +2109,10 @@
             updateVentLogic();
             toggleCentralLine();
             updateOpUnitLogic();
+            // Sync vehicle dropdown with the value loaded from the snapshot
+            // so dispatcher sees the saved vehicle (fixes "เลขรถหาย" bug where
+            // op_unit_no was present in hidden input but dropdown was blank).
+            syncMainFormVehicleSelector();
 
             if(data.ivJson) {
                 try {
@@ -2152,6 +2202,11 @@
        toggleArrest('pre');
        toggleArrestOutcome('pre');
        updateOpUnitLogic();
+       // Reset vehicle selector display state so "New Case" doesn't
+       // carry over the previous vehicle's dropdown state.
+       if (typeof syncMainFormVehicleSelector === 'function') {
+         syncMainFormVehicleSelector();
+       }
        updateTimelineUI();
        updateSceneInfo();
     }
@@ -2782,6 +2837,7 @@
             html:
                 '<style>.swal2-popup input::placeholder { color: #ccc !important; opacity: 1; } .swal2-popup input { color: #212529; font-weight: 600; } .swal2-popup .swal-invalid { border: 2px solid #dc3545 !important; background-color: #fff5f5 !important; }</style>' +
                 '<div class="row g-2 text-start" style="font-size:0.9rem;">' +
+                    '<div class="col-12"><label class="form-label fw-bold small mb-1"><i class="bi bi-clock-fill text-danger me-1"></i> เวลาบันทึก</label><input type="time" id="swal-time" class="form-control form-control-sm" value="' + (f.init_vitals_time.value || new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false})) + '"></div>' +
                     '<div class="col-6"><label class="form-label fw-bold small mb-1">BP (mmHg)</label><input type="text" id="swal-bp" class="form-control form-control-sm text-center" value="' + f.init_bp.value + '" placeholder="เช่น 120/80"></div>' +
                     '<div class="col-6"><label class="form-label fw-bold small mb-1">PR (/min)</label><input type="text" id="swal-pr" class="form-control form-control-sm text-center" value="' + f.init_pr.value + '" placeholder="เช่น 80"></div>' +
                     '<div class="col-6"><label class="form-label fw-bold small mb-1">RR (/min)</label><input type="text" id="swal-rr" class="form-control form-control-sm text-center" value="' + f.init_rr.value + '" placeholder="เช่น 20"></div>' +
@@ -2797,6 +2853,7 @@
             focusConfirm: false,
             preConfirm: function() {
                 var values = {
+                    time: document.getElementById('swal-time').value.trim(),
                     bp: document.getElementById('swal-bp').value.trim(),
                     pr: document.getElementById('swal-pr').value.trim(),
                     rr: document.getElementById('swal-rr').value.trim(),
@@ -2834,7 +2891,10 @@
                 form.elements['init_temp'].value = v.temp;
                 form.elements['init_spo2'].value = v.spo2;
                 form.elements['init_dtx'].value = v.dtx;
-                if (!form.elements['init_vitals_time'].value) {
+                // Use the user-edited time if provided; fall back to now.
+                if (v.time) {
+                    form.elements['init_vitals_time'].value = v.time;
+                } else if (!form.elements['init_vitals_time'].value) {
                     var now = new Date();
                     form.elements['init_vitals_time'].value = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
                 }

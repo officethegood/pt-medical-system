@@ -1483,12 +1483,12 @@
             err.style.display = '';
             return;
           }
-          results = await PlacesAPI.searchText({ query: q, lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng, radius: radius });
+          results = await PlacesAPI.searchText({ query: q, lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng, radius: radius, maxResults: 10 });
         } else {
           // Map UI type → Google primary type(s). Using includedPrimaryTypes
           // gives stricter results: place's PRIMARY category must match.
-          // Without this, 'hospital' results include dental/beauty clinics
-          // tagged as hospital secondarily.
+          // Limited to top 10 for API cost control — dispatcher can widen
+          // radius or refine type if they need to see more.
           var primaryTypes;
           if (type === 'clinic') {
             primaryTypes = ['doctor', 'dentist'];
@@ -1500,9 +1500,12 @@
             lat: _hospitalOrigin.lat,
             lng: _hospitalOrigin.lng,
             radius: radius,
-            primaryTypes: primaryTypes
+            primaryTypes: primaryTypes,
+            maxResults: 10
           });
         }
+        // Also cap text-search results to 10 for consistency + cost
+        if (type === 'text' && results && results.length > 10) results = results.slice(0, 10);
         loading.style.display = 'none';
         renderHospitalList(results);
         // Phase 4: enrich list with Distance Matrix road distance + ETA (non-blocking)
@@ -1586,20 +1589,33 @@
      * Phase 4 — Enrich places list with actual road distance + ETA,
      * re-sort by ETA, and re-render. Silently falls back if Distance
      * Matrix API is not enabled or fails.
-     * Limits to top 10 to control API cost.
+     *
+     * Google Distance Matrix limit = 25 destinations per request, so
+     * we chunk. All results get enriched (not just top 10) — dispatchers
+     * need real ETA on every candidate hospital when triaging.
      */
     async function enrichWithDistanceMatrix(places) {
       if (!places || !places.length || !_hospitalOrigin) return;
       if (!window.PlacesAPI || typeof PlacesAPI.getDistanceMatrix !== 'function') return;
-      var top = places.slice(0, 10);
+
+      var CHUNK = 25; // Distance Matrix hard limit per request
+      var chunks = [];
+      for (var i = 0; i < places.length; i += CHUNK) {
+        chunks.push(places.slice(i, i + CHUNK));
+      }
+
       try {
-        var matrix = await PlacesAPI.getDistanceMatrix(
-          { lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng },
-          top
-        );
-        // Merge matrix data into corresponding places
-        top.forEach(function(p, i) {
-          var m = matrix[i];
+        // Fire all chunks in parallel
+        var results = await Promise.all(chunks.map(function(ch) {
+          return PlacesAPI.getDistanceMatrix(
+            { lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng },
+            ch
+          );
+        }));
+        // Flatten + merge matrix data into the corresponding places
+        var flat = [].concat.apply([], results);
+        places.forEach(function(p, idx) {
+          var m = flat[idx];
           if (m && m.status === 'OK') {
             p.roadDistance = m.distance;
             p.roadDistanceMeters = m.distanceMeters;
@@ -1607,20 +1623,17 @@
             p.roadDurationSeconds = m.durationSeconds;
           }
         });
-        // Build full list: enriched top + original rest (unchanged order)
-        var rest = places.slice(10);
-        // Sort enriched part by ETA ascending (places with no road data go last)
-        top.sort(function(a, b) {
+        // Sort entire list by ETA (places with no road data go last)
+        var sorted = places.slice();
+        sorted.sort(function(a, b) {
           var aSec = a.roadDurationSeconds != null ? a.roadDurationSeconds : Infinity;
           var bSec = b.roadDurationSeconds != null ? b.roadDurationSeconds : Infinity;
           return aSec - bSec;
         });
-        var merged = top.concat(rest);
-        renderHospitalList(merged);
+        renderHospitalList(sorted);
       } catch (e) {
         var msg = String(e && e.message || e);
         // Silent: keep the Haversine-sorted list on any failure.
-        // Log to console so dev can diagnose if needed.
         console.warn('[DistanceMatrix] enrichment failed, keeping straight-line sort:', msg);
       }
     }

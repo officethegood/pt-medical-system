@@ -2053,15 +2053,76 @@
                     <div id="gps-modal-map" style="height:400px;"></div>
                 </div>
                 <div class="modal-footer border-0 py-2">
+                    <button class="btn btn-sm btn-outline-danger" id="gpsModalFindPlaces" onclick="gpsModalOpenNearbySearch()" style="display:none;"><i class="bi bi-geo-alt-fill me-1"></i>ค้นหาใกล้รถ</button>
+                    <button class="btn btn-sm btn-outline-secondary" id="gpsModalClearSearch" onclick="gpsModalClearNearbyMarkers(true)" style="display:none;"><i class="bi bi-x-circle me-1"></i>ล้าง</button>
                     <button class="btn btn-sm btn-outline-warning" onclick="gpsModalOpenCamera()"><i class="bi bi-camera-video-fill me-1"></i>Camera</button>
                     <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ==================== GPS MODAL — NEARBY PLACES SEARCH ==================== -->
+    <div class="modal fade" id="gpsNearbyModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow border-0">
+          <div class="modal-header border-0" style="background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff;">
+            <h6 class="modal-title fw-bold"><i class="bi bi-geo-alt-fill me-2"></i> ค้นหาใกล้รถ</h6>
+            <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="gps-nearby-origin" style="padding:10px 14px; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; margin-bottom:12px; font-size:0.85rem; color:#1e3a5f;">
+              <i class="bi bi-truck"></i>
+              <span id="gps-nearby-origin-label">--</span>
+            </div>
+            <div class="mb-3">
+              <label class="fw-bold small mb-1">ประเภทที่ค้นหา</label>
+              <div class="d-flex gap-1 flex-wrap" id="gps-nearby-type-group">
+                <button type="button" class="btn btn-sm btn-danger" data-type="hospital"><i class="bi bi-hospital-fill"></i> รพ.</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-type="clinic"><i class="bi bi-heart-pulse-fill"></i> คลินิก</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-type="pharmacy"><i class="bi bi-capsule"></i> ร้านยา</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-type="gas_station"><i class="bi bi-fuel-pump-fill"></i> ปั้ม</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-type="text"><i class="bi bi-search"></i> พิมพ์</button>
+              </div>
+              <div class="d-flex gap-1 mt-1 flex-wrap">
+                <small class="text-muted align-self-center me-1" style="font-size:0.7rem;">ฉุกเฉิน:</small>
+                <button type="button" class="btn btn-sm" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:0.72rem; border-radius:14px;" data-type="police"><i class="bi bi-shield-fill-exclamation"></i> ตำรวจ</button>
+                <button type="button" class="btn btn-sm" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; font-size:0.72rem; border-radius:14px;" data-type="fire_station"><i class="bi bi-fire"></i> ดับเพลิง</button>
+              </div>
+              <input type="hidden" id="gps-nearby-type" value="hospital">
+            </div>
+            <div class="mb-3" id="gps-nearby-text-wrap" style="display:none;">
+              <label class="fw-bold small mb-1">คำค้น</label>
+              <input type="text" id="gps-nearby-text-query" class="form-control form-control-sm" placeholder="เช่น ตำรวจ, 7-Eleven, ร้านอาหาร...">
+            </div>
+            <div class="mb-3">
+              <label class="fw-bold small mb-1">รัศมีค้นหา</label>
+              <div class="btn-group btn-group-sm w-100" role="group" id="gps-nearby-radius-group">
+                <button type="button" class="btn btn-outline-secondary" data-r="2000">2 km</button>
+                <button type="button" class="btn btn-secondary" data-r="5000">5 km</button>
+                <button type="button" class="btn btn-outline-secondary" data-r="10000">10 km</button>
+                <button type="button" class="btn btn-outline-secondary" data-r="25000">25 km</button>
+              </div>
+              <input type="hidden" id="gps-nearby-radius" value="5000">
+            </div>
+            <div id="gps-nearby-loading" style="text-align:center; padding:20px 0; display:none;">
+              <div class="spinner-border text-danger"></div>
+              <div class="mt-2 small text-muted">กำลังค้นหา...</div>
+            </div>
+            <div id="gps-nearby-error" style="display:none; padding:10px; background:#fee2e2; border-left:3px solid #dc2626; border-radius:6px; color:#991b1b; font-size:0.82rem;"></div>
+            <div id="gps-nearby-list"></div>
+          </div>
+          <div class="modal-footer border-0">
+            <button class="btn btn-sm btn-light" data-bs-dismiss="modal">ปิด</button>
+            <button class="btn btn-sm btn-danger" onclick="gpsModalRunSearch()"><i class="bi bi-search me-1"></i> ค้นหา</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../shared/map-config.js"></script>
+    <script src="../shared/places-api.js"></script>
     <script>
     // =============================================
     // GPS Modal Logic
@@ -2071,10 +2132,16 @@
     var _gpsModalProvider = null;
     var _gpsModalDeviceId = null;
     var _gpsModalInterval = null;
+    var _gpsModalCurrentStatus = null; // {lat,lng,speed,online}
+    var _gpsModalVehicleName = '';
+    var _gpsNearbyMarkers = [];        // hospital/place markers + route lines
+    var _gpsNearbyCache = [];          // last search results
+    var _gpsNearbyOrigin = null;       // {lat, lng, label}
 
     async function openGpsModal(vehicleName) {
         if (!window._gpsEnabled) return;
 
+        _gpsModalVehicleName = vehicleName;
         document.getElementById('gps-modal-vehicle').textContent = vehicleName;
         document.getElementById('gps-modal-info').innerHTML = '<span class="text-muted"><div class="spinner-border spinner-border-sm me-1"></div> กำลังค้นหารถ...</span>';
 
@@ -2166,12 +2233,283 @@
                 } else {
                     _gpsModalMarker = L.marker([s.lat, s.lng], { icon: icon }).addTo(_gpsModalMap);
                 }
-                _gpsModalMap.setView([s.lat, s.lng], 15);
+                // Only auto-center when no nearby-search result is plotted
+                // (otherwise it fights the route fitBounds for the search).
+                if (!_gpsNearbyMarkers.length) _gpsModalMap.setView([s.lat, s.lng], 15);
+                // Cache status for nearby search + toggle find button visibility
+                _gpsModalCurrentStatus = {
+                    lat: Number(s.lat), lng: Number(s.lng),
+                    speed: s.speed, online: online,
+                    address: s.address || ''
+                };
+                gpsModalUpdateFindButton();
             }
         } catch(e) {
             console.warn('gpsModalFetchStatus:', e.message);
         }
     }
+
+    // =============================================
+    // GPS Modal — Nearby Places Search
+    // =============================================
+    function gpsModalUpdateFindButton() {
+        var btn = document.getElementById('gpsModalFindPlaces');
+        if (!btn) return;
+        var canUse = window.MapConfig && MapConfig.useGoogle()
+                   && _gpsModalCurrentStatus && _gpsModalCurrentStatus.lat && _gpsModalCurrentStatus.lng;
+        btn.style.display = canUse ? '' : 'none';
+    }
+
+    function gpsModalOpenNearbySearch() {
+        if (!window.PlacesAPI || !window.MapConfig || !MapConfig.useGoogle()) {
+            alert('ต้อง enable Google Maps ใน Admin settings ก่อน');
+            return;
+        }
+        if (!_gpsModalCurrentStatus || !_gpsModalCurrentStatus.lat) {
+            alert('ยังไม่มีตำแหน่ง GPS ของรถ');
+            return;
+        }
+        gpsModalClearNearbyMarkers();
+        _gpsNearbyOrigin = {
+            lat: _gpsModalCurrentStatus.lat,
+            lng: _gpsModalCurrentStatus.lng,
+            label: 'รถ: ' + _gpsModalVehicleName
+        };
+        document.getElementById('gps-nearby-origin-label').textContent =
+            _gpsNearbyOrigin.label + ' (' + _gpsNearbyOrigin.lat.toFixed(5) + ', ' + _gpsNearbyOrigin.lng.toFixed(5) + ')';
+        document.getElementById('gps-nearby-list').innerHTML = '';
+        document.getElementById('gps-nearby-error').style.display = 'none';
+        gpsModalSetSearchType('hospital');
+        var modal = new bootstrap.Modal(document.getElementById('gpsNearbyModal'));
+        modal.show();
+        gpsModalRunSearch();
+    }
+
+    function gpsModalSetSearchType(type) {
+        document.getElementById('gps-nearby-type').value = type;
+        // Main type buttons (red outline/filled pattern)
+        document.querySelectorAll('#gps-nearby-type-group button').forEach(function(b) {
+            var isActive = b.getAttribute('data-type') === type;
+            b.classList.toggle('btn-danger', isActive);
+            b.classList.toggle('btn-outline-danger', !isActive);
+        });
+        document.getElementById('gps-nearby-text-wrap').style.display = (type === 'text') ? '' : 'none';
+    }
+
+    async function gpsModalRunSearch() {
+        if (!_gpsNearbyOrigin) return;
+        var radius = parseInt(document.getElementById('gps-nearby-radius').value, 10) || 5000;
+        var type = document.getElementById('gps-nearby-type').value || 'hospital';
+        var loading = document.getElementById('gps-nearby-loading');
+        var list = document.getElementById('gps-nearby-list');
+        var err = document.getElementById('gps-nearby-error');
+        loading.style.display = '';
+        list.innerHTML = '';
+        err.style.display = 'none';
+        try {
+            var results;
+            if (type === 'text') {
+                var q = (document.getElementById('gps-nearby-text-query').value || '').trim();
+                if (!q) { loading.style.display = 'none'; err.innerHTML = 'กรุณาพิมพ์คำค้น'; err.style.display = ''; return; }
+                results = await PlacesAPI.searchText({ query: q, lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng, radius: radius, maxResults: 10 });
+            } else {
+                var primaryTypes = type === 'clinic' ? ['doctor', 'dentist'] : [type];
+                results = await PlacesAPI.searchNearby({
+                    lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng,
+                    radius: radius, primaryTypes: primaryTypes, maxResults: 10
+                });
+            }
+            if (results && results.length > 10) results = results.slice(0, 10);
+            loading.style.display = 'none';
+            gpsModalRenderList(results);
+            gpsModalEnrichDistanceMatrix(results);
+        } catch (e) {
+            loading.style.display = 'none';
+            var msg = e.message || String(e);
+            if (msg.indexOf('SERVICE_DISABLED') !== -1 || msg.indexOf('has not been used') !== -1) {
+                err.innerHTML = '<b>Places API ยังไม่ได้เปิด</b><br>Admin ต้อง enable Places API (New) ใน Google Cloud Console';
+            } else if (msg.indexOf('REQUEST_DENIED') !== -1) {
+                err.innerHTML = '<b>API Key ถูกจำกัด</b><br>ตรวจสอบ API restrictions';
+            } else {
+                err.textContent = 'ค้นหาไม่สำเร็จ: ' + msg.substring(0, 200);
+            }
+            err.style.display = '';
+        }
+    }
+
+    function gpsModalRenderList(places) {
+        var list = document.getElementById('gps-nearby-list');
+        if (!places.length) {
+            list.innerHTML = '<div class="text-center text-muted py-3">ไม่พบผลลัพธ์ในรัศมีนี้</div>';
+            return;
+        }
+        var hasRoadData = places.some(function(p){ return p.roadDurationSeconds != null; });
+        var html = '';
+        places.forEach(function(h, idx) {
+            var distText = h.roadDistance
+                ? '<span class="fw-bold text-danger"><i class="bi bi-signpost-split"></i> ' + gpsEsc(h.roadDistance) + '</span>'
+                : '<span class="fw-bold text-muted"><i class="bi bi-signpost-split"></i> ' + PlacesAPI.formatDistance(h.distanceM) + ' <small>(เส้นตรง)</small></span>';
+            var etaText = h.roadDuration
+                ? '<span class="fw-bold text-success"><i class="bi bi-clock-fill"></i> ' + gpsEsc(h.roadDuration) + '</span>'
+                : '';
+            var rating = h.rating ? '<span class="text-warning"><i class="bi bi-star-fill"></i> ' + h.rating.toFixed(1) + '</span> <small class="text-muted">(' + h.ratingCount + ')</small>' : '';
+            var phoneBtn = h.phone ? '<a href="tel:' + gpsEsc(h.phone) + '" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-telephone-fill"></i> ' + gpsEsc(h.phone) + '</a>' : '';
+            var gmapBtn = h.googleMapsUri ? '<a href="' + gpsEsc(h.googleMapsUri) + '" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-map"></i> Maps</a>' : '';
+            var fastestBadge = (hasRoadData && idx === 0 && h.roadDuration) ? '<span class="badge bg-success ms-1">⚡ เร็วสุด</span>' : '';
+            var rowCls = (hasRoadData && idx === 0) ? 'p-2 border border-2 border-success rounded mb-2 bg-success bg-opacity-10' : 'p-2 border rounded mb-2 bg-white';
+            html += ''
+                + '<div class="' + rowCls + '">'
+                +   '<div class="fw-bold small">' + (idx+1) + '. ' + gpsEsc(h.name) + fastestBadge + '</div>'
+                +   '<div class="text-muted small">' + gpsEsc(h.address) + '</div>'
+                +   '<div class="d-flex gap-2 mt-1 align-items-center small flex-wrap">' + distText + etaText + rating + '</div>'
+                +   '<div class="d-flex gap-1 mt-2 flex-wrap">'
+                +     '<button class="btn btn-sm btn-danger rounded-pill" onclick="gpsModalPlotPlace(' + idx + ')"><i class="bi bi-geo-alt-fill"></i> แสดงบนแผนที่</button>'
+                +     phoneBtn + gmapBtn
+                +   '</div>'
+                + '</div>';
+        });
+        list.innerHTML = html;
+        _gpsNearbyCache = places;
+    }
+
+    async function gpsModalEnrichDistanceMatrix(places) {
+        if (!places || !places.length || !_gpsNearbyOrigin || !PlacesAPI.getDistanceMatrix) return;
+        var CHUNK = 25;
+        var chunks = [];
+        for (var i = 0; i < places.length; i += CHUNK) chunks.push(places.slice(i, i + CHUNK));
+        try {
+            var results = await Promise.all(chunks.map(function(ch){
+                return PlacesAPI.getDistanceMatrix({ lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng }, ch);
+            }));
+            var flat = [].concat.apply([], results);
+            places.forEach(function(p, idx) {
+                var m = flat[idx];
+                if (m && m.status === 'OK') {
+                    p.roadDistance = m.distance;
+                    p.roadDistanceMeters = m.distanceMeters;
+                    p.roadDuration = m.duration;
+                    p.roadDurationSeconds = m.durationSeconds;
+                }
+            });
+            var sorted = places.slice().sort(function(a, b) {
+                var aSec = a.roadDurationSeconds != null ? a.roadDurationSeconds : Infinity;
+                var bSec = b.roadDurationSeconds != null ? b.roadDurationSeconds : Infinity;
+                return aSec - bSec;
+            });
+            gpsModalRenderList(sorted);
+        } catch (e) {
+            console.warn('[DistanceMatrix monitor]', e.message);
+        }
+    }
+
+    function gpsModalPlotPlace(idx) {
+        var h = _gpsNearbyCache[idx];
+        if (!h || !_gpsModalMap) return;
+        gpsModalClearNearbyMarkers();
+        var icon = L.divIcon({
+            className: '',
+            html: '<div style="width:32px;height:32px;background:#dc2626;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 10px rgba(220,38,38,0.5);">🏥</div>',
+            iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        var marker = L.marker([h.lat, h.lng], { icon: icon }).addTo(_gpsModalMap);
+        var directionsUrl = 'https://www.google.com/maps/dir/?api=1'
+            + '&origin=' + _gpsNearbyOrigin.lat + ',' + _gpsNearbyOrigin.lng
+            + '&destination=' + h.lat + ',' + h.lng + '&travelmode=driving';
+        var popupHtml = '<div style="min-width:200px; font-family:Sarabun,sans-serif;">'
+            + '<div style="font-weight:700; color:#0c1e3d;">' + gpsEsc(h.name) + '</div>'
+            + '<div style="font-size:0.78rem; color:#64748b; margin:3px 0;">' + gpsEsc(h.address) + '</div>'
+            + (h.roadDistance ? '<div style="font-size:0.78rem; color:#dc2626;"><b>ระยะ:</b> ' + gpsEsc(h.roadDistance) + '</div>' : '')
+            + (h.roadDuration ? '<div style="font-size:0.78rem; color:#16a34a; font-weight:700;"><i class="bi bi-clock"></i> ETA: ' + gpsEsc(h.roadDuration) + '</div>' : '')
+            + (h.phone ? '<div style="font-size:0.78rem; margin-top:3px;"><b>โทร:</b> <a href="tel:' + gpsEsc(h.phone) + '">' + gpsEsc(h.phone) + '</a></div>' : '')
+            + '<a href="' + gpsEsc(directionsUrl) + '" target="_blank" class="btn btn-sm btn-danger w-100 mt-2" style="font-size:0.72rem;"><i class="bi bi-signpost-2-fill"></i> เปิดใน Google Maps</a>'
+            + '</div>';
+        marker.bindPopup(popupHtml);
+        _gpsNearbyMarkers.push(marker);
+
+        // Straight-line fallback while fetching real route
+        var routeLine = L.polyline(
+            [[_gpsNearbyOrigin.lat, _gpsNearbyOrigin.lng], [h.lat, h.lng]],
+            { color: '#dc2626', weight: 3, opacity: 0.65, dashArray: '8, 8' }
+        ).addTo(_gpsModalMap);
+        _gpsNearbyMarkers.push(routeLine);
+        _gpsModalMap.fitBounds(L.latLngBounds([[_gpsNearbyOrigin.lat, _gpsNearbyOrigin.lng], [h.lat, h.lng]]), { padding: [40, 40], maxZoom: 15 });
+
+        // Fetch real road route (async, replaces straight line)
+        if (PlacesAPI.getDirections) {
+            PlacesAPI.getDirections(
+                { lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng },
+                { lat: h.lat, lng: h.lng }
+            ).then(function(r) {
+                if (routeLine) { _gpsModalMap.removeLayer(routeLine); var ix = _gpsNearbyMarkers.indexOf(routeLine); if (ix !== -1) _gpsNearbyMarkers.splice(ix, 1); }
+                var roadLine = L.polyline(r.path, { color: '#dc2626', weight: 5, opacity: 0.8 }).addTo(_gpsModalMap);
+                _gpsNearbyMarkers.push(roadLine);
+                try { _gpsModalMap.fitBounds(roadLine.getBounds(), { padding: [40, 40], maxZoom: 15 }); } catch(e) {}
+            }).catch(function(){ /* keep straight line */ });
+        }
+
+        marker.openPopup();
+        // Show clear button
+        document.getElementById('gpsModalClearSearch').style.display = '';
+        // Close search modal so dispatcher can see the map
+        var m = bootstrap.Modal.getInstance(document.getElementById('gpsNearbyModal'));
+        if (m) m.hide();
+    }
+
+    function gpsModalClearNearbyMarkers(recenter) {
+        _gpsNearbyMarkers.forEach(function(m) { if (_gpsModalMap) _gpsModalMap.removeLayer(m); });
+        _gpsNearbyMarkers = [];
+        var clearBtn = document.getElementById('gpsModalClearSearch');
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (recenter && _gpsModalCurrentStatus && _gpsModalMap) {
+            _gpsModalMap.setView([_gpsModalCurrentStatus.lat, _gpsModalCurrentStatus.lng], 15);
+        }
+    }
+
+    function gpsEsc(str) {
+        if (str == null) return '';
+        var d = document.createElement('div'); d.textContent = String(str); return d.innerHTML;
+    }
+
+    // Wire up radius/type buttons inside the nearby modal
+    document.addEventListener('click', function(ev) {
+        var radius = ev.target.closest('#gps-nearby-radius-group button');
+        if (radius) {
+            document.querySelectorAll('#gps-nearby-radius-group button').forEach(function(b) {
+                b.classList.remove('btn-secondary');
+                b.classList.add('btn-outline-secondary');
+            });
+            radius.classList.add('btn-secondary');
+            radius.classList.remove('btn-outline-secondary');
+            document.getElementById('gps-nearby-radius').value = radius.getAttribute('data-r');
+            if (_gpsNearbyOrigin) gpsModalRunSearch();
+            return;
+        }
+        var typeBtn = ev.target.closest('#gps-nearby-type-group button, #gpsNearbyModal [data-type]');
+        if (typeBtn && document.getElementById('gpsNearbyModal').classList.contains('show')) {
+            var t = typeBtn.getAttribute('data-type');
+            if (!t) return;
+            gpsModalSetSearchType(t);
+            if (t !== 'text' && _gpsNearbyOrigin) gpsModalRunSearch();
+        }
+    });
+
+    document.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Enter' && ev.target && ev.target.id === 'gps-nearby-text-query') {
+            ev.preventDefault();
+            gpsModalRunSearch();
+        }
+    });
+
+    // Clear nearby markers when GPS modal closes
+    document.addEventListener('DOMContentLoaded', function() {
+        var gpsModalEl = document.getElementById('gpsModal');
+        if (gpsModalEl) {
+            gpsModalEl.addEventListener('hidden.bs.modal', function() {
+                gpsModalClearNearbyMarkers();
+                _gpsModalCurrentStatus = null;
+            });
+        }
+    });
 
     function gpsModalOpenCamera() {
         if (_gpsModalProvider && _gpsModalDeviceId) {
