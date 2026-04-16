@@ -517,9 +517,9 @@
                   <div class="col-md-5">
                     <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ประเภทการนำส่ง</label>
                     <select class="form-select shadow-sm border-0 bg-light" name="transport_type" onchange="updateTimelineUI(); updateSceneInfo();">
+                      <option value="EMS" selected>EMS (รับจากจุดเกิดเหตุ)</option>
                       <option value="Refer">Refer (ส่งต่อ)</option>
                       <option value="Discharge">Discharge (ส่งกลับบ้าน)</option>
-                      <option value="EMS">EMS (รับจากจุดเกิดเหตุ)</option>
                       <option value="Follow up">Follow up (ตรวจตามนัด)</option>
                     </select>
                   </div>
@@ -956,10 +956,13 @@
               <div class="row g-3">
                  <div class="col-md-12 bg-white p-3 rounded-3 border mb-2">
                     <label class="form-label text-secondary small fw-bold text-uppercase tracking-wider">Operation Unit</label>
-                    <div class="input-group input-group-sm mb-3">
+                    <div class="input-group input-group-sm mb-3" id="m-vehicle-selector-group">
                         <div class="input-group-text bg-light"><input class="form-check-input mt-0" type="radio" name="m_op_level" value="BLS" onchange="updateModalOpLogic()"><span class="ms-2 fw-medium">BLS</span></div>
                         <div class="input-group-text bg-light"><input class="form-check-input mt-0" type="radio" name="m_op_level" value="ALS" onchange="updateModalOpLogic()"><span class="ms-2 fw-medium">ALS</span></div>
-                        <span class="input-group-text bg-light text-secondary">รถเบอร์</span>
+                        <span class="input-group-text bg-light text-secondary">รถ</span>
+                        <select class="form-select" id="m-vehicle-select" onchange="onModalVehicleSelect(this)" style="display:none;">
+                            <option value="">-- เลือกรถ --</option>
+                        </select>
                         <input type="text" class="form-control" id="m_op_unit_no" placeholder="ระบุเบอร์">
                     </div>
                     <div class="p-3 bg-light rounded-3">
@@ -996,8 +999,8 @@
                    <div class="card p-3 island-card">
                      <h6 class="card-title fw-bold text-dark mb-3 border-bottom pb-2"><i class="bi bi-clipboard2-pulse-fill text-primary me-2"></i> รายละเอียดผู้ป่วย</h6>
                      <div class="row g-3">
-                       <!-- Triage (moved to top of detail card) -->
-                       <div class="col-12">
+                       <!-- Triage + Transport Type -->
+                       <div class="col-md-7">
                          <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ระดับความเร่งด่วน (Triage)</label>
                          <div class="btn-group w-100 shadow-sm" role="group">
                            <input type="radio" class="btn-check" name="m_triage_level" id="mt1" value="Resuscitation" autocomplete="off"><label class="btn btn-outline-danger fw-medium" for="mt1">วิกฤต</label>
@@ -1005,6 +1008,15 @@
                            <input type="radio" class="btn-check" name="m_triage_level" id="mt3" value="Urgent" autocomplete="off"><label class="btn btn-outline-warning text-dark fw-medium" for="mt3">เร่งด่วน</label>
                            <input type="radio" class="btn-check" name="m_triage_level" id="mt4" value="Non-Urgent" autocomplete="off"><label class="btn btn-outline-success fw-medium" for="mt4">ไม่เร่งด่วน</label>
                          </div>
+                       </div>
+                       <div class="col-md-5">
+                         <label class="form-label fw-bold text-secondary fs-7 text-uppercase tracking-wider">ประเภทการนำส่ง</label>
+                         <select class="form-select shadow-sm border-0 bg-light" id="m_transport_type">
+                           <option value="EMS">EMS (รับจากจุดเกิดเหตุ)</option>
+                           <option value="Refer">Refer (ส่งต่อ)</option>
+                           <option value="Discharge">Discharge (ส่งกลับบ้าน)</option>
+                           <option value="Follow up">Follow up (ตรวจตามนัด)</option>
+                         </select>
                        </div>
 
                        <!-- Origin / Destination -->
@@ -1213,13 +1225,18 @@
     // =============================================
     // GPS Vehicle Dropdown (Step 1 form)
     // =============================================
+    // Cache of GPS vehicles for reuse by modal
+    var _gpsVehiclesCache = null;
+
     async function loadGpsVehicleDropdown() {
         try {
             var res = await _supabase.from('gps_vehicles').select('device_id, device_name, nickname, provider')
                 .eq('is_active', true).order('nickname');
             var vehicles = res.data || [];
+            _gpsVehiclesCache = vehicles;
             if (vehicles.length === 0) return;
 
+            // Populate create form dropdown
             var sel = document.getElementById('vehicle-select');
             var manualInput = document.querySelector('input[name="op_unit_no"]');
             sel.innerHTML = '<option value="">-- เลือกรถ --</option>';
@@ -1232,20 +1249,55 @@
                 opt.textContent = display;
                 sel.appendChild(opt);
             });
-            // Add manual option
             var manualOpt = document.createElement('option');
             manualOpt.value = '__manual__';
             manualOpt.textContent = '[ พิมพ์เอง ]';
             sel.appendChild(manualOpt);
 
-            // Show dropdown, hide text input by default
             sel.style.display = '';
             manualInput.style.display = 'none';
+
+            // Populate edit modal dropdown (same data)
+            populateModalVehicleDropdown();
         } catch(e) { console.warn('loadGpsVehicleDropdown:', e); }
+    }
+
+    function populateModalVehicleDropdown() {
+        var mSel = document.getElementById('m-vehicle-select');
+        if (!mSel || !_gpsVehiclesCache || _gpsVehiclesCache.length === 0) return;
+        mSel.innerHTML = '<option value="">-- เลือกรถ --</option>';
+        _gpsVehiclesCache.forEach(function(v) {
+            var display = v.nickname || v.device_name || v.device_id;
+            var opt = document.createElement('option');
+            opt.value = display;
+            opt.setAttribute('data-device-id', v.device_id);
+            opt.setAttribute('data-provider', v.provider);
+            opt.textContent = display;
+            mSel.appendChild(opt);
+        });
+        var manualOpt = document.createElement('option');
+        manualOpt.value = '__manual__';
+        manualOpt.textContent = '[ พิมพ์เอง ]';
+        mSel.appendChild(manualOpt);
     }
 
     function onVehicleSelect(sel) {
         var manualInput = document.querySelector('input[name="op_unit_no"]');
+        if (sel.value === '__manual__') {
+            manualInput.style.display = '';
+            manualInput.value = '';
+            manualInput.focus();
+        } else if (sel.value) {
+            manualInput.style.display = 'none';
+            manualInput.value = sel.value;
+        } else {
+            manualInput.style.display = 'none';
+            manualInput.value = '';
+        }
+    }
+
+    function onModalVehicleSelect(sel) {
+        var manualInput = document.getElementById('m_op_unit_no');
         if (sel.value === '__manual__') {
             manualInput.style.display = '';
             manualInput.value = '';
@@ -3183,6 +3235,33 @@
        }
        document.getElementById('m_op_unit_no').value = f.op_unit_no.value;
 
+       // Sync GPS vehicle dropdown if available
+       var mVehicleSel = document.getElementById('m-vehicle-select');
+       if (mVehicleSel && _gpsVehiclesCache && _gpsVehiclesCache.length > 0) {
+           // Ensure options are populated (in case GPS loaded after modal was first touched)
+           if (mVehicleSel.options.length <= 1) populateModalVehicleDropdown();
+           var currentUnit = f.op_unit_no.value || '';
+           var matched = false;
+           for (var k = 0; k < mVehicleSel.options.length; k++) {
+               if (mVehicleSel.options[k].value === currentUnit) { matched = true; break; }
+           }
+           var mManualInput = document.getElementById('m_op_unit_no');
+           if (matched && currentUnit) {
+               mVehicleSel.value = currentUnit;
+               mVehicleSel.style.display = '';
+               mManualInput.style.display = 'none';
+           } else if (currentUnit) {
+               // Value doesn't match any fleet vehicle → manual mode
+               mVehicleSel.value = '__manual__';
+               mVehicleSel.style.display = '';
+               mManualInput.style.display = '';
+           } else {
+               mVehicleSel.value = '';
+               mVehicleSel.style.display = '';
+               mManualInput.style.display = 'none';
+           }
+       }
+
        document.getElementById('m_staff_1_name').value = f.staff_1_name.value;
        document.getElementById('m_staff_1_pos').value = f.staff_1_pos.value;
        document.getElementById('m_staff_2_name').value = f.staff_2_name.value;
@@ -3195,6 +3274,10 @@
        var currentTriage = f.triage_level.value || 'Non-Urgent';
        var mTriageRadios = document.getElementsByName('m_triage_level');
        for(var i=0; i<mTriageRadios.length; i++) mTriageRadios[i].checked = (mTriageRadios[i].value === currentTriage);
+
+       // Transport type
+       var mTransportTypeEl = document.getElementById('m_transport_type');
+       if (mTransportTypeEl) mTransportTypeEl.value = f.transport_type.value || 'EMS';
 
        updateModalOpLogic();
 
@@ -3252,6 +3335,14 @@
        if(mTriage) {
            var mainTriageRadios = document.getElementsByName('triage_level');
            for(var i=0; i<mainTriageRadios.length; i++) mainTriageRadios[i].checked = (mainTriageRadios[i].value === mTriage.value);
+       }
+
+       // Transport type
+       var mTransportTypeEl2 = document.getElementById('m_transport_type');
+       if (mTransportTypeEl2 && mTransportTypeEl2.value) {
+           f.transport_type.value = mTransportTypeEl2.value;
+           if (typeof updateTimelineUI === 'function') updateTimelineUI();
+           if (typeof updateSceneInfo === 'function') updateSceneInfo();
        }
 
        updateOpUnitLogic();
