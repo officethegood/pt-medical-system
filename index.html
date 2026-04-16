@@ -282,7 +282,7 @@
                         <i class="bi bi-truck fs-3" style="color:#2563eb;"></i>
                         <div>
                           <div class="fw-bold">Transport</div>
-                          <div class="small text-muted">บันทึกนำส่งผู้ป่วย V/S, IV, Consent 2 ขั้นตอน, พิมพ์ใบส่งตัว, อัปโหลด PDF</div>
+                          <div class="small text-muted">บันทึกนำส่งผู้ป่วย, V/S (ต้นทาง/ระหว่างทาง/ปลายทาง), IV, Consent + DNR (ยืนยัน 2 ขั้น + บัตร ปชช./พยาน), พิมพ์ใบส่งตัว, อัปโหลด PDF + OCR</div>
                         </div>
                       </div>
                     </div>
@@ -291,7 +291,7 @@
                         <i class="bi bi-bandaid fs-3" style="color:#dc2626;"></i>
                         <div>
                           <div class="fw-bold">First Aid</div>
-                          <div class="small text-muted">อีเวนท์ปฐมพยาบาล ลงทะเบียนผู้บาดเจ็บ, triage 4 ระดับ, วัด V/S, บันทึกการรักษา</div>
+                          <div class="small text-muted">อีเวนท์ปฐมพยาบาล ลงทะเบียนผู้บาดเจ็บ, triage 4 ระดับ, V/S, บันทึกการรักษา, Quick Dispense ยา, รายงานสรุป</div>
                         </div>
                       </div>
                     </div>
@@ -300,7 +300,7 @@
                         <i class="bi bi-broadcast-pin fs-3" style="color:#16a34a;"></i>
                         <div>
                           <div class="fw-bold">GPS Tracking</div>
-                          <div class="small text-muted">ตามรถ real-time, แชร์ลิงก์สาธารณะ (expire ได้), ดูกล้อง, หลาย Provider</div>
+                          <div class="small text-muted">ตามรถ real-time, แชร์ลิงก์สาธารณะ (expire ได้), ดูกล้อง, หลาย Provider + ค้นหาสถานที่ใกล้สุด (โรงพยาบาล/คลินิก/ปั๊ม/ตำรวจ) + เส้นทาง/ETA + เตือนเร็วเกิน 120 km/h</div>
                         </div>
                       </div>
                     </div>
@@ -309,7 +309,7 @@
                         <i class="bi bi-geo-alt fs-3" style="color:#f59e0b;"></i>
                         <div>
                           <div class="fw-bold">Location</div>
-                          <div class="small text-muted">แผนที่โรงพยาบาล/สถานที่, รวม marker เป็นกลุ่ม, แชร์รายการได้</div>
+                          <div class="small text-muted">ฐานข้อมูลตำแหน่ง (โรงพยาบาล/ลูกค้า), แผนที่ + marker cluster, mini-map ซ้อนใน modal, แชร์ลิงก์สาธารณะ (admin ลบได้แม้ expired)</div>
                         </div>
                       </div>
                     </div>
@@ -318,7 +318,7 @@
                         <i class="bi bi-display fs-3" style="color:#475569;"></i>
                         <div>
                           <div class="fw-bold">Monitor</div>
-                          <div class="small text-muted">Dashboard รวมสถานะ — เคส Active, อีเวนท์, กระพริบเตือนผู้ป่วยวิกฤต</div>
+                          <div class="small text-muted">Dashboard รวมสถานะ — เคส Active, อีเวนท์, GPS, กระพริบเตือนผู้ป่วยวิกฤต + ค้นหาสถานที่ใกล้สุดในแผนที่รถ</div>
                         </div>
                       </div>
                     </div>
@@ -327,7 +327,7 @@
                         <i class="bi bi-gear-fill fs-3" style="color:#1e3a5f;"></i>
                         <div>
                           <div class="fw-bold">Admin Panel</div>
-                          <div class="small text-muted">จัดการตั้งค่า, Provider GPS, สถิติ, Activity Log, ภาพรวมระบบ</div>
+                          <div class="small text-muted">จัดการตั้งค่า, Provider GPS, Map Provider (Leaflet/Google), เช็ค API, สถิติ, Activity Log, ภาพรวมระบบ</div>
                         </div>
                       </div>
                     </div>
@@ -344,7 +344,8 @@
                       <div class="fw-semibold text-muted text-uppercase mb-2" style="font-size:0.7rem; letter-spacing:0.5px;">Frontend</div>
                       <ul class="list-unstyled mb-0 ps-0" style="font-size:0.85rem;">
                         <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Bootstrap 5.3.3 + Sarabun Font</li>
-                        <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Leaflet 1.9.4 (แผนที่)</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Leaflet 1.9.4 + MarkerCluster (แผนที่ + OSM)</li>
+                        <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Leaflet GoogleMutant (Google Tiles ใน Leaflet)</li>
                         <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>PDF.js 2.16.105 (อ่าน PDF)</li>
                         <li class="mb-1"><i class="bi bi-check2 text-success me-2"></i>Chart.js 4 (กราฟสถิติ)</li>
                         <li><i class="bi bi-check2 text-success me-2"></i>SweetAlert2 (popup)</li>
@@ -357,7 +358,33 @@
                         <li class="mb-1"><i class="bi bi-cloud-upload text-info me-2"></i>Cloudinary (รูป + PDF)</li>
                         <li class="mb-1"><i class="bi bi-key text-warning me-2"></i>Google Apps Script (Auth HR)</li>
                         <li class="mb-1"><i class="bi bi-broadcast" style="color:#dc2626;"></i> <span class="ms-1">CMSV6 / 808gps (GPS API)</span></li>
+                        <li class="mb-1"><i class="bi bi-google text-primary me-2"></i>Google Maps Platform (Maps JS / Places New / Directions / Distance Matrix / Geocoding) — เปิดตามการตั้งค่า</li>
                         <li><i class="bi bi-shield-check text-success me-2"></i>Cloudflare Worker (OCR / Proxy)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Feature Highlights -->
+              <div class="card border-0 shadow-sm rounded-3 mb-3">
+                <div class="card-body p-4">
+                  <h5 class="fw-bold mb-3"><i class="bi bi-stars me-2" style="color:#f59e0b;"></i>ฟีเจอร์เด่น (Phase 1-4)</h5>
+                  <div class="row g-2 small">
+                    <div class="col-md-6">
+                      <ul class="list-unstyled mb-0 ps-0" style="font-size:0.85rem;">
+                        <li class="mb-1"><i class="bi bi-search text-primary me-2"></i>ค้นหาสถานที่ใกล้สุด — โรงพยาบาล / คลินิก / ร้านยา / ปั๊ม / ตำรวจ / ดับเพลิง (Places API New)</li>
+                        <li class="mb-1"><i class="bi bi-signpost-split text-success me-2"></i>นำทางจริงบนถนน + ETA (Directions API)</li>
+                        <li class="mb-1"><i class="bi bi-lightning-charge text-warning me-2"></i>จัดอันดับตามเวลาจริง (Distance Matrix) — badge "⚡ เร็วสุด"</li>
+                        <li class="mb-1"><i class="bi bi-speedometer2 text-danger me-2"></i>เตือนรถเร็วเกิน 120 km/h (border แดง + pulse)</li>
+                      </ul>
+                    </div>
+                    <div class="col-md-6">
+                      <ul class="list-unstyled mb-0 ps-0" style="font-size:0.85rem;">
+                        <li class="mb-1"><i class="bi bi-share text-info me-2"></i>Share Link (GPS / Location) + admin ลบ token หมดอายุได้</li>
+                        <li class="mb-1"><i class="bi bi-file-earmark-medical text-danger me-2"></i>DNR workflow + ภาพบัตร ปชช./Passport/ใบราชการ + ลายเซ็นพยาน</li>
+                        <li class="mb-1"><i class="bi bi-map text-warning me-2"></i>Mini-map modal (Location) — ดูแผนที่ในหน้าเดียว</li>
+                        <li class="mb-1"><i class="bi bi-globe text-secondary me-2"></i>Fallback อัตโนมัติ — ไม่มี Google key → ใช้ Leaflet + ซ่อนฟีเจอร์ที่ต้องใช้ Google</li>
                       </ul>
                     </div>
                   </div>
@@ -369,7 +396,7 @@
                 <div class="card-body p-4">
                   <h5 class="fw-bold mb-3"><i class="bi bi-heart-pulse me-2" style="color:#dc2626;"></i>System Health</h5>
                   <div class="row g-3" id="ov-health-grid">
-                    <div class="col-md-4">
+                    <div class="col-md-3 col-6">
                       <div class="d-flex align-items-center gap-2 p-3 rounded-3" style="background:#f8fafc;">
                         <div id="ov-health-db-dot" class="rounded-circle" style="width:10px; height:10px; background:#94a3b8;"></div>
                         <div>
@@ -378,7 +405,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3 col-6">
                       <div class="d-flex align-items-center gap-2 p-3 rounded-3" style="background:#f8fafc;">
                         <div id="ov-health-realtime-dot" class="rounded-circle" style="width:10px; height:10px; background:#94a3b8;"></div>
                         <div>
@@ -387,12 +414,21 @@
                         </div>
                       </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3 col-6">
                       <div class="d-flex align-items-center gap-2 p-3 rounded-3" style="background:#f8fafc;">
                         <div id="ov-health-gps-dot" class="rounded-circle" style="width:10px; height:10px; background:#94a3b8;"></div>
                         <div>
                           <div class="small fw-semibold">GPS Proxy (Render)</div>
                           <div class="small text-muted" id="ov-health-gps-text">กำลังตรวจ...</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="d-flex align-items-center gap-2 p-3 rounded-3" style="background:#f8fafc;">
+                        <div id="ov-health-gmap-dot" class="rounded-circle" style="width:10px; height:10px; background:#94a3b8;"></div>
+                        <div>
+                          <div class="small fw-semibold">Google Maps API</div>
+                          <div class="small text-muted" id="ov-health-gmap-text">กำลังตรวจ...</div>
                         </div>
                       </div>
                     </div>
@@ -594,12 +630,22 @@
                             <button class="btn btn-outline-info" type="button" onclick="testGoogleMapsKey()" title="ทดสอบ Key">
                               <i class="bi bi-check2-circle"></i> ทดสอบ
                             </button>
+                            <button class="btn btn-primary" type="button" onclick="testAllGoogleApis()" title="เช็คทุก API">
+                              <i class="bi bi-clipboard-check"></i> เช็ค API ทั้งหมด
+                            </button>
                           </div>
                           <div class="form-text">
                             <a href="https://console.cloud.google.com/apis/credentials" target="_blank">console.cloud.google.com</a>
-                            — เปิด Maps JavaScript API แล้วจำกัด referrer ให้โดเมนของคุณ
+                            — เปิด Maps JavaScript API, Places API (New), Directions API, Distance Matrix API, Geocoding API แล้วจำกัด referrer ให้โดเมนของคุณ
                           </div>
                           <div id="gmap-key-test-result" class="small mt-1"></div>
+                          <div id="gmap-api-status-grid" class="mt-2" style="display:none;">
+                            <div class="border rounded-3 p-3" style="background:#f8fafc;">
+                              <div class="fw-bold small mb-2"><i class="bi bi-clipboard-check me-1"></i> สถานะ Google Maps API</div>
+                              <div class="row g-2" id="gmap-api-rows"></div>
+                              <div class="small text-muted mt-2" id="gmap-api-summary"></div>
+                            </div>
+                          </div>
                         </div>
                         <div class="col-md-4">
                           <label class="form-label small fw-medium">Map Type</label>
@@ -1170,6 +1216,68 @@
         document.getElementById('ov-health-gps-text').textContent = 'หลับอยู่ (Render cold-start)';
       }
 
+      // Health — Google Maps API (read from settings)
+      try {
+        var gmapDot = document.getElementById('ov-health-gmap-dot');
+        var gmapText = document.getElementById('ov-health-gmap-text');
+        if (gmapDot && gmapText) {
+          var stgRes = await _supabase.from('settings').select('key, value').in('key', ['MAP_PROVIDER', 'GOOGLE_MAPS_API_KEY']);
+          var stgMap = {};
+          (stgRes.data || []).forEach(function(r){ stgMap[r.key] = r.value; });
+          var provider = (stgMap['MAP_PROVIDER'] || 'leaflet').toLowerCase();
+          var gkey = (stgMap['GOOGLE_MAPS_API_KEY'] || '').trim();
+
+          if (provider !== 'google') {
+            gmapDot.style.background = '#94a3b8';
+            gmapText.textContent = 'ปิดใช้งาน (ใช้ Leaflet)';
+          } else if (!gkey) {
+            gmapDot.style.background = '#f59e0b';
+            gmapText.textContent = 'เลือก Google แต่ยังไม่ใส่ API key';
+          } else {
+            // Quick probe: Places API (New) with tiny Bangkok query
+            try {
+              var ctrl = new AbortController();
+              var tm = setTimeout(function(){ ctrl.abort(); }, 6000);
+              var t0g = performance.now();
+              var pr = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Goog-Api-Key': gkey,
+                  'X-Goog-FieldMask': 'places.displayName'
+                },
+                body: JSON.stringify({
+                  includedTypes: ['hospital'],
+                  maxResultCount: 1,
+                  locationRestriction: { circle: { center: { latitude: 13.7563, longitude: 100.5018 }, radius: 2000.0 } }
+                }),
+                signal: ctrl.signal
+              });
+              clearTimeout(tm);
+              var msg = Math.round(performance.now() - t0g);
+              if (pr.ok) {
+                gmapDot.style.background = '#16a34a';
+                gmapText.textContent = 'ทำงานปกติ · ' + msg + ' ms';
+              } else if (pr.status === 403) {
+                gmapDot.style.background = '#dc2626';
+                gmapText.textContent = 'HTTP 403 — Places (New) ยังไม่เปิด/referrer ผิด';
+              } else {
+                gmapDot.style.background = '#f59e0b';
+                gmapText.textContent = 'HTTP ' + pr.status;
+              }
+            } catch(ge) {
+              gmapDot.style.background = '#f59e0b';
+              gmapText.textContent = 'ทดสอบไม่สำเร็จ (' + (ge.message || 'timeout') + ')';
+            }
+          }
+        }
+      } catch(e) {
+        var dot = document.getElementById('ov-health-gmap-dot');
+        var txt = document.getElementById('ov-health-gmap-text');
+        if (dot) dot.style.background = '#dc2626';
+        if (txt) txt.textContent = 'ตรวจไม่ได้';
+      }
+
       // Build info
       var bi = document.getElementById('ov-build-info');
       if (bi) {
@@ -1571,6 +1679,227 @@
         } catch(e) {
             resultEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ข้อผิดพลาด: ' + (e.message || e) + '</span>';
         }
+    }
+
+    // =============================================
+    // เช็ค API ทั้งหมด (5 APIs) — Maps JS, Places New, Directions, Distance Matrix, Geocoding
+    // =============================================
+    async function testAllGoogleApis() {
+        var key = (document.getElementById('admin-gmap-key').value || '').trim();
+        var grid = document.getElementById('gmap-api-status-grid');
+        var rowsEl = document.getElementById('gmap-api-rows');
+        var sumEl = document.getElementById('gmap-api-summary');
+        var simpleEl = document.getElementById('gmap-key-test-result');
+        if (simpleEl) simpleEl.innerHTML = '';
+        if (!grid || !rowsEl) return;
+        if (!key) {
+            grid.style.display = '';
+            rowsEl.innerHTML = '<div class="col-12 text-warning small"><i class="bi bi-exclamation-triangle me-1"></i> กรุณาใส่ Google Maps API Key ก่อน</div>';
+            sumEl.textContent = '';
+            return;
+        }
+        // Test rows config
+        var apis = [
+            { id: 'mapsjs', name: 'Maps JavaScript API', icon: 'bi-map' },
+            { id: 'places', name: 'Places API (New)', icon: 'bi-geo-alt-fill' },
+            { id: 'directions', name: 'Directions API', icon: 'bi-signpost-split' },
+            { id: 'distmatrix', name: 'Distance Matrix API', icon: 'bi-lightning-charge' },
+            { id: 'geocoding', name: 'Geocoding API', icon: 'bi-pin-map' }
+        ];
+        grid.style.display = '';
+        rowsEl.innerHTML = apis.map(function(a) {
+            return '<div class="col-md-6"><div class="d-flex align-items-center gap-2 p-2 rounded-2 border bg-white" id="api-row-' + a.id + '">' +
+                '<i class="bi ' + a.icon + ' text-secondary"></i>' +
+                '<div class="flex-grow-1"><div class="small fw-semibold">' + a.name + '</div>' +
+                '<div class="small text-muted" id="api-msg-' + a.id + '"><span class="spinner-border spinner-border-sm text-muted"></span> กำลังทดสอบ...</div></div>' +
+                '<span class="badge rounded-pill bg-secondary" id="api-badge-' + a.id + '">...</span>' +
+                '</div></div>';
+        }).join('');
+        sumEl.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังทดสอบ API ทั้ง 5 ตัว...</span>';
+
+        function setRow(id, status, msg) {
+            var badge = document.getElementById('api-badge-' + id);
+            var msgEl = document.getElementById('api-msg-' + id);
+            var row = document.getElementById('api-row-' + id);
+            if (!badge || !msgEl || !row) return;
+            if (status === 'ok') {
+                badge.className = 'badge rounded-pill bg-success';
+                badge.innerHTML = '<i class="bi bi-check-circle-fill"></i> OK';
+                row.style.background = '#f0fdf4';
+                row.style.borderColor = '#16a34a';
+            } else if (status === 'fail') {
+                badge.className = 'badge rounded-pill bg-danger';
+                badge.innerHTML = '<i class="bi bi-x-circle-fill"></i> FAIL';
+                row.style.background = '#fef2f2';
+                row.style.borderColor = '#dc2626';
+            } else if (status === 'warn') {
+                badge.className = 'badge rounded-pill bg-warning text-dark';
+                badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> WARN';
+                row.style.background = '#fffbeb';
+                row.style.borderColor = '#f59e0b';
+            }
+            msgEl.innerHTML = msg;
+        }
+
+        // Load Maps JS SDK first (with places library) — required for SDK-based tests
+        async function loadSdk(k) {
+            return new Promise(function(resolve, reject) {
+                if (window.google && window.google.maps && window.google.maps.places) { resolve(); return; }
+                // Remove previous test script if present
+                var prev = document.getElementById('gmap-apitest-script');
+                if (prev) prev.remove();
+                delete window.__gmapApiTestCb;
+                window.__gmapApiTestCb = function() { resolve(); };
+                var s = document.createElement('script');
+                s.id = 'gmap-apitest-script';
+                s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(k) + '&libraries=places&callback=__gmapApiTestCb&v=weekly';
+                s.async = true; s.defer = true;
+                s.onerror = function() { reject(new Error('โหลด Maps JS SDK ไม่ได้')); };
+                document.head.appendChild(s);
+                setTimeout(function() { if (!(window.google && window.google.maps)) reject(new Error('Maps JS SDK timeout')); }, 10000);
+            });
+        }
+
+        var results = { ok: 0, fail: 0, warn: 0 };
+
+        // 1) Maps JS API
+        try {
+            await loadSdk(key);
+            if (window.google && window.google.maps) {
+                setRow('mapsjs', 'ok', 'SDK โหลดสำเร็จ');
+                results.ok++;
+            } else {
+                setRow('mapsjs', 'fail', 'SDK โหลดไม่สำเร็จ');
+                results.fail++;
+            }
+        } catch(e) {
+            setRow('mapsjs', 'fail', (e.message || 'ล้มเหลว') + ' — ตรวจสอบว่าเปิด Maps JavaScript API และ referrer ถูกต้อง');
+            results.fail++;
+            setRow('places', 'fail', 'ต้องโหลด Maps JS ก่อน');
+            setRow('directions', 'fail', 'ต้องโหลด Maps JS ก่อน');
+            setRow('distmatrix', 'fail', 'ต้องโหลด Maps JS ก่อน');
+            setRow('geocoding', 'fail', 'ต้องโหลด Maps JS ก่อน');
+            results.fail += 4;
+            sumEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i> Maps JS SDK โหลดไม่ได้ — ข้าม API อื่น</span>';
+            return;
+        }
+
+        // 2) Places API (New) — REST POST to places.googleapis.com
+        try {
+            var pr = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Goog-Api-Key': key,
+                    'X-Goog-FieldMask': 'places.displayName'
+                },
+                body: JSON.stringify({
+                    includedTypes: ['hospital'],
+                    maxResultCount: 1,
+                    locationRestriction: {
+                        circle: { center: { latitude: 13.7563, longitude: 100.5018 }, radius: 5000.0 }
+                    }
+                })
+            });
+            if (pr.ok) {
+                setRow('places', 'ok', 'ค้นหาสถานที่สำเร็จ (Nearby Search)');
+                results.ok++;
+            } else {
+                var errBody = '';
+                try { var j = await pr.json(); errBody = (j.error && j.error.message) || ''; } catch(_){}
+                if (pr.status === 403) {
+                    setRow('places', 'fail', 'HTTP 403 — Places API (New) ยังไม่เปิด/referrer ไม่ถูกต้อง ' + (errBody ? '· ' + errBody : ''));
+                } else if (pr.status === 400) {
+                    setRow('places', 'warn', 'HTTP 400 — ' + (errBody || 'คำขอไม่ถูกต้อง'));
+                    results.warn++;
+                    results.fail--;
+                } else {
+                    setRow('places', 'fail', 'HTTP ' + pr.status + ' ' + (errBody ? '· ' + errBody : ''));
+                }
+                if (!pr.ok && pr.status !== 400) results.fail++;
+            }
+        } catch(e) {
+            setRow('places', 'fail', (e.message || 'ล้มเหลว'));
+            results.fail++;
+        }
+
+        // 3) Directions API — via SDK (referrer-compat)
+        try {
+            var ds = new google.maps.DirectionsService();
+            var dr = await new Promise(function(resolve) {
+                ds.route({
+                    origin: { lat: 13.7563, lng: 100.5018 },
+                    destination: { lat: 13.7270, lng: 100.5237 },
+                    travelMode: 'DRIVING'
+                }, function(res, status) { resolve({ res: res, status: status }); });
+            });
+            if (dr.status === 'OK' && dr.res && dr.res.routes && dr.res.routes.length) {
+                setRow('directions', 'ok', 'ได้เส้นทาง ' + dr.res.routes.length + ' route');
+                results.ok++;
+            } else {
+                setRow('directions', 'fail', 'Status: ' + dr.status + ' — ตรวจสอบว่าเปิด Directions API');
+                results.fail++;
+            }
+        } catch(e) {
+            setRow('directions', 'fail', (e.message || 'ล้มเหลว'));
+            results.fail++;
+        }
+
+        // 4) Distance Matrix API — via SDK
+        try {
+            var dm = new google.maps.DistanceMatrixService();
+            var dmr = await new Promise(function(resolve) {
+                dm.getDistanceMatrix({
+                    origins: [{ lat: 13.7563, lng: 100.5018 }],
+                    destinations: [{ lat: 13.7270, lng: 100.5237 }],
+                    travelMode: 'DRIVING'
+                }, function(res, status) { resolve({ res: res, status: status }); });
+            });
+            if (dmr.status === 'OK') {
+                var elem = dmr.res.rows && dmr.res.rows[0] && dmr.res.rows[0].elements && dmr.res.rows[0].elements[0];
+                var dur = elem && elem.duration && elem.duration.text;
+                setRow('distmatrix', 'ok', 'คำนวณระยะเวลาได้' + (dur ? ' · ETA ' + dur : ''));
+                results.ok++;
+            } else {
+                setRow('distmatrix', 'fail', 'Status: ' + dmr.status + ' — ตรวจสอบว่าเปิด Distance Matrix API');
+                results.fail++;
+            }
+        } catch(e) {
+            setRow('distmatrix', 'fail', (e.message || 'ล้มเหลว'));
+            results.fail++;
+        }
+
+        // 5) Geocoding API — via SDK
+        try {
+            var gc = new google.maps.Geocoder();
+            var gcr = await new Promise(function(resolve) {
+                gc.geocode({ location: { lat: 13.7563, lng: 100.5018 } }, function(res, status) { resolve({ res: res, status: status }); });
+            });
+            if (gcr.status === 'OK' && gcr.res && gcr.res.length) {
+                setRow('geocoding', 'ok', 'แปลงพิกัด → ที่อยู่สำเร็จ');
+                results.ok++;
+            } else if (gcr.status === 'ZERO_RESULTS') {
+                setRow('geocoding', 'warn', 'ZERO_RESULTS — API ทำงาน แต่ไม่พบที่อยู่');
+                results.warn++;
+            } else {
+                setRow('geocoding', 'fail', 'Status: ' + gcr.status + ' — ตรวจสอบว่าเปิด Geocoding API และ referrer');
+                results.fail++;
+            }
+        } catch(e) {
+            setRow('geocoding', 'fail', (e.message || 'ล้มเหลว'));
+            results.fail++;
+        }
+
+        // Summary
+        var total = 5;
+        var pct = Math.round(results.ok / total * 100);
+        var color = results.fail === 0 ? 'text-success' : (results.ok >= 3 ? 'text-warning' : 'text-danger');
+        sumEl.innerHTML = '<span class="' + color + ' fw-semibold">' +
+            '<i class="bi bi-info-circle me-1"></i>สรุป: ' +
+            results.ok + '/' + total + ' ผ่าน' +
+            (results.warn ? ' · ' + results.warn + ' warn' : '') +
+            (results.fail ? ' · ' + results.fail + ' ล้มเหลว' : '') +
+            ' (' + pct + '%)</span>';
     }
 
     async function loadGpsAdminData() {
