@@ -103,6 +103,7 @@
     padding: 3mm 4mm; border-radius: 2mm;
     overflow-x: auto; font-size: 9.5pt;
     font-family: 'Consolas', 'Courier New', monospace;
+    white-space: pre-wrap; word-break: break-all;
   }
   pre code { background: transparent; color: inherit; padding: 0; }
 
@@ -138,6 +139,9 @@
   .arch-node.target { border-color: #dc2626; background: #fef2f2; }
   .arch-arrow { font-size: 14pt; color: #64748b; }
 
+  .port-table td:nth-child(2) { font-weight: 600; color: #2563eb; }
+  .port-table td:nth-child(3) { font-weight: 600; color: #dc2626; }
+
   @media print {
     body { background: #fff; }
     .toolbar { display: none; }
@@ -157,232 +161,293 @@
 <div class="page">
 
   <div class="cover">
-    <div class="badge">SYNOLOGY DSM · v5.5</div>
-    <h1>Synology Reverse Proxy Setup</h1>
-    <div class="sub">คู่มือตั้งค่า NAS Synology เป็น HTTPS proxy สำหรับ CMSV6 GPS API</div>
+    <div class="badge">SYNOLOGY DSM + UNIFI · v5.6</div>
+    <h1>Synology Reverse Proxy<br>(Port-split approach)</h1>
+    <div class="sub">ตั้งค่า NAS Synology + UniFi ให้เป็น HTTPS proxy สำหรับ CMSV6 GPS API</div>
   </div>
 
-  <h2 id="s0"><span class="num">0</span>ภาพรวม</h2>
+  <h2 id="s0"><span class="num">0</span>ภาพรวม + เหตุผลที่ใช้ Port-split</h2>
+
   <p>
-    ปัญหา: PT Medical System ทำงานบน <b>HTTPS</b> (GitHub Pages) แต่ CMSV6 API เป็น <b>HTTP</b>
-    → Browser บล็อกด้วย Mixed Content Policy ต้องมี Proxy HTTPS → HTTP คั่น
+    <b>ปัญหา:</b> PT Medical System ทำงานบน HTTPS (GitHub Pages) แต่ CMSV6 API เป็น HTTP
+    → ต้องมี HTTPS proxy คั่น
   </p>
+
+  <p><b>ข้อจำกัดของ infrastructure:</b></p>
+  <ul>
+    <li>🔒 DSM Reverse Proxy ไม่มี <b>Path field</b> — แยก path เช่น <code>/cmsv6/</code> ไม่ได้</li>
+    <li>🔒 เพิ่ม subdomain ใหม่ไม่ได้ (ใช้ <code>staff.supwilai.com</code> เท่านั้น)</li>
+    <li>🔒 <code>staff.supwilai.com:443</code> ใช้กับ Web Station portal อยู่แล้ว ย้ายไม่ได้</li>
+  </ul>
+
+  <p><b>ทางออก: แยกโดย Port</b> — ใช้ port อื่น (เช่น <code>8443</code>) สำหรับ CMSV6 proxy</p>
 
   <div class="arch-flow">
     <div class="arch-node primary">📱<br>Web App<br><small>(HTTPS)</small></div>
     <span class="arch-arrow">→</span>
-    <div class="arch-node proxy">🏠<br>Synology NAS<br><small>staff.supwilai.com/cmsv6/</small></div>
+    <div class="arch-node proxy">🌐<br>UniFi<br><small>WAN :8443 Port Forward</small></div>
     <span class="arch-arrow">→</span>
-    <div class="arch-node target">🚗<br>CMSV6 API<br><small>(HTTP)</small></div>
+    <div class="arch-node proxy">🏠<br>Synology NAS<br><small>LAN :8443 Reverse Proxy</small></div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node target">🚗<br>CMSV6 API<br><small>203.170.193.90:80</small></div>
   </div>
 
-  <p>
-    Synology เป็น <b>primary</b> — ถ้า NAS down/timeout ระบบจะ fallback ไป Render → GAS อัตโนมัติ
-    (ตั้งค่าเรียบร้อยจากใน Admin > Settings > GPS)
-  </p>
+  <h3>Port Assignment</h3>
+  <table class="port-table">
+    <tr><th>URL</th><th>เข้าที่ไหน</th><th>ส่งต่อไปไหน</th></tr>
+    <tr>
+      <td><code>https://staff.supwilai.com</code></td>
+      <td>NAS :443 (Web Station)</td>
+      <td>Portal (คงเดิม)</td>
+    </tr>
+    <tr>
+      <td><code>https://staff.supwilai.com:8443</code></td>
+      <td>NAS :8443 (Reverse Proxy ใหม่)</td>
+      <td><code>http://203.170.193.90:80</code></td>
+    </tr>
+  </table>
 
   <div class="callout info">
-    <strong>ข้อดีของ Synology Proxy:</strong>
+    <strong>ข้อดี:</strong>
     <ul style="margin:1mm 0 0;">
-      <li>เร็วกว่า Render (ไม่มี cold-start)</li>
-      <li>ไม่มีข้อจำกัด request/วัน เหมือน GAS</li>
-      <li>อยู่ในเครือข่ายองค์กร — ลด latency</li>
-      <li>ควบคุม log/audit ได้เอง</li>
+      <li>ไม่ต้องแตะ Web Station portal เดิม</li>
+      <li>ไม่ต้องทำ cert ใหม่ (ใช้ <code>staff.supwilai.com</code> เดิมได้ทันที)</li>
+      <li>ไม่ต้องแก้ DNS</li>
+      <li>แยก rule ได้ชัด ปิด port 8443 ก็ปิดเฉพาะ proxy ได้</li>
     </ul>
   </div>
 
-  <h2 id="s1"><span class="num">1</span>ก่อนเริ่ม — สิ่งที่ต้องมี</h2>
-  <table>
-    <tr><th style="width:30%">รายการ</th><th>คำอธิบาย</th></tr>
-    <tr><td>Synology NAS</td><td>DSM 7.0 ขึ้นไป (มี Control Panel > Login Portal)</td></tr>
-    <tr><td>Domain + DDNS</td><td>เช่น <code>staff.supwilai.com</code> ชี้มาที่ IP NAS</td></tr>
-    <tr><td>SSL Certificate</td><td>Let's Encrypt ผ่าน DSM หรือ Wildcard cert (DSM > Security > Certificate)</td></tr>
-    <tr><td>Port Forwarding</td><td>Router → NAS port 443 (HTTPS)</td></tr>
-    <tr><td>CMSV6 URL</td><td>เช่น <code>http://203.170.193.90</code></td></tr>
-  </table>
+  <h2 id="s1"><span class="num">1</span>สรุปสิ่งที่ต้องทำ (5 ขั้น)</h2>
+  <ol>
+    <li>UniFi — เพิ่ม Port Forward: <code>WAN 8443</code> → <code>&lt;NAS LAN IP&gt;:8443</code></li>
+    <li>Synology DSM — สร้าง Reverse Proxy rule (source :8443 → dest CMSV6 HTTP :80)</li>
+    <li>Assign cert <code>staff.supwilai.com</code> ให้ rule ใหม่</li>
+    <li>เพิ่ม CORS headers ใน Custom Header tab</li>
+    <li>ตั้งค่า webapp: Admin > Settings > GPS > Synology URL = <code>https://staff.supwilai.com:8443</code></li>
+  </ol>
 
-  <h2 id="s2"><span class="num">2</span>ตั้งค่า Reverse Proxy บน DSM</h2>
+  <h2 id="s2"><span class="num">2</span>UniFi — Port Forward</h2>
 
   <div class="step-box">
-    <div class="step-title">Step 2.1 — เปิด Reverse Proxy</div>
+    <div class="step-title">Step 2.1 — เปิด Port Forward rule</div>
     <ol>
-      <li>เข้า DSM → <span class="kbd">Control Panel</span></li>
-      <li>ไปที่ <span class="kbd">Login Portal</span> → tab <span class="kbd">Advanced</span></li>
-      <li>คลิก <span class="kbd">Reverse Proxy</span></li>
-      <li>กด <span class="kbd">Create</span></li>
+      <li>เข้า UniFi Network Application</li>
+      <li><span class="kbd">Settings</span> → <span class="kbd">Firewall &amp; Security</span> → tab <span class="kbd">Port Forwarding</span></li>
+      <li>กด <span class="kbd">Create New Forward</span></li>
     </ol>
   </div>
 
   <div class="step-box">
-    <div class="step-title">Step 2.2 — กรอก Source + Destination</div>
+    <div class="step-title">Step 2.2 — กรอกค่า</div>
     <table>
-      <tr><th style="width:30%">ช่อง</th><th>ค่า</th></tr>
-      <tr><td colspan="2"><b style="color:#2563eb;">▸ Source (ที่รับ request)</b></td></tr>
+      <tr><th style="width:35%">ช่อง</th><th>ค่า</th></tr>
+      <tr><td>Name</td><td><code>CMSV6 Proxy (8443)</code></td></tr>
+      <tr><td>Forward Rule</td><td>Enabled</td></tr>
+      <tr><td>Interface</td><td>WAN (หรือชื่อ WAN ของคุณ)</td></tr>
+      <tr><td>From</td><td><code>Anywhere</code> (หรือจำกัด IP source ก็ได้)</td></tr>
+      <tr><td>Port</td><td><code>8443</code></td></tr>
+      <tr><td>Forward IP</td><td><b>&lt;LAN IP ของ Synology&gt;</b> — เช่น <code>192.168.1.10</code></td></tr>
+      <tr><td>Forward Port</td><td><code>8443</code></td></tr>
+      <tr><td>Protocol</td><td><code>TCP</code></td></tr>
+      <tr><td>Logging</td><td>☑️ Enable (แนะนำ — ดู log ได้ว่ามี traffic มั้ย)</td></tr>
+    </table>
+    <p><b>Save + Apply</b> → UniFi จะ provision firewall rule อัตโนมัติ</p>
+  </div>
+
+  <div class="callout warn">
+    <strong>⚠️ LAN IP ของ NAS ต้อง fix!</strong>
+    ถ้า NAS ใช้ DHCP แล้ว IP เปลี่ยน rule จะพัง
+    — ให้ไปตั้ง <span class="kbd">UniFi → Clients → Synology → Fixed IP</span> ก่อน
+  </div>
+
+  <h2 id="s3"><span class="num">3</span>Synology DSM — Reverse Proxy Rule</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 3.1 — เปิด Reverse Proxy GUI</div>
+    <ol>
+      <li>DSM → <span class="kbd">Control Panel</span></li>
+      <li><span class="kbd">Login Portal</span> → tab <span class="kbd">Advanced</span></li>
+      <li>กด <span class="kbd">Reverse Proxy</span> → <span class="kbd">Create</span></li>
+    </ol>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 3.2 — ตั้ง Source + Destination</div>
+    <table>
+      <tr><th style="width:35%">ช่อง</th><th>ค่า</th></tr>
+      <tr><td colspan="2"><b style="color:#2563eb;">▸ Source (ที่รับ request จาก browser)</b></td></tr>
       <tr><td>Description</td><td><code>CMSV6 GPS Proxy</code></td></tr>
       <tr><td>Protocol</td><td><code>HTTPS</code></td></tr>
       <tr><td>Hostname</td><td><code>staff.supwilai.com</code></td></tr>
-      <tr><td>Port</td><td><code>443</code></td></tr>
-      <tr><td>Enable HSTS</td><td>☑️ ติ๊ก (แนะนำ)</td></tr>
+      <tr><td>Port</td><td><code>8443</code> ← <b>สำคัญ</b></td></tr>
+      <tr><td>Enable HSTS</td><td>☑️ ติ๊ก</td></tr>
       <tr><td>Enable HTTP/2</td><td>☑️ ติ๊ก</td></tr>
-      <tr><td>Access control profile</td><td><code>Not configured</code> (หรือตั้ง IP whitelist ตามต้องการ)</td></tr>
-      <tr><td colspan="2"><b style="color:#dc2626;">▸ Destination (ที่ส่งต่อไป)</b></td></tr>
+      <tr><td>Access control profile</td><td><code>Not configured</code></td></tr>
+      <tr><td colspan="2"><b style="color:#dc2626;">▸ Destination (ส่งต่อไปที่ CMSV6)</b></td></tr>
       <tr><td>Protocol</td><td><code>HTTP</code></td></tr>
-      <tr><td>Hostname</td><td><code>203.170.193.90</code> (IP ของ CMSV6)</td></tr>
+      <tr><td>Hostname</td><td><code>203.170.193.90</code></td></tr>
       <tr><td>Port</td><td><code>80</code></td></tr>
     </table>
-    <div class="callout warn" style="margin-top:3mm;">
-      <strong>⚠️ Path mapping:</strong>
-      DSM Reverse Proxy จะส่งทุก path ที่ตามหลัง hostname ไปยัง destination
-      — นั่นหมายความว่า <code>staff.supwilai.com/StandardApiAction_login.action</code>
-      จะไปที่ <code>http://203.170.193.90/StandardApiAction_login.action</code>
-      <br><br>
-      <b>แต่ระบบ webapp คาดว่าเป็น</b> <code>staff.supwilai.com<b>/cmsv6/</b>StandardApiAction_login.action</code>
-      → ต้องใช้ <b>Custom Header + URL rewrite</b> ในขั้น 2.4
-    </div>
+    <p>กด <span class="kbd">Save</span></p>
   </div>
 
+  <h2 id="s4"><span class="num">4</span>Assign SSL Certificate</h2>
+
   <div class="step-box">
-    <div class="step-title">Step 2.3 — เพิ่ม Custom Headers (CORS + Cache)</div>
-    <p>หลังคลิก Create แล้วกดเข้าไปแก้รายการ → tab <span class="kbd">Custom Header</span></p>
-    <p>คลิก <span class="kbd">Create</span> → <span class="kbd">CORS</span> (DSM จะเติม header CORS พื้นฐานให้) → ติ๊กทุกข้อ</p>
-    <p>ถ้าอยากตั้งแบบละเอียดเอง ให้ <span class="kbd">Create</span> → <span class="kbd">Custom Header</span> แล้วเพิ่ม:</p>
+    <div class="step-title">Step 4.1 — แปะ cert staff.supwilai.com ให้ port 8443</div>
+    <p>
+      DSM จะใช้ cert <b>default</b> ถ้าไม่ได้ assign explicit — ซึ่งปกติก็ใช้ได้ถ้า cert ของคุณคือ
+      <code>staff.supwilai.com</code> (single domain) แต่ถ้าต้องการแน่ใจ:
+    </p>
+    <ol>
+      <li>Control Panel → <span class="kbd">Security</span> → tab <span class="kbd">Certificate</span></li>
+      <li>เลือก cert <code>staff.supwilai.com</code> (ที่มีอยู่แล้ว)</li>
+      <li>กด <span class="kbd">Settings</span> (ปุ่มมุมขวาบน)</li>
+      <li>หา service <code>staff.supwilai.com:8443</code> (DSM จะเพิ่มเข้าให้อัตโนมัติหลังสร้าง Reverse Proxy)</li>
+      <li>เลือก cert นี้ → <span class="kbd">OK</span></li>
+    </ol>
+  </div>
+
+  <div class="callout success">
+    <strong>💡 ถ้า cert เป็น Let's Encrypt</strong> DSM จะ auto-renew ให้ — ไม่ต้องทำอะไรเพิ่ม
+  </div>
+
+  <h2 id="s5"><span class="num">5</span>Custom Headers (CORS)</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 5.1 — เพิ่ม CORS headers</div>
+    <ol>
+      <li>เลือก Reverse Proxy rule ที่เพิ่งสร้าง → <span class="kbd">Edit</span></li>
+      <li>ไป tab <span class="kbd">Custom Header</span></li>
+      <li>กด <span class="kbd">Create</span> → <span class="kbd">CORS</span></li>
+      <li>DSM จะเพิ่ม CORS headers อัตโนมัติ — ติ๊ก ☑️ ทุกข้อ</li>
+    </ol>
+    <p>หรือถ้าต้องการตั้งละเอียดเอง ให้ <span class="kbd">Create</span> → <span class="kbd">Custom Header</span> แล้วเพิ่มทีละรายการ:</p>
     <table>
       <tr><th>Header Name</th><th>Value</th></tr>
-      <tr><td><code>Access-Control-Allow-Origin</code></td><td><code>https://supwilaimedical.github.io</code></td></tr>
+      <tr><td><code>Access-Control-Allow-Origin</code></td><td><code>*</code></td></tr>
       <tr><td><code>Access-Control-Allow-Methods</code></td><td><code>GET, POST, OPTIONS</code></td></tr>
-      <tr><td><code>Access-Control-Allow-Headers</code></td><td><code>Content-Type, Accept</code></td></tr>
+      <tr><td><code>Access-Control-Allow-Headers</code></td><td><code>Content-Type, Accept, Authorization</code></td></tr>
       <tr><td><code>Access-Control-Max-Age</code></td><td><code>86400</code></td></tr>
     </table>
     <div class="callout info" style="margin-top:3mm;">
-      <strong>💡 ถ้าใช้ 2 โดเมน</strong> (supwilai + officethegood) ให้ตั้ง
-      <code>Access-Control-Allow-Origin: *</code> แทน
-      — หรือใช้ logic ใน web Station ตรวจ referer ก่อน mirror กลับ
+      <strong>ทำไม <code>*</code>?</strong> — รองรับ 2 โดเมน (supwilaimedical + officethegood)
+      และ dev/preview environments ในอนาคต
+      <br>
+      <b>ปลอดภัยไหม?</b> CMSV6 ใช้ session token ใน URL อยู่แล้ว ไม่ใช่ cookie จาก origin
+      → CORS ไม่ใช่เกราะป้องกันหลัก — Rate limit + IP allowlist ใน UniFi คือเกราะจริง
     </div>
   </div>
 
+  <h2 id="s6"><span class="num">6</span>ทดสอบ</h2>
+
   <div class="step-box">
-    <div class="step-title">Step 2.4 — Path Rewrite (ถ้าอยากได้ /cmsv6/ prefix)</div>
-    <p>DSM GUI ไม่รองรับ path rewrite แต่ทางเลือกคือ:</p>
-    <h4>ทางเลือก A — ตั้ง Source เป็น path-level (แนะนำ)</h4>
-    <p>สร้าง Reverse Proxy entry แยก (ไม่ใช่ hostname level):</p>
+    <div class="step-title">Step 6.1 — ทดสอบจาก browser console</div>
+    <p>เปิด <code>https://supwilaimedical.github.io/pt-medical-system/</code> → กด F12 → tab Console → รัน:</p>
+<pre><code>fetch('https://staff.supwilai.com:8443/StandardApiAction_login.action?account=supwilai&password=1234')
+  .then(r =&gt; r.json())
+  .then(d =&gt; console.log('✅ Synology proxy OK:', d))
+  .catch(e =&gt; console.error('❌ Fail:', e));</code></pre>
     <table>
-      <tr><th>ช่อง</th><th>ค่า</th></tr>
-      <tr><td>Source Hostname</td><td><code>staff.supwilai.com</code></td></tr>
-      <tr><td>Source Port</td><td><code>443</code></td></tr>
-      <tr><td>Destination</td><td><code>http://203.170.193.90:80</code></td></tr>
+      <tr><th>Response</th><th>แก้ยังไง</th></tr>
+      <tr><td>✅ <code>{ result: 0, jsession: "..." }</code></td><td><b>ใช้งานได้เลย</b> — ไป Step 7</td></tr>
+      <tr><td>❌ CORS error</td><td>Custom Header ยังไม่ได้ตั้ง — ดู Step 5</td></tr>
+      <tr><td>❌ <code>net::ERR_CONNECTION_REFUSED</code></td><td>Port forward ไม่ทำงาน → เช็ค UniFi Step 2</td></tr>
+      <tr><td>❌ <code>net::ERR_CERT_*</code></td><td>Cert ไม่ตรง → ดู Step 4</td></tr>
+      <tr><td>❌ 502 Bad Gateway</td><td>NAS ไม่ถึง CMSV6 → SSH เข้า NAS แล้ว <code>curl -v http://203.170.193.90/</code></td></tr>
+      <tr><td>❌ <code>net::ERR_TIMED_OUT</code></td><td>Firewall WAN ปิด port 8443 → เช็ค ISP / router</td></tr>
     </table>
-    <p>แล้ว<b>ปรับ webapp ให้ไม่ใส่</b> <code>/cmsv6/</code> — เก็บ URL เป็น <code>https://staff.supwilai.com</code> เฉยๆ</p>
-
-    <h4>ทางเลือก B — ใช้ Web Station + nginx custom config</h4>
-    <p>ถ้าอยากแยก path <code>/cmsv6/</code> ให้ใช้ <b>Web Station</b> (หรือ Container Manager + nginx):</p>
-<pre><code># /volume1/web/nginx-cmsv6.conf (สร้างเพิ่มใน Web Station)
-location ^~ /cmsv6/ {
-    rewrite ^/cmsv6/(.*)$ /$1 break;
-    proxy_pass http://203.170.193.90:80;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-
-    # CORS
-    add_header Access-Control-Allow-Origin  "https://supwilaimedical.github.io" always;
-    add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
-    add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
-    if ($request_method = OPTIONS) { return 204; }
-}</code></pre>
-    <div class="callout warn">
-      ⚠️ ใน webapp จะตั้ง <code>GPS_PROXY_SYNOLOGY = https://staff.supwilai.com/cmsv6</code>
-      — ระบบจะ strip <code>http://203.170.193.90</code> ออกแล้ว append path ลงต่อท้าย
-      <br>เช่น <code>http://203.170.193.90/a/b?x=1</code>
-      → <code>https://staff.supwilai.com/cmsv6/a/b?x=1</code>
-    </div>
   </div>
 
-  <h2 id="s3"><span class="num">3</span>ทดสอบจาก Browser</h2>
-
-  <div class="step-box">
-    <div class="step-title">Step 3.1 — ทดสอบ CORS preflight</div>
-    <p>เปิด browser console (F12) แล้วรัน:</p>
-<pre><code>fetch('https://staff.supwilai.com/cmsv6/StandardApiAction_login.action?account=supwilai&password=1234')
-  .then(r => r.json())
-  .then(d => console.log('✅ OK:', d))
-  .catch(e => console.error('❌ Fail:', e));</code></pre>
-    <ul>
-      <li>✅ <b>ได้ JSON</b> → ใช้งานได้เลย</li>
-      <li>❌ <b>CORS error</b> → กลับไปเช็ค Step 2.3 (Custom Headers)</li>
-      <li>❌ <b>404 Not Found</b> → path rewrite ไม่ถูก ดู Step 2.4</li>
-      <li>❌ <b>502 Bad Gateway</b> → CMSV6 IP ไม่ reachable จาก NAS</li>
-      <li>❌ <b>SSL cert error</b> → ตั้ง cert ให้ <code>staff.supwilai.com</code> ใน DSM > Security > Certificate</li>
-    </ul>
-  </div>
-
-  <h2 id="s4"><span class="num">4</span>ตั้งค่าใน PT Medical System</h2>
+  <h2 id="s7"><span class="num">7</span>ตั้งค่าใน PT Medical System</h2>
 
   <ol>
     <li>Login เป็น Admin</li>
     <li>ไป <span class="kbd">Admin Settings</span> → tab <span class="kbd">ตั้งค่า</span></li>
-    <li>เลื่อนลงมาที่ <b>GPS Tracking</b></li>
-    <li>หัวข้อ <b>Synology Reverse Proxy</b> → กรอก URL เช่น <code>https://staff.supwilai.com/cmsv6</code></li>
-    <li>ระบบจะ auto-save + probe สถานะ → รอดูแถบ <b>Synology (1°)</b> เปลี่ยนเป็น <span style="color:#16a34a; font-weight:600;">✓ ทำงานปกติ</span></li>
-    <li>ถ้าอยากปิดใช้ Synology (กลับไปใช้ Render) กดปุ่ม <span class="kbd">×</span> ล้างค่า</li>
+    <li>เลื่อนลงมาที่ <b>GPS Tracking</b> → เปิดสวิตช์ <b>เปิดใช้งาน GPS Tracking</b></li>
+    <li>หัวข้อ <b>Synology Reverse Proxy</b> → กรอก:
+      <pre><code>https://staff.supwilai.com:8443</code></pre>
+    </li>
+    <li>ระบบจะ auto-save → probe สถานะทันที → แถบ <b>Synology (1°)</b> เปลี่ยนเป็น <span style="color:#16a34a; font-weight:600;">✓ ทำงานปกติ</span></li>
+    <li>ลองเปิด GPS page → ดู Network tab (F12) ว่า request ไปที่ <code>staff.supwilai.com:8443</code> (ไม่ใช่ Render)</li>
   </ol>
 
   <div class="callout success">
-    <strong>✓ ตรวจสอบว่าทำงานจริงที่ไหน?</strong>
-    <br>เปิด GPS page แล้วเปิด Console (F12) → ดู Network tab
-    ถ้า request ไปที่ <code>staff.supwilai.com/cmsv6/...</code> = ใช้ Synology
-    ถ้าไปที่ <code>gps-proxy-lpdq.onrender.com</code> = fallback ไป Render แล้ว
+    <strong>✅ Fallback อัตโนมัติ</strong>
+    ถ้า Synology down/timeout ระบบจะใช้ <b>Render</b> → <b>GAS</b> ต่ออัตโนมัติ (ผู้ใช้ไม่รู้สึก)
+    <br>ดูสถานะแบบ real-time ได้ที่ Admin > ตั้งค่า > GPS Tracking > Proxy Status
   </div>
 
-  <h2 id="s5"><span class="num">5</span>Troubleshooting</h2>
-  <table>
-    <tr><th style="width:35%">อาการ</th><th>สาเหตุ + แก้</th></tr>
-    <tr>
-      <td>❌ CORS error ใน console</td>
-      <td>Custom Header ยังไม่ตั้ง หรือ Origin ไม่ตรง → ดู Step 2.3</td>
-    </tr>
-    <tr>
-      <td>❌ 502 Bad Gateway</td>
-      <td>NAS ต่อ CMSV6 ไม่ได้ (firewall, routing) → ทดสอบ <code>curl -v http://203.170.193.90/</code> จาก SSH บน NAS</td>
-    </tr>
-    <tr>
-      <td>❌ SSL Handshake fail</td>
-      <td>Cert หมดอายุ หรือ hostname ไม่ตรง → DSM > Security > Certificate → ใส่ Let's Encrypt ใหม่</td>
-    </tr>
-    <tr>
-      <td>❌ 404 ทุก endpoint</td>
-      <td>Path rewrite ไม่ได้ทำ (Step 2.4) → ใช้ทางเลือก A หรือ B</td>
-    </tr>
-    <tr>
-      <td>⚠️ ช้าเกิน 5 วินาที</td>
-      <td>Internet ขาเข้า NAS ช้า → ระบบจะ fallback ไป Render อัตโนมัติ (ไม่ต้องแก้ไข)</td>
-    </tr>
-    <tr>
-      <td>⚠️ Webapp ยังใช้ Render อยู่</td>
-      <td>Settings ยังไม่ save หรือยังไม่ได้ refresh page → เข้า Admin > เช็ค field <b>Synology URL</b> ใส่ค่าไว้ไหม แล้ว refresh GPS page</td>
-    </tr>
-  </table>
+  <h2 id="s8"><span class="num">8</span>How it works (ภายใน)</h2>
+  <p>ดู <code>shared/gps-providers.js</code> → function <code>gpsFetch()</code></p>
 
-  <h2 id="s6"><span class="num">6</span>Security แนะนำ</h2>
+  <h3>Request transformation</h3>
+<pre><code>// URL ที่ app สร้าง (จาก provider.base_url ในฐานข้อมูล):
+http://203.170.193.90/StandardApiAction_login.action?account=xxx&password=xxx
+
+// gpsFetch() ทำการ:
+// 1. Strip scheme+host: http://203.170.193.90
+// 2. Prepend Synology URL: https://staff.supwilai.com:8443
+// 3. Final:
+https://staff.supwilai.com:8443/StandardApiAction_login.action?account=xxx&password=xxx
+
+// DSM Reverse Proxy รับแล้วส่งต่อ:
+// http://203.170.193.90:80/StandardApiAction_login.action?account=xxx&password=xxx
+// → CMSV6 ตอบ JSON → Synology ส่งกลับ → app อ่าน</code></pre>
+
+  <h3>Fallback chain</h3>
+<pre><code>Tier 1 (Primary):  Synology (path-rewrite, 5s timeout)
+       ↓ timeout/error/non-OK HTTP
+Tier 2 (Secondary): Render (?url=... query-param, 5s timeout)
+       ↓ timeout/error
+Tier 3 (Last):      GAS (?url=... query-param, no timeout)</code></pre>
+
+  <h2 id="s9"><span class="num">9</span>Security แนะนำ</h2>
   <ul>
-    <li>🔒 <b>Access Control Profile</b>: จำกัด IP ที่เรียกได้ เฉพาะ IP ของ GitHub Pages (dynamic — อาจต้อง allow all + rely on CORS)</li>
-    <li>🔒 <b>Rate limit</b>: ใช้ DSM > Security > Protection เปิด <b>Auto Block</b> + <b>Account Protection</b></li>
-    <li>🔒 <b>DoS Protection</b>: Control Panel > Security > Protection → ☑️ Enable DoS protection</li>
-    <li>🔒 <b>Log</b>: เปิด Log Center บันทึก request ไว้ตรวจย้อนหลัง</li>
-    <li>🔒 <b>HTTPS Only</b>: บังคับให้เข้า HTTPS เท่านั้น (redirect HTTP → HTTPS)</li>
-    <li>🔒 <b>Hide version</b>: DSM → Advanced → ปิด Server Header ที่เปิดเผย DSM version</li>
+    <li>🔒 <b>IP Allowlist ที่ UniFi</b>: จำกัดใครเข้า port 8443 ได้ (ถ้าเป็นไปได้)</li>
+    <li>🔒 <b>DSM Auto Block</b>: Control Panel → Security → Protection → ☑️ Auto Block (5 fails ใน 10 นาที → block 24hr)</li>
+    <li>🔒 <b>DSM DoS Protection</b>: ☑️ Enable DoS Protection</li>
+    <li>🔒 <b>Log Center</b>: เปิด log traffic port 8443 — ตรวจย้อนหลังได้</li>
+    <li>🔒 <b>Rate limit</b>: พิจารณาทำ rate limit ใน UniFi (CMSV6 ไม่มี rate limit ในตัว)</li>
+    <li>🔒 <b>ปิดเมื่อไม่ใช้</b>: ถ้าไม่ต้องการ GPS เลย disable rule + port forward</li>
   </ul>
 
-  <h2 id="s7"><span class="num">7</span>Monitoring</h2>
+  <h2 id="s10"><span class="num">10</span>Monitoring + Troubleshooting</h2>
   <p>ตรวจสถานะ Synology Proxy ได้ 2 ที่:</p>
   <ul>
     <li><b>Admin > ตั้งค่า > GPS Tracking > Proxy Status</b> — แสดง Synology (1°) พร้อม response time</li>
-    <li><b>Admin > ภาพรวม > System Health</b> — probe อัตโนมัติทุกครั้งที่เข้า tab (แสดงสถานะเขียว/เหลือง/แดง)</li>
+    <li><b>Admin > ภาพรวม > System Health</b> — probe อัตโนมัติเมื่อเปิดหน้า</li>
   </ul>
-  <p>ถ้า Synology down ระบบ fallback Render ได้เอง — ผู้ใช้ไม่รู้สึก</p>
+
+  <h3>Common issues</h3>
+  <table>
+    <tr><th style="width:35%">อาการ</th><th>สาเหตุ + แก้</th></tr>
+    <tr>
+      <td>Synology (1°) ขึ้น <b>✗ Unreachable</b></td>
+      <td>UniFi port forward ไม่ทำงาน หรือ NAS :8443 ปิด → SSH เข้า NAS แล้ว <code>netstat -tln | grep 8443</code></td>
+    </tr>
+    <tr>
+      <td>Synology (1°) ขึ้น <b>✗ HTTP 502</b></td>
+      <td>NAS ออก internet ไปหา CMSV6 ไม่ได้ → เช็ค WAN firewall ของ NAS</td>
+    </tr>
+    <tr>
+      <td>Synology (1°) ขึ้น <b>✗ HTTP 400</b></td>
+      <td>Request ไปถึง CMSV6 แต่ response ไม่ใช่ 200 (อาจ account/password ผิด) — ปกติทดสอบใช้ <code>supwilai / 1234</code></td>
+    </tr>
+    <tr>
+      <td>Network tab ยังยิงไป Render อยู่</td>
+      <td>ยังไม่ได้ save Synology URL หรือยังไม่ refresh page → F5 GPS page 1 รอบ</td>
+    </tr>
+    <tr>
+      <td>ทำงานเฉพาะ PC แต่ไม่ได้บนมือถือ</td>
+      <td>มือถือเชื่อม WiFi ในบ้านที่ block CMSV6 → ทดสอบ 4G/5G แทน</td>
+    </tr>
+  </table>
 
   <div class="callout info" style="margin-top:8mm;">
-    <strong>📞 ปัญหาที่แก้ไม่ตก?</strong>
-    <br>ดูรายละเอียด architecture ใน <a href="README-ITSupport.html">README-ITSupport.html</a>
-    หรือตรวจ proxy code ใน <code>shared/gps-providers.js</code> (function <code>gpsFetch</code>)
+    <strong>📞 ต้องการความช่วยเหลือเพิ่ม?</strong>
+    <br>ดู architecture overview ใน <a href="README-ITSupport.html">README-ITSupport.html</a>
+    หรือตรวจ proxy chain code ใน <code>shared/gps-providers.js</code> (function <code>gpsFetch</code>)
   </div>
 
 </div>

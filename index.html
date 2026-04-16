@@ -565,7 +565,7 @@
                     <div class="input-group input-group-sm mb-3">
                       <span class="input-group-text bg-light"><i class="bi bi-link-45deg"></i></span>
                       <input type="url" id="admin-gps-synology" class="form-control"
-                        placeholder="https://staff.yourdomain.com/cmsv6"
+                        placeholder="https://staff.supwilai.com:8443"
                         onchange="saveAdminSetting('GPS_PROXY_SYNOLOGY', this.value); if (typeof CONFIG !== 'undefined') CONFIG.GPS_PROXY_SYNOLOGY = this.value.trim(); checkProxyStatus();">
                       <button class="btn btn-outline-secondary" type="button"
                         onclick="document.getElementById('admin-gps-synology').value=''; saveAdminSetting('GPS_PROXY_SYNOLOGY', ''); if (typeof CONFIG !== 'undefined') CONFIG.GPS_PROXY_SYNOLOGY=''; checkProxyStatus();"
