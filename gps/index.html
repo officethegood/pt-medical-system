@@ -771,7 +771,10 @@
     // =============================================
     // MAP INIT
     // =============================================
-    var map = L.map('map').setView([15.87, 100.99], 6);
+    // Set maxZoom on map to avoid "Map has no maxZoom specified" errors from
+    // any plugin that calls map.getMaxZoom() before the async tile layer
+    // attaches (e.g. MarkerCluster). Matches the tile layer's maxZoom.
+    var map = L.map('map', { maxZoom: 19 }).setView([15.87, 100.99], 6);
     // Tile layer is attached asynchronously by MapConfig — uses Google Maps
     // (via GoogleMutant plugin) if Admin enabled it and provided API key,
     // otherwise falls back to CartoDB Light tiles.

@@ -876,7 +876,12 @@
       if (!dataToRender) dataToRender = loc_customers;
       var mapEl = document.getElementById('loc-map'); if (!mapEl) return;
       if (!loc_leafletMap) {
-        loc_leafletMap = L.map('loc-map').setView([15.7, 100.1], 10);
+        // IMPORTANT: set maxZoom on the map itself (not only on the tile
+        // layer) because L.markerClusterGroup() calls map.getMaxZoom()
+        // synchronously — and our tile layer is attached ASYNC via
+        // MapConfig. Without this, PC loads racing ahead throw:
+        //   "Map has no maxZoom specified"
+        loc_leafletMap = L.map('loc-map', { maxZoom: 19 }).setView([15.7, 100.1], 10);
         // Tile layer via MapConfig: uses Google Maps if Admin enabled it,
         // else falls back to OSM tiles.
         MapConfig.load(_supabase).then(function() {

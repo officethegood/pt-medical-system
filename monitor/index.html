@@ -2154,7 +2154,10 @@
         document.getElementById('gpsModal').addEventListener('shown.bs.modal', function initMap() {
             document.getElementById('gpsModal').removeEventListener('shown.bs.modal', initMap);
             if (!_gpsModalMap) {
-                _gpsModalMap = L.map('gps-modal-map').setView([15.87, 100.99], 6);
+                // maxZoom set here to match tile layer — some plugins call
+                // map.getMaxZoom() synchronously before the async tile
+                // layer attaches and throw "Map has no maxZoom specified".
+                _gpsModalMap = L.map('gps-modal-map', { maxZoom: 19 }).setView([15.87, 100.99], 6);
                 // Tile layer via MapConfig (Google Maps if Admin enabled + key, else CartoDB)
                 MapConfig.load(_supabase).then(function() { return MapConfig.createTileLayer(_gpsModalMap); });
             } else {
