@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Synology Reverse Proxy Setup — PT Medical System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: 'Sarabun', sans-serif;
+    color: #1e293b; background: #f1f5f9;
+    margin: 0; font-size: 11.5pt; line-height: 1.55;
+  }
+  .page {
+    max-width: 210mm; margin: 14mm auto;
+    background: #fff; padding: 18mm 16mm;
+    box-shadow: 0 4px 20px rgba(15,36,68,0.08);
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1e3a5f; color: #fff;
+    padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .toolbar h6 { margin: 0; font-weight: 700; font-size: 0.95rem; }
+  .btn-print {
+    background: #dc2626; color: #fff; border: none;
+    padding: 7px 16px; border-radius: 6px; font-weight: 600;
+    cursor: pointer; font-size: 0.85rem; font-family: inherit;
+  }
+  .btn-print:hover { background: #b91c1c; }
+
+  .cover {
+    text-align: center;
+    padding: 25mm 0 15mm;
+    border-bottom: 4px solid #dc2626;
+    margin-bottom: 10mm;
+  }
+  .cover .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    color: #fff; padding: 2mm 5mm; border-radius: 100px;
+    font-size: 10pt; font-weight: 600; margin-bottom: 8mm;
+  }
+  .cover h1 {
+    font-size: 26pt; font-weight: 800;
+    margin: 0 0 4mm; color: #1e3a5f; letter-spacing: -0.02em;
+  }
+  .cover .sub { font-size: 13pt; color: #64748b; font-weight: 500; }
+
+  h1, h2, h3, h4 { color: #1e3a5f; font-weight: 700; }
+  h2 {
+    font-size: 16pt; margin: 12mm 0 4mm;
+    padding-bottom: 2mm; border-bottom: 2px solid #dc2626;
+    display: flex; align-items: center; gap: 3mm;
+  }
+  h2 .num {
+    background: #1e3a5f; color: #fff;
+    width: 9mm; height: 9mm; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11pt; font-weight: 700;
+  }
+  h3 { font-size: 13pt; margin: 6mm 0 2mm; }
+  h4 { font-size: 11.5pt; margin: 4mm 0 1.5mm; color: #475569; }
+
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 7mm; }
+  li { margin-bottom: 1.5mm; }
+
+  .callout {
+    padding: 3mm 5mm; border-radius: 2mm;
+    margin: 3mm 0; font-size: 10.5pt;
+    border-left: 4px solid;
+  }
+  .callout.info    { background: #eff6ff; border-color: #2563eb; }
+  .callout.warn    { background: #fffbeb; border-color: #f59e0b; }
+  .callout.danger  { background: #fef2f2; border-color: #dc2626; }
+  .callout.success { background: #f0fdf4; border-color: #16a34a; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 2mm 0 4mm; font-size: 10pt;
+  }
+  th {
+    background: #1e3a5f; color: #fff;
+    padding: 2mm 3mm; text-align: left; font-weight: 600;
+  }
+  td {
+    border: 1px solid #e2e8f0;
+    padding: 2mm 3mm; vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  code {
+    background: #f1f5f9; padding: 0.5mm 1.5mm;
+    border-radius: 1mm; font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt; color: #dc2626;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0;
+    padding: 3mm 4mm; border-radius: 2mm;
+    overflow-x: auto; font-size: 9.5pt;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  .step-box {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 3mm; padding: 4mm 5mm; margin: 3mm 0;
+  }
+  .step-box .step-title {
+    font-weight: 700; color: #1e3a5f;
+    font-size: 11.5pt; margin-bottom: 2mm;
+  }
+  .kbd {
+    background: #334155; color: #fff;
+    padding: 0.5mm 2mm; border-radius: 1mm;
+    font-family: 'Consolas', monospace;
+    font-size: 9.5pt;
+  }
+
+  .arch-flow {
+    display: flex; align-items: center; gap: 3mm;
+    flex-wrap: wrap; justify-content: center;
+    padding: 5mm; background: #f8fafc;
+    border-radius: 3mm; margin: 4mm 0;
+  }
+  .arch-node {
+    background: #fff; border: 2px solid #2563eb;
+    padding: 3mm 5mm; border-radius: 3mm;
+    font-weight: 600; font-size: 10pt;
+    text-align: center;
+  }
+  .arch-node.primary { border-color: #16a34a; background: #f0fdf4; }
+  .arch-node.proxy { border-color: #f59e0b; background: #fffbeb; }
+  .arch-node.target { border-color: #dc2626; background: #fef2f2; }
+  .arch-arrow { font-size: 14pt; color: #64748b; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .page { box-shadow: none; margin: 0; max-width: 100%; padding: 10mm; }
+    h2 { page-break-after: avoid; }
+    .step-box, .callout, pre, table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h6>🏥 Synology Reverse Proxy Setup — PT Medical System</h6>
+  <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / Save as PDF</button>
+</div>
+
+<div class="page">
+
+  <div class="cover">
+    <div class="badge">SYNOLOGY DSM · v5.5</div>
+    <h1>Synology Reverse Proxy Setup</h1>
+    <div class="sub">คู่มือตั้งค่า NAS Synology เป็น HTTPS proxy สำหรับ CMSV6 GPS API</div>
+  </div>
+
+  <h2 id="s0"><span class="num">0</span>ภาพรวม</h2>
+  <p>
+    ปัญหา: PT Medical System ทำงานบน <b>HTTPS</b> (GitHub Pages) แต่ CMSV6 API เป็น <b>HTTP</b>
+    → Browser บล็อกด้วย Mixed Content Policy ต้องมี Proxy HTTPS → HTTP คั่น
+  </p>
+
+  <div class="arch-flow">
+    <div class="arch-node primary">📱<br>Web App<br><small>(HTTPS)</small></div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node proxy">🏠<br>Synology NAS<br><small>staff.supwilai.com/cmsv6/</small></div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node target">🚗<br>CMSV6 API<br><small>(HTTP)</small></div>
+  </div>
+
+  <p>
+    Synology เป็น <b>primary</b> — ถ้า NAS down/timeout ระบบจะ fallback ไป Render → GAS อัตโนมัติ
+    (ตั้งค่าเรียบร้อยจากใน Admin > Settings > GPS)
+  </p>
+
+  <div class="callout info">
+    <strong>ข้อดีของ Synology Proxy:</strong>
+    <ul style="margin:1mm 0 0;">
+      <li>เร็วกว่า Render (ไม่มี cold-start)</li>
+      <li>ไม่มีข้อจำกัด request/วัน เหมือน GAS</li>
+      <li>อยู่ในเครือข่ายองค์กร — ลด latency</li>
+      <li>ควบคุม log/audit ได้เอง</li>
+    </ul>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>ก่อนเริ่ม — สิ่งที่ต้องมี</h2>
+  <table>
+    <tr><th style="width:30%">รายการ</th><th>คำอธิบาย</th></tr>
+    <tr><td>Synology NAS</td><td>DSM 7.0 ขึ้นไป (มี Control Panel > Login Portal)</td></tr>
+    <tr><td>Domain + DDNS</td><td>เช่น <code>staff.supwilai.com</code> ชี้มาที่ IP NAS</td></tr>
+    <tr><td>SSL Certificate</td><td>Let's Encrypt ผ่าน DSM หรือ Wildcard cert (DSM > Security > Certificate)</td></tr>
+    <tr><td>Port Forwarding</td><td>Router → NAS port 443 (HTTPS)</td></tr>
+    <tr><td>CMSV6 URL</td><td>เช่น <code>http://203.170.193.90</code></td></tr>
+  </table>
+
+  <h2 id="s2"><span class="num">2</span>ตั้งค่า Reverse Proxy บน DSM</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 2.1 — เปิด Reverse Proxy</div>
+    <ol>
+      <li>เข้า DSM → <span class="kbd">Control Panel</span></li>
+      <li>ไปที่ <span class="kbd">Login Portal</span> → tab <span class="kbd">Advanced</span></li>
+      <li>คลิก <span class="kbd">Reverse Proxy</span></li>
+      <li>กด <span class="kbd">Create</span></li>
+    </ol>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 2.2 — กรอก Source + Destination</div>
+    <table>
+      <tr><th style="width:30%">ช่อง</th><th>ค่า</th></tr>
+      <tr><td colspan="2"><b style="color:#2563eb;">▸ Source (ที่รับ request)</b></td></tr>
+      <tr><td>Description</td><td><code>CMSV6 GPS Proxy</code></td></tr>
+      <tr><td>Protocol</td><td><code>HTTPS</code></td></tr>
+      <tr><td>Hostname</td><td><code>staff.supwilai.com</code></td></tr>
+      <tr><td>Port</td><td><code>443</code></td></tr>
+      <tr><td>Enable HSTS</td><td>☑️ ติ๊ก (แนะนำ)</td></tr>
+      <tr><td>Enable HTTP/2</td><td>☑️ ติ๊ก</td></tr>
+      <tr><td>Access control profile</td><td><code>Not configured</code> (หรือตั้ง IP whitelist ตามต้องการ)</td></tr>
+      <tr><td colspan="2"><b style="color:#dc2626;">▸ Destination (ที่ส่งต่อไป)</b></td></tr>
+      <tr><td>Protocol</td><td><code>HTTP</code></td></tr>
+      <tr><td>Hostname</td><td><code>203.170.193.90</code> (IP ของ CMSV6)</td></tr>
+      <tr><td>Port</td><td><code>80</code></td></tr>
+    </table>
+    <div class="callout warn" style="margin-top:3mm;">
+      <strong>⚠️ Path mapping:</strong>
+      DSM Reverse Proxy จะส่งทุก path ที่ตามหลัง hostname ไปยัง destination
+      — นั่นหมายความว่า <code>staff.supwilai.com/StandardApiAction_login.action</code>
+      จะไปที่ <code>http://203.170.193.90/StandardApiAction_login.action</code>
+      <br><br>
+      <b>แต่ระบบ webapp คาดว่าเป็น</b> <code>staff.supwilai.com<b>/cmsv6/</b>StandardApiAction_login.action</code>
+      → ต้องใช้ <b>Custom Header + URL rewrite</b> ในขั้น 2.4
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 2.3 — เพิ่ม Custom Headers (CORS + Cache)</div>
+    <p>หลังคลิก Create แล้วกดเข้าไปแก้รายการ → tab <span class="kbd">Custom Header</span></p>
+    <p>คลิก <span class="kbd">Create</span> → <span class="kbd">CORS</span> (DSM จะเติม header CORS พื้นฐานให้) → ติ๊กทุกข้อ</p>
+    <p>ถ้าอยากตั้งแบบละเอียดเอง ให้ <span class="kbd">Create</span> → <span class="kbd">Custom Header</span> แล้วเพิ่ม:</p>
+    <table>
+      <tr><th>Header Name</th><th>Value</th></tr>
+      <tr><td><code>Access-Control-Allow-Origin</code></td><td><code>https://supwilaimedical.github.io</code></td></tr>
+      <tr><td><code>Access-Control-Allow-Methods</code></td><td><code>GET, POST, OPTIONS</code></td></tr>
+      <tr><td><code>Access-Control-Allow-Headers</code></td><td><code>Content-Type, Accept</code></td></tr>
+      <tr><td><code>Access-Control-Max-Age</code></td><td><code>86400</code></td></tr>
+    </table>
+    <div class="callout info" style="margin-top:3mm;">
+      <strong>💡 ถ้าใช้ 2 โดเมน</strong> (supwilai + officethegood) ให้ตั้ง
+      <code>Access-Control-Allow-Origin: *</code> แทน
+      — หรือใช้ logic ใน web Station ตรวจ referer ก่อน mirror กลับ
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 2.4 — Path Rewrite (ถ้าอยากได้ /cmsv6/ prefix)</div>
+    <p>DSM GUI ไม่รองรับ path rewrite แต่ทางเลือกคือ:</p>
+    <h4>ทางเลือก A — ตั้ง Source เป็น path-level (แนะนำ)</h4>
+    <p>สร้าง Reverse Proxy entry แยก (ไม่ใช่ hostname level):</p>
+    <table>
+      <tr><th>ช่อง</th><th>ค่า</th></tr>
+      <tr><td>Source Hostname</td><td><code>staff.supwilai.com</code></td></tr>
+      <tr><td>Source Port</td><td><code>443</code></td></tr>
+      <tr><td>Destination</td><td><code>http://203.170.193.90:80</code></td></tr>
+    </table>
+    <p>แล้ว<b>ปรับ webapp ให้ไม่ใส่</b> <code>/cmsv6/</code> — เก็บ URL เป็น <code>https://staff.supwilai.com</code> เฉยๆ</p>
+
+    <h4>ทางเลือก B — ใช้ Web Station + nginx custom config</h4>
+    <p>ถ้าอยากแยก path <code>/cmsv6/</code> ให้ใช้ <b>Web Station</b> (หรือ Container Manager + nginx):</p>
+<pre><code># /volume1/web/nginx-cmsv6.conf (สร้างเพิ่มใน Web Station)
+location ^~ /cmsv6/ {
+    rewrite ^/cmsv6/(.*)$ /$1 break;
+    proxy_pass http://203.170.193.90:80;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+
+    # CORS
+    add_header Access-Control-Allow-Origin  "https://supwilaimedical.github.io" always;
+    add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
+    if ($request_method = OPTIONS) { return 204; }
+}</code></pre>
+    <div class="callout warn">
+      ⚠️ ใน webapp จะตั้ง <code>GPS_PROXY_SYNOLOGY = https://staff.supwilai.com/cmsv6</code>
+      — ระบบจะ strip <code>http://203.170.193.90</code> ออกแล้ว append path ลงต่อท้าย
+      <br>เช่น <code>http://203.170.193.90/a/b?x=1</code>
+      → <code>https://staff.supwilai.com/cmsv6/a/b?x=1</code>
+    </div>
+  </div>
+
+  <h2 id="s3"><span class="num">3</span>ทดสอบจาก Browser</h2>
+
+  <div class="step-box">
+    <div class="step-title">Step 3.1 — ทดสอบ CORS preflight</div>
+    <p>เปิด browser console (F12) แล้วรัน:</p>
+<pre><code>fetch('https://staff.supwilai.com/cmsv6/StandardApiAction_login.action?account=supwilai&password=1234')
+  .then(r => r.json())
+  .then(d => console.log('✅ OK:', d))
+  .catch(e => console.error('❌ Fail:', e));</code></pre>
+    <ul>
+      <li>✅ <b>ได้ JSON</b> → ใช้งานได้เลย</li>
+      <li>❌ <b>CORS error</b> → กลับไปเช็ค Step 2.3 (Custom Headers)</li>
+      <li>❌ <b>404 Not Found</b> → path rewrite ไม่ถูก ดู Step 2.4</li>
+      <li>❌ <b>502 Bad Gateway</b> → CMSV6 IP ไม่ reachable จาก NAS</li>
+      <li>❌ <b>SSL cert error</b> → ตั้ง cert ให้ <code>staff.supwilai.com</code> ใน DSM > Security > Certificate</li>
+    </ul>
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>ตั้งค่าใน PT Medical System</h2>
+
+  <ol>
+    <li>Login เป็น Admin</li>
+    <li>ไป <span class="kbd">Admin Settings</span> → tab <span class="kbd">ตั้งค่า</span></li>
+    <li>เลื่อนลงมาที่ <b>GPS Tracking</b></li>
+    <li>หัวข้อ <b>Synology Reverse Proxy</b> → กรอก URL เช่น <code>https://staff.supwilai.com/cmsv6</code></li>
+    <li>ระบบจะ auto-save + probe สถานะ → รอดูแถบ <b>Synology (1°)</b> เปลี่ยนเป็น <span style="color:#16a34a; font-weight:600;">✓ ทำงานปกติ</span></li>
+    <li>ถ้าอยากปิดใช้ Synology (กลับไปใช้ Render) กดปุ่ม <span class="kbd">×</span> ล้างค่า</li>
+  </ol>
+
+  <div class="callout success">
+    <strong>✓ ตรวจสอบว่าทำงานจริงที่ไหน?</strong>
+    <br>เปิด GPS page แล้วเปิด Console (F12) → ดู Network tab
+    ถ้า request ไปที่ <code>staff.supwilai.com/cmsv6/...</code> = ใช้ Synology
+    ถ้าไปที่ <code>gps-proxy-lpdq.onrender.com</code> = fallback ไป Render แล้ว
+  </div>
+
+  <h2 id="s5"><span class="num">5</span>Troubleshooting</h2>
+  <table>
+    <tr><th style="width:35%">อาการ</th><th>สาเหตุ + แก้</th></tr>
+    <tr>
+      <td>❌ CORS error ใน console</td>
+      <td>Custom Header ยังไม่ตั้ง หรือ Origin ไม่ตรง → ดู Step 2.3</td>
+    </tr>
+    <tr>
+      <td>❌ 502 Bad Gateway</td>
+      <td>NAS ต่อ CMSV6 ไม่ได้ (firewall, routing) → ทดสอบ <code>curl -v http://203.170.193.90/</code> จาก SSH บน NAS</td>
+    </tr>
+    <tr>
+      <td>❌ SSL Handshake fail</td>
+      <td>Cert หมดอายุ หรือ hostname ไม่ตรง → DSM > Security > Certificate → ใส่ Let's Encrypt ใหม่</td>
+    </tr>
+    <tr>
+      <td>❌ 404 ทุก endpoint</td>
+      <td>Path rewrite ไม่ได้ทำ (Step 2.4) → ใช้ทางเลือก A หรือ B</td>
+    </tr>
+    <tr>
+      <td>⚠️ ช้าเกิน 5 วินาที</td>
+      <td>Internet ขาเข้า NAS ช้า → ระบบจะ fallback ไป Render อัตโนมัติ (ไม่ต้องแก้ไข)</td>
+    </tr>
+    <tr>
+      <td>⚠️ Webapp ยังใช้ Render อยู่</td>
+      <td>Settings ยังไม่ save หรือยังไม่ได้ refresh page → เข้า Admin > เช็ค field <b>Synology URL</b> ใส่ค่าไว้ไหม แล้ว refresh GPS page</td>
+    </tr>
+  </table>
+
+  <h2 id="s6"><span class="num">6</span>Security แนะนำ</h2>
+  <ul>
+    <li>🔒 <b>Access Control Profile</b>: จำกัด IP ที่เรียกได้ เฉพาะ IP ของ GitHub Pages (dynamic — อาจต้อง allow all + rely on CORS)</li>
+    <li>🔒 <b>Rate limit</b>: ใช้ DSM > Security > Protection เปิด <b>Auto Block</b> + <b>Account Protection</b></li>
+    <li>🔒 <b>DoS Protection</b>: Control Panel > Security > Protection → ☑️ Enable DoS protection</li>
+    <li>🔒 <b>Log</b>: เปิด Log Center บันทึก request ไว้ตรวจย้อนหลัง</li>
+    <li>🔒 <b>HTTPS Only</b>: บังคับให้เข้า HTTPS เท่านั้น (redirect HTTP → HTTPS)</li>
+    <li>🔒 <b>Hide version</b>: DSM → Advanced → ปิด Server Header ที่เปิดเผย DSM version</li>
+  </ul>
+
+  <h2 id="s7"><span class="num">7</span>Monitoring</h2>
+  <p>ตรวจสถานะ Synology Proxy ได้ 2 ที่:</p>
+  <ul>
+    <li><b>Admin > ตั้งค่า > GPS Tracking > Proxy Status</b> — แสดง Synology (1°) พร้อม response time</li>
+    <li><b>Admin > ภาพรวม > System Health</b> — probe อัตโนมัติทุกครั้งที่เข้า tab (แสดงสถานะเขียว/เหลือง/แดง)</li>
+  </ul>
+  <p>ถ้า Synology down ระบบ fallback Render ได้เอง — ผู้ใช้ไม่รู้สึก</p>
+
+  <div class="callout info" style="margin-top:8mm;">
+    <strong>📞 ปัญหาที่แก้ไม่ตก?</strong>
+    <br>ดูรายละเอียด architecture ใน <a href="README-ITSupport.html">README-ITSupport.html</a>
+    หรือตรวจ proxy code ใน <code>shared/gps-providers.js</code> (function <code>gpsFetch</code>)
+  </div>
+
+</div>
+
+</body>
+</html>

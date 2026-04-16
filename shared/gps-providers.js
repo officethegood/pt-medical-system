@@ -3,36 +3,96 @@
 // รองรับหลาย GPS software (cmsv6, gpsone, ...)
 // =============================================
 
-// HTTPS Proxy — แก้ Mixed Content (HTTPS page → HTTP API)
-// ตั้งค่าใน CONFIG.GPS_PROXY_URL หรือปล่อยว่างถ้าไม่ต้องใช้
-async function gpsFetch(url) {
-  var proxyUrl = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_URL) ? CONFIG.GPS_PROXY_URL : '';
-  var fallbackUrl = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_FALLBACK) ? CONFIG.GPS_PROXY_FALLBACK : '';
-
-  if (proxyUrl && url.startsWith('http://')) {
-    // ลอง Render ก่อน (timeout 5 วินาที) → ถ้าช้า/fail สลับ GAS
-    try {
-      var controller = new AbortController();
-      var timer = setTimeout(function() { controller.abort(); }, 5000);
-      var finalUrl = proxyUrl + '?url=' + encodeURIComponent(url);
-      var resp = await fetch(finalUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      return await resp.json();
-    } catch(e) {
-      // Render ช้า/fail → fallback GAS
-      if (fallbackUrl) {
-        console.warn('GPS Proxy: Render timeout, switching to GAS fallback');
-        var finalUrl2 = fallbackUrl + '?url=' + encodeURIComponent(url);
-        var resp2 = await fetch(finalUrl2);
-        return await resp2.json();
-      }
-      throw e;
+// Load Synology proxy URL from Supabase settings (once per page, cached)
+// Call await gpsLoadProxyConfig(_supabase) before first gpsFetch() on GPS pages.
+var _gpsProxyConfigLoaded = false;
+async function gpsLoadProxyConfig(supabaseClient) {
+  if (_gpsProxyConfigLoaded) return;
+  if (!supabaseClient || typeof CONFIG === 'undefined') return;
+  try {
+    var r = await supabaseClient.from('settings')
+      .select('key, value')
+      .eq('key', 'GPS_PROXY_SYNOLOGY')
+      .maybeSingle();
+    if (r && r.data && r.data.value) {
+      CONFIG.GPS_PROXY_SYNOLOGY = String(r.data.value).trim();
     }
-  } else {
-    // เรียกตรง (localhost / HTTP page)
-    var resp = await fetch(url);
-    return await resp.json();
+    _gpsProxyConfigLoaded = true;
+  } catch(e) {
+    console.warn('gpsLoadProxyConfig:', e.message || e);
   }
+}
+
+// HTTPS Proxy — แก้ Mixed Content (HTTPS page → HTTP API)
+// Fallback chain: Synology (path-rewrite) → Render (?url=) → GAS (?url=)
+//
+// Synology setup: path-rewrite mode. ตั้ง Reverse Proxy บน DSM ให้
+//   https://staff.supwilai.com/cmsv6/<anything> → http://203.170.193.90/<anything>
+// ดู docs/SYNOLOGY_PROXY_SETUP.html สำหรับ step-by-step
+//
+// Runtime config:
+//   CONFIG.GPS_PROXY_SYNOLOGY (Supabase settings key: GPS_PROXY_SYNOLOGY) — primary
+//   CONFIG.GPS_PROXY_URL      — Render fallback (hard-coded in config.js)
+//   CONFIG.GPS_PROXY_FALLBACK — GAS fallback (hard-coded in config.js)
+
+async function gpsFetch(url) {
+  var synoUrl    = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_SYNOLOGY) ? CONFIG.GPS_PROXY_SYNOLOGY : '';
+  var renderUrl  = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_URL)      ? CONFIG.GPS_PROXY_URL      : '';
+  var gasUrl     = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_FALLBACK) ? CONFIG.GPS_PROXY_FALLBACK : '';
+
+  // HTTPS direct — no proxy needed
+  if (!url.startsWith('http://')) {
+    var r0 = await fetch(url);
+    return await r0.json();
+  }
+
+  // ===== Tier 1: Synology Reverse Proxy (path-rewrite) =====
+  if (synoUrl) {
+    try {
+      // strip scheme+host from original URL: http://203.170.193.90/a/b?c=1 → /a/b?c=1
+      var pathAndQuery = url.replace(/^https?:\/\/[^\/]+/, '');
+      var synoFinal = synoUrl.replace(/\/+$/, '') + pathAndQuery;
+      var c1 = new AbortController();
+      var t1 = setTimeout(function() { c1.abort(); }, 5000);
+      var r1 = await fetch(synoFinal, { signal: c1.signal, credentials: 'omit' });
+      clearTimeout(t1);
+      if (r1.ok) return await r1.json();
+      console.warn('GPS Proxy: Synology returned HTTP ' + r1.status + ', falling back to Render');
+    } catch(e1) {
+      console.warn('GPS Proxy: Synology fail (' + (e1.message || e1) + '), falling back to Render');
+    }
+  }
+
+  // ===== Tier 2: Render (query-param) =====
+  if (renderUrl) {
+    try {
+      var c2 = new AbortController();
+      var t2 = setTimeout(function() { c2.abort(); }, 5000);
+      var rFinal = renderUrl.replace(/\/+$/, '') + '/?url=' + encodeURIComponent(url);
+      var r2 = await fetch(rFinal, { signal: c2.signal });
+      clearTimeout(t2);
+      return await r2.json();
+    } catch(e2) {
+      console.warn('GPS Proxy: Render fail (' + (e2.message || e2) + '), falling back to GAS');
+      if (gasUrl) {
+        var gFinal = gasUrl + '?url=' + encodeURIComponent(url);
+        var r3 = await fetch(gFinal);
+        return await r3.json();
+      }
+      throw e2;
+    }
+  }
+
+  // ===== Tier 3: GAS only (if no Render configured) =====
+  if (gasUrl) {
+    var gFinal2 = gasUrl + '?url=' + encodeURIComponent(url);
+    var r4 = await fetch(gFinal2);
+    return await r4.json();
+  }
+
+  // Last resort: direct (will fail on HTTPS page due to Mixed Content)
+  var rDirect = await fetch(url);
+  return await rDirect.json();
 }
 
 const GPS_ADAPTERS = {

@@ -131,7 +131,7 @@
           <div class="text-center mt-5 pt-3 border-top" style="color:#94a3b8; font-size:0.8rem;">
               &copy; <span id="landing-footer-year">2026</span>
               <span id="landing-footer-company">PT-System</span> &middot; All rights reserved
-              &middot; <span id="landing-footer-version">v5.5</span>
+              &middot; <span id="landing-footer-version">v5.6</span>
           </div>
       </div>
   </div>
@@ -453,6 +453,9 @@
                     <a href="docs/MULTI_DEVICE_WORKFLOW.html" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill">
                       <i class="bi bi-phone-flip me-1"></i> Multi-Device Workflow
                     </a>
+                    <a href="docs/SYNOLOGY_PROXY_SETUP.html" target="_blank" class="btn btn-outline-info btn-sm rounded-pill">
+                      <i class="bi bi-hdd-rack me-1"></i> Synology Proxy Setup
+                    </a>
                   </div>
                 </div>
               </div>
@@ -550,14 +553,43 @@
                   <!-- GPS Config (ซ่อนเมื่อปิด) -->
                   <div id="admin-gps-config" style="display:none;">
 
+                    <!-- Synology Reverse Proxy (Primary) -->
+                    <h6 class="fw-bold text-secondary mt-2 mb-2">
+                      <i class="bi bi-hdd-rack me-1"></i> Synology Reverse Proxy
+                      <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Primary</span>
+                    </h6>
+                    <p class="text-muted small mb-2">
+                      ตั้งได้ตอน runtime — ถ้า NAS ใช้ได้ ระบบจะใช้ Synology เป็นหลัก ช้า/fail → fallback ไป Render → GAS
+                      <a href="docs/SYNOLOGY_PROXY_SETUP.html" target="_blank" class="text-decoration-none ms-1"><i class="bi bi-book"></i> ดูคู่มือ</a>
+                    </p>
+                    <div class="input-group input-group-sm mb-3">
+                      <span class="input-group-text bg-light"><i class="bi bi-link-45deg"></i></span>
+                      <input type="url" id="admin-gps-synology" class="form-control"
+                        placeholder="https://staff.yourdomain.com/cmsv6"
+                        onchange="saveAdminSetting('GPS_PROXY_SYNOLOGY', this.value); if (typeof CONFIG !== 'undefined') CONFIG.GPS_PROXY_SYNOLOGY = this.value.trim(); checkProxyStatus();">
+                      <button class="btn btn-outline-secondary" type="button"
+                        onclick="document.getElementById('admin-gps-synology').value=''; saveAdminSetting('GPS_PROXY_SYNOLOGY', ''); if (typeof CONFIG !== 'undefined') CONFIG.GPS_PROXY_SYNOLOGY=''; checkProxyStatus();"
+                        title="ล้าง (ปิดการใช้ Synology)">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+
                     <!-- Proxy Status -->
                     <h6 class="fw-bold text-secondary mt-2 mb-2"><i class="bi bi-shield-check me-1"></i> Proxy Status</h6>
                     <div class="d-flex gap-2 mb-3 flex-wrap" id="admin-proxy-status">
+                      <div class="border rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="min-width:200px;" id="proxy-syno-wrap">
+                        <span class="spinner-border spinner-border-sm text-muted" id="proxy-syno-spinner"></span>
+                        <span class="badge rounded-pill" id="proxy-syno-badge" style="display:none;">--</span>
+                        <div>
+                          <div class="small fw-bold">Synology <span class="text-primary">(1°)</span></div>
+                          <div class="text-muted" style="font-size:0.7rem;" id="proxy-syno-ms">กำลังตรวจสอบ...</div>
+                        </div>
+                      </div>
                       <div class="border rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="min-width:200px;">
                         <span class="spinner-border spinner-border-sm text-muted" id="proxy-render-spinner"></span>
                         <span class="badge rounded-pill" id="proxy-render-badge" style="display:none;">--</span>
                         <div>
-                          <div class="small fw-bold">Render</div>
+                          <div class="small fw-bold">Render <span class="text-secondary">(2°)</span></div>
                           <div class="text-muted" style="font-size:0.7rem;" id="proxy-render-ms">กำลังตรวจสอบ...</div>
                         </div>
                       </div>
@@ -565,7 +597,7 @@
                         <span class="spinner-border spinner-border-sm text-muted" id="proxy-gas-spinner"></span>
                         <span class="badge rounded-pill" id="proxy-gas-badge" style="display:none;">--</span>
                         <div>
-                          <div class="small fw-bold">GAS (Fallback)</div>
+                          <div class="small fw-bold">GAS <span class="text-secondary">(3°)</span></div>
                           <div class="text-muted" style="font-size:0.7rem;" id="proxy-gas-ms">กำลังตรวจสอบ...</div>
                         </div>
                       </div>
@@ -939,6 +971,11 @@
             // GPS settings
             document.getElementById('admin-gps-enabled').checked = settings['GPS_ENABLED'] === '1';
             toggleGpsConfig();
+            // Synology Reverse Proxy URL (runtime override)
+            var synoInput = document.getElementById('admin-gps-synology');
+            var synoVal = (settings['GPS_PROXY_SYNOLOGY'] || '').trim();
+            if (synoInput) synoInput.value = synoVal;
+            if (typeof CONFIG !== 'undefined') CONFIG.GPS_PROXY_SYNOLOGY = synoVal;
             if (settings['GPS_ENABLED'] === '1') {
                 loadGpsAdminData();
                 var gpsCard = document.getElementById('landing-gps-card');
@@ -1880,9 +1917,78 @@
     // --- Proxy Status Check ---
     async function checkProxyStatus() {
         var testUrl = 'http://203.170.193.90/StandardApiAction_login.action?account=supwilai&password=1234';
+        checkSynologyProxy(testUrl);
         checkOneProxy('render', CONFIG.GPS_PROXY_URL, testUrl);
         checkOneProxy('gas', CONFIG.GPS_PROXY_FALLBACK, testUrl);
         checkOcrProxy();
+    }
+
+    // Synology proxy uses path-rewrite mode instead of ?url=
+    async function checkSynologyProxy(testUrl) {
+        var spinner = document.getElementById('proxy-syno-spinner');
+        var badge = document.getElementById('proxy-syno-badge');
+        var msEl = document.getElementById('proxy-syno-ms');
+        if (!spinner || !badge || !msEl) return;
+
+        var base = (CONFIG && CONFIG.GPS_PROXY_SYNOLOGY) ? CONFIG.GPS_PROXY_SYNOLOGY.trim().replace(/\/+$/, '') : '';
+        if (!base) {
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            badge.textContent = '— Not configured';
+            badge.className = 'badge rounded-pill bg-secondary';
+            msEl.textContent = 'ยังไม่ได้ตั้งค่า (fallback ไป Render)';
+            msEl.style.color = '#6b7280';
+            return;
+        }
+
+        // Reset loading
+        spinner.style.display = '';
+        badge.style.display = 'none';
+        msEl.textContent = 'กำลังตรวจสอบ...';
+        msEl.style.color = '';
+
+        // Convert testUrl to Synology path-rewrite form
+        var pathAndQuery = testUrl.replace(/^https?:\/\/[^\/]+/, '');
+        var synoUrl = base + pathAndQuery;
+        var start = Date.now();
+        try {
+            var controller = new AbortController();
+            var timer = setTimeout(function() { controller.abort(); }, 5000);
+            var resp = await fetch(synoUrl, { method: 'GET', signal: controller.signal, credentials: 'omit' });
+            clearTimeout(timer);
+            var ms = Date.now() - start;
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            if (resp.ok) {
+                // Got proper JSON from CMSV6 (via path rewrite)
+                var ok2 = true;
+                try { var d = await resp.json(); ok2 = !!d; } catch(_){ ok2 = false; }
+                if (ok2) {
+                    badge.textContent = '✓ ทำงานปกติ';
+                    badge.className = 'badge rounded-pill bg-success';
+                    msEl.textContent = ms + ' ms · primary';
+                    msEl.style.color = ms < 500 ? '#16a34a' : ms < 2000 ? '#f59e0b' : '#dc2626';
+                } else {
+                    badge.textContent = '⚠ Body ว่าง';
+                    badge.className = 'badge rounded-pill bg-warning text-dark';
+                    msEl.textContent = 'HTTP ' + resp.status + ' แต่ body ไม่ใช่ JSON';
+                    msEl.style.color = '#dc2626';
+                }
+            } else {
+                badge.textContent = '✗ HTTP ' + resp.status;
+                badge.className = 'badge rounded-pill bg-danger';
+                msEl.textContent = 'ตรวจสอบ DSM Reverse Proxy / CORS (' + ms + ' ms)';
+                msEl.style.color = '#dc2626';
+            }
+        } catch(e) {
+            var ms2 = Date.now() - start;
+            spinner.style.display = 'none';
+            badge.style.display = '';
+            badge.textContent = '✗ Unreachable';
+            badge.className = 'badge rounded-pill bg-danger';
+            msEl.textContent = e.name === 'AbortError' ? 'Timeout (' + ms2 + ' ms)' : (e.message || 'Network error');
+            msEl.style.color = '#dc2626';
+        }
     }
 
     async function checkOcrProxy() {

@@ -317,6 +317,9 @@
                 if (s.key === 'PRINT_HEADER' && s.value) {
                     window.PRINT_HEADER = s.value;
                 }
+                if (s.key === 'GPS_PROXY_SYNOLOGY' && s.value && typeof CONFIG !== 'undefined') {
+                    CONFIG.GPS_PROXY_SYNOLOGY = String(s.value).trim();
+                }
                 if (s.key === 'GPS_ENABLED' && s.value === '1') {
                     var gpsBtn = document.getElementById('sys-tog-gps');
                     if (gpsBtn) gpsBtn.style.display = '';
