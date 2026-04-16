@@ -34,8 +34,19 @@
 
   var MapConfig = {
     _config: null,
+    _loaded: false,
+    _loadCallbacks: [],
     _sdkPromise: null,
     _mutantPromise: null,
+
+    /** Returns true once load() has resolved successfully. */
+    isLoaded: function() { return this._loaded; },
+
+    /** Register a callback to run when config finishes loading. Fires immediately if already loaded. */
+    onLoad: function(cb) {
+      if (this._loaded) { try { cb(this._config); } catch(e){} return; }
+      this._loadCallbacks.push(cb);
+    },
 
     /** Load settings from Supabase settings table. Call once per page. */
     async load(supabase) {
@@ -53,6 +64,11 @@
         console.warn('[MapConfig] Failed to load settings, using Leaflet defaults:', e);
         this._config = { provider: 'leaflet', apiKey: '', mapType: 'roadmap' };
       }
+      this._loaded = true;
+      var cbs = this._loadCallbacks.slice();
+      this._loadCallbacks = [];
+      var cfg = this._config;
+      cbs.forEach(function(cb) { try { cb(cfg); } catch(e){} });
       return this._config;
     },
 

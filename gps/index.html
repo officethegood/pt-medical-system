@@ -571,8 +571,11 @@
         <button class="map-ctrl-btn" onclick="fitAllMarkers()" title="ซูมดูทุกคัน">
           <i class="bi bi-arrows-fullscreen"></i><span class="d-none d-md-inline">ทั้งหมด</span>
         </button>
-        <button class="map-ctrl-btn" id="btnAutoRefresh" onclick="toggleAutoRefresh()" title="Auto refresh 5 วินาที">
+        <button class="map-ctrl-btn" id="btnAutoRefresh" onclick="toggleAutoRefresh()" title="Auto refresh 10 วินาที">
           <i class="bi bi-arrow-repeat"></i><span class="d-none d-md-inline">Auto</span> <span id="autoLabel" style="font-size:0.68rem;">OFF</span>
+        </button>
+        <button class="map-ctrl-btn" id="btnFindHospitals" onclick="openNearestHospitalsModal()" title="ค้นหา รพ./ปั้มน้ำมัน/สถานที่ ใกล้รถคันที่เลือก" style="display:none;">
+          <i class="bi bi-geo-alt-fill" style="color:#dc3545;"></i><span class="d-none d-md-inline">ค้นหาใกล้รถ</span>
         </button>
       </div>
 
@@ -648,12 +651,67 @@
     </div>
   </div>
 
+  <!-- ==================== NEARBY PLACES SEARCH MODAL ==================== -->
+  <div class="modal fade" id="hospitalsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content pro-modal">
+        <div class="modal-header">
+          <h6><i class="bi bi-geo-alt-fill" style="color:#dc3545;"></i> ค้นหาใกล้รถ</h6>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="hospitals-origin" style="padding:10px 14px; background:var(--navy-50); border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; font-size:0.85rem; color:var(--navy-900);">
+            <i class="bi bi-truck" style="color:var(--navy-700);"></i>
+            <span id="hospitals-origin-label">--</span>
+          </div>
+          <div class="mb-3">
+            <label class="field-label">ประเภทที่ค้นหา</label>
+            <div class="segmented-group" id="hospitals-type-group">
+              <button type="button" class="segmented-btn active" data-type="hospital"><i class="bi bi-hospital"></i> โรงพยาบาล</button>
+              <button type="button" class="segmented-btn" data-type="gas_station"><i class="bi bi-fuel-pump-fill"></i> ปั้มน้ำมัน</button>
+              <button type="button" class="segmented-btn" data-type="text"><i class="bi bi-search"></i> พิมพ์ค้นหา</button>
+            </div>
+            <input type="hidden" id="hospitals-type" value="hospital">
+          </div>
+          <div class="mb-3" id="hospitals-text-wrap" style="display:none;">
+            <label class="field-label">คำค้น</label>
+            <input type="text" id="hospitals-text-query" class="form-control" placeholder="เช่น ตำรวจ, 7-Eleven, ร้านอาหาร..." style="border-radius:8px;">
+            <small class="text-muted" style="font-size:0.72rem;">กด Enter หรือปุ่มค้นหาด้านล่าง</small>
+          </div>
+          <div class="mb-3">
+            <label class="field-label">รัศมีค้นหา</label>
+            <div class="segmented-group" id="hospitals-radius-group">
+              <button type="button" class="segmented-btn" data-r="2000">2 km</button>
+              <button type="button" class="segmented-btn active" data-r="5000">5 km</button>
+              <button type="button" class="segmented-btn" data-r="10000">10 km</button>
+              <button type="button" class="segmented-btn" data-r="25000">25 km</button>
+            </div>
+            <input type="hidden" id="hospitals-radius" value="5000">
+          </div>
+          <div id="hospitals-loading" style="text-align:center; padding:30px 0; display:none;">
+            <div class="spinner-border text-danger" role="status" style="width:2rem; height:2rem;"></div>
+            <div style="margin-top:10px; color:var(--slate-700); font-size:0.9rem;">กำลังค้นหา...</div>
+          </div>
+          <div id="hospitals-error" style="display:none; padding:12px; background:#fee2e2; border-left:3px solid #dc2626; border-radius:6px; color:#991b1b; font-size:0.85rem;"></div>
+          <div id="hospitals-list"></div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0">
+          <button class="btn btn-sm" data-bs-dismiss="modal" style="background:var(--slate-100); color:var(--slate-700); font-weight:600; padding:8px 18px; border-radius:7px;">ปิด</button>
+          <button class="btn btn-sm" id="btnRunSearch" onclick="runHospitalSearch()" style="background:var(--red-600); color:#fff; font-weight:600; padding:8px 18px; border-radius:7px;">
+            <i class="bi bi-search me-1"></i> ค้นหา
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== JAVASCRIPT ==================== -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../shared/config.js"></script>
   <script src="../shared/auth.js"></script>
   <script src="../shared/gps-providers.js"></script>
   <script src="../shared/map-config.js"></script>
+  <script src="../shared/places-api.js"></script>
   <script>
     // =============================================
     // SUPABASE INIT
@@ -762,6 +820,7 @@
 
       renderVehicleList();
       updateMapMarkers();
+      enrichVehicleAddresses();
 
       _lastRefreshAt = new Date();
       var now = _lastRefreshAt.toLocaleTimeString('th-TH');
@@ -883,6 +942,10 @@
         var statusLabel = !s ? 'OFFLINE' : (online ? (isIdle ? 'IDLE' : 'LIVE') : 'OFFLINE');
         var statusLabelClass = !s ? 'off' : (online ? (isIdle ? 'idle' : 'on') : 'off');
 
+        // Prefer cached reverse-geocoded Thai admin names if available
+        var geoLabel = getCachedGeoLabel(s && s.lat, s && s.lng);
+        if (geoLabel) addr = geoLabel;
+
         html += '<div class="v-card ' + statusClass + (_selectedKey === key ? ' active' : '') + '" onclick="focusVehicle(\'' + key + '\')">' +
           '<div class="v-top">' +
             '<div class="v-identity">' +
@@ -895,7 +958,7 @@
               '<div class="v-status-label ' + statusLabelClass + '">' + statusLabel + '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="v-address" title="' + esc(addr) + '"><i class="bi bi-geo-alt"></i><span>' + esc(addr) + '</span></div>' +
+          '<div class="v-address" title="' + esc(addr) + '" data-vkey="' + esc(key) + '"><i class="bi bi-geo-alt"></i><span>' + esc(addr) + '</span></div>' +
           '<div class="v-actions">' +
             '<button class="v-action action-cam" onclick="event.stopPropagation(); openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" title="เปิดกล้อง"><i class="bi bi-camera-video-fill"></i><span>กล้อง</span></button>' +
             '<button class="v-action" onclick="event.stopPropagation(); openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" title="HLS stream"><i class="bi bi-play-circle-fill"></i><span>Stream</span></button>' +
@@ -1007,6 +1070,7 @@
       var bounds = [];
       Object.keys(_markers).forEach(function(k) { bounds.push(_markers[k].getLatLng()); });
       if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      if (typeof updateHospitalButtonVisibility === 'function') updateHospitalButtonVisibility();
     }
 
     // =============================================
@@ -1025,6 +1089,8 @@
       var idx = _vehicles.findIndex(function(v) { return v.device_id + '_' + v.provider === key; });
       var cards = document.querySelectorAll('.v-card');
       if (cards[idx]) cards[idx].classList.add('active');
+      // Show the "ค้นหาใกล้รถ" button now that a vehicle is selected
+      if (typeof updateHospitalButtonVisibility === 'function') updateHospitalButtonVisibility();
     }
 
     // =============================================
@@ -1229,6 +1295,255 @@
     }
 
     // =============================================
+    // NEARBY PLACES SEARCH (Phase 3 — Places API)
+    // =============================================
+    var _hospitalMarkers = [];
+    var _hospitalOrigin = null; // {lat, lng, label}
+
+    // Button shows ONLY when: Google enabled + vehicle selected with valid position
+    function updateHospitalButtonVisibility() {
+      var btn = document.getElementById('btnFindHospitals');
+      if (!btn) return;
+      var canUse = window.MapConfig && MapConfig.useGoogle();
+      var vehiclePicked = false;
+      if (_selectedKey && _statuses[_selectedKey]) {
+        var s = _statuses[_selectedKey];
+        var lat = Number(s.lat), lng = Number(s.lng);
+        vehiclePicked = !isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0);
+      }
+      btn.style.display = (canUse && vehiclePicked) ? '' : 'none';
+    }
+
+    // Resolve origin from the currently selected vehicle (button is only visible
+    // when a vehicle is selected, so this should always succeed).
+    function resolveHospitalOrigin() {
+      if (_selectedKey && _statuses[_selectedKey]) {
+        var s = _statuses[_selectedKey];
+        var lat = Number(s.lat), lng = Number(s.lng);
+        if (!isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0)) {
+          var v = _vehicles.find(function(x){ return (x.device_id + '_' + x.provider) === _selectedKey; });
+          return {
+            lat: lat, lng: lng,
+            label: v ? ('รถ: ' + (v.nickname || v.device_name || v.device_id)) : 'รถที่เลือก'
+          };
+        }
+      }
+      return null;
+    }
+
+    // Geocode cache helper — returns Thai label if cached, else ''
+    function getCachedGeoLabel(lat, lng) {
+      if (!lat || !lng || !window.PlacesAPI) return '';
+      var cacheKey = Number(lat).toFixed(4) + ',' + Number(lng).toFixed(4);
+      var cached = PlacesAPI._geoCache && PlacesAPI._geoCache[cacheKey];
+      if (!cached) return '';
+      return PlacesAPI.formatThaiAddress(cached);
+    }
+
+    // Reverse-geocode all visible vehicle cards and update their address labels.
+    // Skips if Google Maps not enabled. Runs async; cached results are instant.
+    function enrichVehicleAddresses() {
+      if (!window.PlacesAPI || !window.MapConfig || !MapConfig.useGoogle()) return;
+      document.querySelectorAll('.v-address[data-vkey]').forEach(function(div) {
+        var key = div.getAttribute('data-vkey');
+        var s = _statuses[key];
+        if (!s || !s.lat || !s.lng || (s.lat === 0 && s.lng === 0)) return;
+        PlacesAPI.reverseGeocode(s.lat, s.lng).then(function(geo) {
+          var label = PlacesAPI.formatThaiAddress(geo);
+          if (!label) return;
+          var span = div.querySelector('span');
+          if (span) span.textContent = label;
+          div.title = label + ' • ' + Number(s.lat).toFixed(5) + ', ' + Number(s.lng).toFixed(5);
+        }).catch(function(){ /* silently skip on error */ });
+      });
+    }
+
+    async function openNearestHospitalsModal() {
+      if (!window.PlacesAPI) { alert('Places API not loaded'); return; }
+      if (!MapConfig.useGoogle() || !MapConfig.getConfig().apiKey) {
+        alert('ต้องตั้งค่า Google Maps API Key ใน Admin ก่อนใช้งาน');
+        return;
+      }
+      var origin = resolveHospitalOrigin();
+      if (!origin) {
+        alert('กรุณาเลือกรถก่อนค้นหา');
+        return;
+      }
+      clearHospitalMarkers();
+      _hospitalOrigin = origin;
+      document.getElementById('hospitals-origin-label').textContent = _hospitalOrigin.label
+        + ' (' + Number(_hospitalOrigin.lat).toFixed(5) + ', ' + Number(_hospitalOrigin.lng).toFixed(5) + ')';
+      document.getElementById('hospitals-list').innerHTML = '';
+      document.getElementById('hospitals-error').style.display = 'none';
+      // Reset to default type (hospital)
+      setSearchType('hospital');
+      var modal = new bootstrap.Modal(document.getElementById('hospitalsModal'));
+      modal.show();
+      await runHospitalSearch();
+    }
+
+    function setSearchType(type) {
+      document.getElementById('hospitals-type').value = type;
+      document.querySelectorAll('#hospitals-type-group .segmented-btn').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-type') === type);
+      });
+      var textWrap = document.getElementById('hospitals-text-wrap');
+      if (textWrap) textWrap.style.display = (type === 'text') ? '' : 'none';
+    }
+
+    async function runHospitalSearch() {
+      if (!_hospitalOrigin) return;
+      var radius = parseInt(document.getElementById('hospitals-radius').value, 10) || 5000;
+      var type = document.getElementById('hospitals-type').value || 'hospital';
+      var loading = document.getElementById('hospitals-loading');
+      var list = document.getElementById('hospitals-list');
+      var err = document.getElementById('hospitals-error');
+      loading.style.display = '';
+      list.innerHTML = '';
+      err.style.display = 'none';
+      try {
+        var results;
+        if (type === 'text') {
+          var q = (document.getElementById('hospitals-text-query').value || '').trim();
+          if (!q) {
+            loading.style.display = 'none';
+            err.innerHTML = 'กรุณาพิมพ์คำค้น';
+            err.style.display = '';
+            return;
+          }
+          results = await PlacesAPI.searchText({ query: q, lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng, radius: radius });
+        } else if (type === 'gas_station') {
+          results = await PlacesAPI.searchNearbyGasStations(_hospitalOrigin.lat, _hospitalOrigin.lng, radius);
+        } else {
+          results = await PlacesAPI.searchNearbyHospitals(_hospitalOrigin.lat, _hospitalOrigin.lng, radius);
+        }
+        loading.style.display = 'none';
+        renderHospitalList(results);
+      } catch (e) {
+        loading.style.display = 'none';
+        var msg = e.message || String(e);
+        // Friendly message for known errors
+        if (msg.indexOf('SERVICE_DISABLED') !== -1 || msg.indexOf('has not been used') !== -1) {
+          err.innerHTML = '<b><i class="bi bi-exclamation-triangle-fill"></i> Places API ยังไม่ได้เปิด</b><br>'
+                        + 'Admin กรุณาเปิด <b>Places API (New)</b> ที่ Google Cloud Console → APIs & Services → Library → ค้นหา "Places API (New)" → กด Enable<br>'
+                        + '<span style="font-size:0.72rem; color:#64748b;">(ถ้าเพิ่งเปิดให้รอ 1-2 นาทีแล้วลองอีกครั้ง)</span>';
+        } else if (msg.indexOf('403') !== -1) {
+          err.innerHTML = '<b><i class="bi bi-shield-exclamation"></i> API Key ถูกจำกัด</b><br>'
+                        + 'Key อาจไม่อนุญาตให้เรียก Places API หรือ Referrer restriction ไม่ตรง';
+        } else if (msg.indexOf('429') !== -1) {
+          err.innerHTML = '<b><i class="bi bi-hourglass-split"></i> เรียกบ่อยเกิน</b><br>ลองใหม่อีกครั้งในอีกครู่';
+        } else {
+          err.textContent = 'ค้นหาไม่สำเร็จ: ' + msg.substring(0, 200);
+        }
+        err.style.display = '';
+      }
+    }
+
+    function renderHospitalList(hospitals) {
+      var list = document.getElementById('hospitals-list');
+      if (!hospitals.length) {
+        list.innerHTML = '<div style="text-align:center; padding:30px 0; color:var(--slate-600);">ไม่พบโรงพยาบาลในรัศมีนี้</div>';
+        return;
+      }
+      var html = '';
+      hospitals.forEach(function(h, idx) {
+        var distText = PlacesAPI.formatDistance(h.distanceM);
+        var rating = h.rating ? ('<span style="color:#f59e0b;"><i class="bi bi-star-fill"></i> ' + h.rating.toFixed(1) + '</span> <span style="color:var(--slate-500); font-size:0.75rem;">(' + h.ratingCount + ')</span>') : '';
+        var phoneBtn = h.phone ? '<a href="tel:' + esc(h.phone) + '" class="btn btn-sm btn-outline-success rounded-pill" style="font-size:0.72rem;"><i class="bi bi-telephone-fill"></i> ' + esc(h.phone) + '</a>' : '';
+        var gmapBtn = h.googleMapsUri ? '<a href="' + esc(h.googleMapsUri) + '" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:0.72rem;"><i class="bi bi-map"></i> Google Maps</a>' : '';
+        html += ''
+          + '<div style="padding:12px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:#fff;">'
+          +   '<div style="display:flex; justify-content:space-between; align-items:start; gap:10px;">'
+          +     '<div style="flex:1; min-width:0;">'
+          +       '<div style="font-weight:700; color:var(--navy-900); font-size:0.95rem;">' + (idx+1) + '. ' + esc(h.name) + '</div>'
+          +       '<div style="color:var(--slate-600); font-size:0.78rem; margin-top:2px;">' + esc(h.address) + '</div>'
+          +       '<div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:0.8rem;">'
+          +         '<span style="font-weight:600; color:var(--red-600);"><i class="bi bi-signpost-split"></i> ' + distText + '</span>'
+          +         rating
+          +       '</div>'
+          +       '<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">'
+          +         '<button class="btn btn-sm btn-danger rounded-pill" style="font-size:0.72rem;" onclick="plotHospitalMarker(' + idx + ')"><i class="bi bi-geo-alt-fill"></i> แสดงบนแผนที่</button>'
+          +         phoneBtn + gmapBtn
+          +       '</div>'
+          +     '</div>'
+          +   '</div>'
+          + '</div>';
+      });
+      list.innerHTML = html;
+      window._hospitalsCache = hospitals;
+    }
+
+    function plotHospitalMarker(idx) {
+      var h = (window._hospitalsCache || [])[idx];
+      if (!h) return;
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="width:32px; height:32px; background:#dc2626; border:3px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 3px 10px rgba(220,38,38,0.5);">🏥</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      var marker = L.marker([h.lat, h.lng], { icon: icon }).addTo(map);
+      marker.bindPopup(
+        '<div style="min-width:200px; font-family:Sarabun,sans-serif;">'
+        + '<div style="font-weight:700; color:#0c1e3d; margin-bottom:4px;">' + esc(h.name) + '</div>'
+        + '<div style="font-size:0.8rem; color:#64748b; margin-bottom:6px;">' + esc(h.address) + '</div>'
+        + '<div style="font-size:0.78rem; color:#dc2626;"><b>ระยะทาง:</b> ' + PlacesAPI.formatDistance(h.distanceM) + '</div>'
+        + (h.phone ? '<div style="font-size:0.78rem; margin-top:3px;"><b>โทร:</b> <a href="tel:' + esc(h.phone) + '">' + esc(h.phone) + '</a></div>' : '')
+        + '</div>'
+      );
+      _hospitalMarkers.push(marker);
+      map.setView([h.lat, h.lng], 15);
+      marker.openPopup();
+      // Close modal so user can see the map
+      var modalEl = document.getElementById('hospitalsModal');
+      var modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    }
+
+    function clearHospitalMarkers() {
+      _hospitalMarkers.forEach(function(m) { map.removeLayer(m); });
+      _hospitalMarkers = [];
+    }
+
+    // Radius button wiring
+    document.addEventListener('click', function(ev) {
+      var btn = ev.target.closest('#hospitals-radius-group .segmented-btn');
+      if (!btn) return;
+      document.querySelectorAll('#hospitals-radius-group .segmented-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('hospitals-radius').value = btn.getAttribute('data-r');
+      if (_hospitalOrigin) runHospitalSearch();
+    });
+
+    // Search type tab wiring
+    document.addEventListener('click', function(ev) {
+      var btn = ev.target.closest('#hospitals-type-group .segmented-btn');
+      if (!btn) return;
+      var type = btn.getAttribute('data-type');
+      setSearchType(type);
+      if (type !== 'text' && _hospitalOrigin) runHospitalSearch();
+    });
+
+    // Text query Enter key
+    document.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'hospitals-text-query') {
+        ev.preventDefault();
+        runHospitalSearch();
+      }
+    });
+
+    // Clear hospital markers when modal closes (if user cancels without plotting)
+    document.addEventListener('DOMContentLoaded', function() {
+      var modalEl = document.getElementById('hospitalsModal');
+      if (modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', function() {
+          // Keep plotted markers — user may want to keep seeing them.
+          // Clear them only when modal is RE-OPENED (already done in openNearestHospitalsModal).
+        });
+      }
+    });
+
+    // =============================================
     // HELPERS
     // =============================================
     function esc(str) {
@@ -1242,6 +1557,10 @@
     // START
     // =============================================
     document.addEventListener('DOMContentLoaded', init);
+    // Wire up hospital button visibility once MapConfig finishes loading
+    if (window.MapConfig && typeof MapConfig.onLoad === 'function') {
+      MapConfig.onLoad(updateHospitalButtonVisibility);
+    }
   </script>
 
 </body>
