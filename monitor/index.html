@@ -2137,6 +2137,8 @@
     var _gpsNearbyMarkers = [];        // hospital/place markers + route lines
     var _gpsNearbyCache = [];          // last search results
     var _gpsNearbyOrigin = null;       // {lat, lng, label}
+    var _gpsNearbyAllResults = [];     // full set (up to 20)
+    var _gpsNearbyShowMoreAvailable = false;
 
     async function openGpsModal(vehicleName) {
         if (!window._gpsEnabled) return;
@@ -2311,18 +2313,20 @@
             if (type === 'text') {
                 var q = (document.getElementById('gps-nearby-text-query').value || '').trim();
                 if (!q) { loading.style.display = 'none'; err.innerHTML = 'กรุณาพิมพ์คำค้น'; err.style.display = ''; return; }
-                results = await PlacesAPI.searchText({ query: q, lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng, radius: radius, maxResults: 10 });
+                results = await PlacesAPI.searchText({ query: q, lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng, radius: radius, maxResults: 20 });
             } else {
                 var primaryTypes = type === 'clinic' ? ['doctor', 'dentist'] : [type];
                 results = await PlacesAPI.searchNearby({
                     lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng,
-                    radius: radius, primaryTypes: primaryTypes, maxResults: 10
+                    radius: radius, primaryTypes: primaryTypes, maxResults: 20
                 });
             }
-            if (results && results.length > 10) results = results.slice(0, 10);
+            _gpsNearbyAllResults = results || [];
+            var firstBatch = _gpsNearbyAllResults.slice(0, 10);
+            _gpsNearbyShowMoreAvailable = _gpsNearbyAllResults.length > 10;
             loading.style.display = 'none';
-            gpsModalRenderList(results);
-            gpsModalEnrichDistanceMatrix(results);
+            gpsModalRenderList(firstBatch);
+            gpsModalEnrichDistanceMatrix(firstBatch);
         } catch (e) {
             loading.style.display = 'none';
             var msg = e.message || String(e);
@@ -2368,21 +2372,41 @@
                 +   '</div>'
                 + '</div>';
         });
+        // "ค้นหาเพิ่ม" button when there are cached but undisplayed results
+        if (_gpsNearbyShowMoreAvailable && places.length < _gpsNearbyAllResults.length) {
+            var remaining = _gpsNearbyAllResults.length - places.length;
+            html += '<div class="text-center py-2">'
+                  + '<button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="gpsModalLoadMore()">'
+                  + '<i class="bi bi-plus-circle-fill"></i> ค้นหาเพิ่ม (อีก ' + remaining + ' รายการ)'
+                  + '</button></div>';
+        }
         list.innerHTML = html;
         _gpsNearbyCache = places;
     }
 
+    function gpsModalLoadMore() {
+        if (!_gpsNearbyAllResults || _gpsNearbyAllResults.length <= 10) return;
+        _gpsNearbyShowMoreAvailable = false;
+        var full = _gpsNearbyAllResults.slice();
+        gpsModalRenderList(full);
+        var needEnrich = full.filter(function(h){ return h.roadDurationSeconds == null; });
+        if (needEnrich.length) gpsModalEnrichDistanceMatrix(full);
+    }
+
     async function gpsModalEnrichDistanceMatrix(places) {
         if (!places || !places.length || !_gpsNearbyOrigin || !PlacesAPI.getDistanceMatrix) return;
+        // Skip places already enriched (e.g. after "ค้นหาเพิ่ม" we only want to enrich the new batch)
+        var toEnrich = places.filter(function(p){ return p.roadDurationSeconds == null; });
+        if (!toEnrich.length) return;
         var CHUNK = 25;
         var chunks = [];
-        for (var i = 0; i < places.length; i += CHUNK) chunks.push(places.slice(i, i + CHUNK));
+        for (var i = 0; i < toEnrich.length; i += CHUNK) chunks.push(toEnrich.slice(i, i + CHUNK));
         try {
             var results = await Promise.all(chunks.map(function(ch){
                 return PlacesAPI.getDistanceMatrix({ lat: _gpsNearbyOrigin.lat, lng: _gpsNearbyOrigin.lng }, ch);
             }));
             var flat = [].concat.apply([], results);
-            places.forEach(function(p, idx) {
+            toEnrich.forEach(function(p, idx) {
                 var m = flat[idx];
                 if (m && m.status === 'OK') {
                     p.roadDistance = m.distance;

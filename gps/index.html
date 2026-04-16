@@ -1356,6 +1356,8 @@
     // =============================================
     var _hospitalMarkers = [];
     var _hospitalOrigin = null; // {lat, lng, label}
+    var _hospitalAllResults = []; // full search (up to 20)
+    var _hospitalShowMoreAvailable = false;
 
     // Button shows ONLY when: Google enabled + vehicle selected with valid position
     function updateHospitalButtonVisibility() {
@@ -1487,8 +1489,8 @@
         } else {
           // Map UI type → Google primary type(s). Using includedPrimaryTypes
           // gives stricter results: place's PRIMARY category must match.
-          // Limited to top 10 for API cost control — dispatcher can widen
-          // radius or refine type if they need to see more.
+          // Fetch up to 20 but only display first 10 initially — dispatcher
+          // can click "ค้นหาเพิ่ม" to reveal the rest without a new API call.
           var primaryTypes;
           if (type === 'clinic') {
             primaryTypes = ['doctor', 'dentist'];
@@ -1501,15 +1503,16 @@
             lng: _hospitalOrigin.lng,
             radius: radius,
             primaryTypes: primaryTypes,
-            maxResults: 10
+            maxResults: 20
           });
         }
-        // Also cap text-search results to 10 for consistency + cost
-        if (type === 'text' && results && results.length > 10) results = results.slice(0, 10);
+        _hospitalAllResults = results || [];
+        var firstBatch = _hospitalAllResults.slice(0, 10);
+        _hospitalShowMoreAvailable = _hospitalAllResults.length > 10;
         loading.style.display = 'none';
-        renderHospitalList(results);
-        // Phase 4: enrich list with Distance Matrix road distance + ETA (non-blocking)
-        enrichWithDistanceMatrix(results);
+        renderHospitalList(firstBatch);
+        // Phase 4: enrich first batch with Distance Matrix road distance + ETA
+        enrichWithDistanceMatrix(firstBatch);
       } catch (e) {
         loading.style.display = 'none';
         var msg = e.message || String(e);
@@ -1581,8 +1584,31 @@
           +   '</div>'
           + '</div>';
       });
+      // "ค้นหาเพิ่ม" button — shown when there are cached but undisplayed results
+      if (_hospitalShowMoreAvailable && hospitals.length < _hospitalAllResults.length) {
+        var remaining = _hospitalAllResults.length - hospitals.length;
+        html += '<div style="text-align:center; padding:8px 0 4px;">'
+              + '<button class="btn btn-sm btn-outline-danger rounded-pill px-4" onclick="loadMoreHospitals()" style="font-weight:600;">'
+              + '<i class="bi bi-plus-circle-fill"></i> ค้นหาเพิ่ม (อีก ' + remaining + ' รายการ)'
+              + '</button></div>';
+      }
       list.innerHTML = html;
       window._hospitalsCache = hospitals;
+    }
+
+    /**
+     * Append the remaining results (11-20) below the initial 10,
+     * then enrich the new batch with Distance Matrix. No additional
+     * Places API call is made — we already fetched up to 20.
+     */
+    function loadMoreHospitals() {
+      if (!_hospitalAllResults || _hospitalAllResults.length <= 10) return;
+      _hospitalShowMoreAvailable = false; // one-shot
+      var full = _hospitalAllResults.slice();
+      renderHospitalList(full);
+      // Enrich just the new ones (those without road data yet)
+      var needEnrich = full.filter(function(h){ return h.roadDurationSeconds == null; });
+      if (needEnrich.length) enrichWithDistanceMatrix(full);
     }
 
     /**
@@ -1598,23 +1624,26 @@
       if (!places || !places.length || !_hospitalOrigin) return;
       if (!window.PlacesAPI || typeof PlacesAPI.getDistanceMatrix !== 'function') return;
 
+      // Only request matrix for places that don't already have road data
+      // (avoids wasted API calls when "ค้นหาเพิ่ม" is clicked).
+      var toEnrich = places.filter(function(p) { return p.roadDurationSeconds == null; });
+      if (!toEnrich.length) return;
+
       var CHUNK = 25; // Distance Matrix hard limit per request
       var chunks = [];
-      for (var i = 0; i < places.length; i += CHUNK) {
-        chunks.push(places.slice(i, i + CHUNK));
+      for (var i = 0; i < toEnrich.length; i += CHUNK) {
+        chunks.push(toEnrich.slice(i, i + CHUNK));
       }
 
       try {
-        // Fire all chunks in parallel
         var results = await Promise.all(chunks.map(function(ch) {
           return PlacesAPI.getDistanceMatrix(
             { lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng },
             ch
           );
         }));
-        // Flatten + merge matrix data into the corresponding places
         var flat = [].concat.apply([], results);
-        places.forEach(function(p, idx) {
+        toEnrich.forEach(function(p, idx) {
           var m = flat[idx];
           if (m && m.status === 'OK') {
             p.roadDistance = m.distance;
@@ -1623,7 +1652,7 @@
             p.roadDurationSeconds = m.durationSeconds;
           }
         });
-        // Sort entire list by ETA (places with no road data go last)
+        // Sort the FULL displayed list (places) by ETA
         var sorted = places.slice();
         sorted.sort(function(a, b) {
           var aSec = a.roadDurationSeconds != null ? a.roadDurationSeconds : Infinity;
@@ -1633,7 +1662,6 @@
         renderHospitalList(sorted);
       } catch (e) {
         var msg = String(e && e.message || e);
-        // Silent: keep the Haversine-sorted list on any failure.
         console.warn('[DistanceMatrix] enrichment failed, keeping straight-line sort:', msg);
       }
     }
