@@ -204,15 +204,29 @@
 
   <!-- COVER -->
   <div class="cover">
-    <div class="badge">IT Support Manual · v1.0</div>
+    <div class="badge">IT Support Manual · v5.5</div>
     <h1>PT Medical <span class="accent">System</span></h1>
     <div class="sub">คู่มือการติดตั้ง บำรุงรักษา และแก้ไขปัญหา สำหรับเจ้าหน้าที่ IT</div>
     <div class="meta">
-      <b>ระบบ:</b> PT Medical Transport + First Aid + GPS + Location<br>
-      <b>Stack:</b> HTML/JS · Supabase · Cloudinary · Google Apps Script · CMSV6<br>
+      <b>ระบบ:</b> PT Medical — Transport + First Aid + Location + GPS + Monitor<br>
+      <b>Stack:</b> HTML/JS · Supabase · Cloudinary · Google Apps Script · CMSV6 · Google Maps Platform<br>
       <b>Repo:</b> github.com/supwilaimedical/pt-medical-system<br>
-      <b>วันที่:</b> ปรับปรุงล่าสุด 2026-04-15
+      <b>Version:</b> 5.5 — ปรับปรุงล่าสุด 2026-04-17
     </div>
+  </div>
+
+  <!-- What's New in v5.5 -->
+  <div class="callout info" style="margin-top:8mm;">
+    <strong>🆕 What's new in v5.5 (Apr 2026):</strong>
+    <ul style="margin:2mm 0 0;">
+      <li><b>Admin Overview</b> ปรับปรุงใหม่ — ย้ายไปขวาสุด, ตั้งค่า เป็น default, มี "ฟีเจอร์เด่น", System Health เพิ่ม Google Maps probe</li>
+      <li><b>ปุ่ม "เช็ค API ทั้งหมด"</b> — ทดสอบ 5 Google APIs (Maps JS / Places New / Directions / Distance Matrix / Geocoding) พร้อมผลแยกแต่ละตัว</li>
+      <li><b>Landing Page mobile fix</b> — แก้ logo หายบนมือถือ + card ไม่เต็ม (เปลี่ยนจาก flex center เป็น wrap scroll)</li>
+      <li><b>24-hour time</b> — บังคับทุก <code>&lt;input type="time"&gt;</code> ใช้ 24 ชั่วโมง (lang="en-GB")</li>
+      <li><b>Phase 1-4 Maps</b>: ค้นหาสถานที่ใกล้สุด, Directions + ETA, Distance Matrix ranking, Overspeed ≥120 km/h</li>
+      <li><b>DNR Policy</b>: ภาพบัตร ปชช./Passport/เอกสารราชการ + ลายเซ็นพยาน (i18n 4 ภาษา)</li>
+      <li><b>Share Link</b>: admin ลบ token หมดอายุได้</li>
+    </ul>
   </div>
 
   <!-- TOC -->
@@ -245,27 +259,29 @@
     ทั้งบนคอม แท็บเล็ต และมือถือ
   </p>
   <div class="card-grid">
-    <div class="mini-card"><div class="title">🚑 Transport</div><div class="body">บันทึกเคสนำส่งผู้ป่วย V/S + IV + Consent 2 ขั้นตอน + พิมพ์ใบส่งตัว</div></div>
-    <div class="mini-card"><div class="title">🩹 First Aid</div><div class="body">อีเวนท์ปฐมพยาบาล ลงทะเบียนผู้บาดเจ็บ, triage 4 ระดับ</div></div>
-    <div class="mini-card"><div class="title">📡 GPS Tracking</div><div class="body">ตามรถ real-time + แชร์ลิงก์สาธารณะ + เปิดกล้อง DVR</div></div>
-    <div class="mini-card"><div class="title">📍 Location</div><div class="body">แผนที่โรงพยาบาล/สถานที่ พร้อม marker clustering</div></div>
-    <div class="mini-card"><div class="title">🖥️ Monitor</div><div class="body">Dashboard รวมสถานะ real-time สำหรับศูนย์สั่งการ</div></div>
-    <div class="mini-card"><div class="title">⚙️ Admin Panel</div><div class="body">ตั้งค่า + สถิติ + Activity Log + ภาพรวมระบบ</div></div>
+    <div class="mini-card"><div class="title">🚑 Transport</div><div class="body">บันทึกเคสนำส่งผู้ป่วย V/S 3 จุด (ต้นทาง/ระหว่างทาง/ปลายทาง) + IV + Consent + DNR (บัตร ปชช./Passport + ลายเซ็นพยาน) + พิมพ์ A4 + OCR</div></div>
+    <div class="mini-card"><div class="title">🩹 First Aid</div><div class="body">อีเวนท์ปฐมพยาบาล, Triage 4 ระดับ, V/S, Quick Dispense ยา, รายงานสรุป</div></div>
+    <div class="mini-card"><div class="title">📡 GPS Tracking</div><div class="body">ตามรถ real-time + แชร์ลิงก์ (admin ลบหมดอายุได้) + กล้อง + <b>ค้นหาสถานที่ใกล้สุด + ETA + เตือนความเร็ว ≥120 km/h</b></div></div>
+    <div class="mini-card"><div class="title">📍 Location</div><div class="body">ฐานข้อมูลตำแหน่ง + แผนที่ + marker cluster + mini-map ซ้อน modal + share link</div></div>
+    <div class="mini-card"><div class="title">🖥️ Monitor</div><div class="body">Dashboard รวมสถานะ real-time + ค้นหาสถานที่ใกล้สุดในแผนที่รถ</div></div>
+    <div class="mini-card"><div class="title">⚙️ Admin Panel</div><div class="body">ตั้งค่า, Map Provider (Leaflet/Google), <b>เช็ค API 5 ตัว</b>, สถิติ, Activity Log, ภาพรวม + version</div></div>
   </div>
 
   <h2 id="s2"><span class="num">2</span>Stack และส่วนประกอบ</h2>
   <table>
     <tr><th style="width:25%">หัวข้อ</th><th>บริการ / ไลบรารี</th><th>หมายเหตุ</th></tr>
-    <tr><td>Frontend</td><td>HTML + JS (Vanilla) + Bootstrap 5</td><td>ไม่ใช้ Build tool — เปิดไฟล์ .html รันได้เลย</td></tr>
+    <tr><td>Frontend</td><td>HTML + JS (Vanilla) + Bootstrap 5.3</td><td>ไม่ใช้ Build tool — เปิดไฟล์ .html รันได้เลย</td></tr>
     <tr><td>Database</td><td>Supabase PostgreSQL</td><td>rwxaalgvkzlsyfzdebcj.supabase.co</td></tr>
     <tr><td>Realtime</td><td>Supabase Realtime (Postgres changes)</td><td>Sync ข้ามอุปกรณ์</td></tr>
     <tr><td>Auth</td><td>Google Apps Script (HR API)</td><td>ไม่ใช้ Supabase Auth</td></tr>
-    <tr><td>File storage</td><td>Cloudinary (deimrg3xs)</td><td>รูป + PDF (ใบ Refer, Consent)</td></tr>
+    <tr><td>File storage</td><td>Cloudinary (deimrg3xs)</td><td>รูป + PDF (ใบ Refer, Consent, DNR, บัตร ปชช.)</td></tr>
     <tr><td>GPS API</td><td>CMSV6 / 808gps</td><td>ต้อง Proxy เพราะเป็น HTTP</td></tr>
     <tr><td>GPS Proxy</td><td>Render.com + Google Apps Script fallback</td><td>Timeout 5s → ใช้ fallback</td></tr>
     <tr><td>OCR</td><td>Gemini API via Cloudflare Worker</td><td>OCR บัตรประชาชน</td></tr>
-    <tr><td>Map</td><td>Leaflet 1.9.4 + MarkerCluster</td><td>Tile จาก CartoDB</td></tr>
+    <tr><td>Map (Leaflet)</td><td>Leaflet 1.9.4 + MarkerCluster</td><td>Default — ฟรี, Tile จาก OSM/CartoDB</td></tr>
+    <tr><td>Map (Google) <i>optional</i></td><td>Google Maps Platform — Maps JS, Places (New), Directions, Distance Matrix, Geocoding</td><td>เปิดใน Admin → ต้องใส่ API key (ต้องเปิดทั้ง 5 API + ตั้ง referrer)</td></tr>
     <tr><td>PDF</td><td>PDF.js 2.16.105</td><td>แสดงผล PDF ใน browser</td></tr>
+    <tr><td>Config file</td><td><code>shared/config.js</code></td><td><code>window.APP_VERSION</code> = "5.5" (อัพเดตทุก release)</td></tr>
   </table>
 
   <h2 id="s3"><span class="num">3</span>การเข้าถึง / Login</h2>

@@ -139,6 +139,10 @@ body {
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 
+/* Force 24-hour time format (en-GB locale on all type=time) */
+input[type="time"] { font-variant-numeric: tabular-nums; }
+/* Suppress AM/PM picker: Chromium uses host locale unless lang set; we set on each input */
+
 /* Thai text overflow fix */
 .text-truncate { padding-bottom: 0.15em; }
 .text-truncate-2 {
@@ -153,17 +157,22 @@ body {
 
 /* --- LANDING PAGE --- */
 #landing-page {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    min-height: 100vh; min-height: -webkit-fill-available;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: linear-gradient(135deg, #f0f2f5 0%, #e3eaf6 100%);
     z-index: 9998;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: center; justify-content: center;
-    overflow-y: auto; padding: 24px 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 24px 16px;
+    padding-top: calc(24px + env(safe-area-inset-top));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 .landing-wrapper {
     max-width: 780px; width: 100%;
+    margin: 0 auto;
+    min-height: 100%;
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    -webkit-justify-content: center; justify-content: center;
 }
 .landing-card {
     background: white;
@@ -189,6 +198,17 @@ body {
     -webkit-justify-content: center; justify-content: center;
     font-size: 1.8rem;
     margin-bottom: 16px;
+}
+
+/* --- LANDING PAGE: Mobile tweaks --- */
+@media (max-width: 575.98px) {
+    #landing-page { padding: 16px 12px; padding-top: calc(16px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+    .landing-card { padding: 20px 16px; border-radius: 16px; }
+    .landing-card-icon { width: 56px; height: 56px; font-size: 1.4rem; margin-bottom: 10px; }
+    .landing-card h5 { font-size: 1.05rem; margin-bottom: 0.2rem !important; }
+    .landing-card p { font-size: 0.82rem; }
+    #landing-logo { height: 48px !important; }
+    .landing-wrapper .row.g-4 { --bs-gutter-y: 0.75rem; --bs-gutter-x: 0.75rem; }
 }
 
 /* --- LOCATION: Public Share Screen --- */
@@ -325,6 +345,13 @@ body {
     margin-bottom: 20px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.04);
     border: 1px solid rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+.patient-banner .badge {
+    white-space: normal;
+    word-break: break-word;
+    text-align: left;
+    max-width: 100%;
 }
 
 /* Island Card (Form Sections) */

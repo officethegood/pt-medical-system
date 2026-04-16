@@ -1,16 +1,18 @@
-// PT Medical System — Configuration (Thegood)
+// PT Medical System — Configuration
+// APP_VERSION: bump on every significant update + add entry in memory/version.md
+window.APP_VERSION = '5.5';
+window.APP_VERSION_DATE = '2026-04-17';
 const CONFIG = {
-  SUPABASE_URL: 'https://bztzsjuwyduveaqjvjma.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_caWu7knCmMs_MJNRMbsyCg_dzzX93Sc',
-  CLOUDINARY_CLOUD_NAME: 'ddummbyql',
+  SUPABASE_URL: 'https://rwxaalgvkzlsyfzdebcj.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_5jmlKl7w2H_Qb4Yp1Y8gWA_-SMZfB0a',
+  CLOUDINARY_CLOUD_NAME: 'deimrg3xs',
   CLOUDINARY_UPLOAD_PRESET: 'pt-medical',
   BASE_URL: '/pt-medical-system',
-  GAS_AUTH_API_URL: 'https://script.google.com/macros/s/AKfycbxV5tbmeFx8SxEENtFgHNhZJfM26QocQX1bfqSzxxOPFd_CSiRCINGE2FfXuRAVF-IYGw/exec',
-  // GPS Proxy — ต้อง deploy Render ของ thegood เอง แล้วอัปเดต URL นี้
-  // GPS Proxy — ใช้ร่วมกับ supwilai ไปก่อน (thegood ยังไม่มี GPS devices)
+  GAS_AUTH_API_URL: 'https://script.google.com/macros/s/AKfycbybpea7XetHbLnibNWUHV_Mg9CpmIWzXR_5lCKzPWoWUAjPcy-wUVAgAP_dWd0Avf4jug/exec',
   GPS_PROXY_URL: 'https://gps-proxy-lpdq.onrender.com',
   GPS_PROXY_FALLBACK: 'https://script.google.com/macros/s/AKfycbxXbDS4vXO9v_q5bgyxv0WJeIR5CAr_6kZ-LrCINEFLFe1_VPV3Ls8geNv4jPT_FNPfNg/exec',
-  // OCR Proxy (Cloudflare Worker) — ใช้ร่วมกับ supwilai (key กลาง)
-  // ถ้าอยาก deploy ของ thegood เอง: see supwilai's cloudflare/README.md
+  // OCR Proxy (Cloudflare Worker) — ซ่อน Gemini API key จาก browser
+  // Deploy: see cloudflare/README.md
+  // ว่างไว้ = fallback ใช้ API key ใน localStorage ต่อเครื่อง
   OCR_PROXY_URL: 'https://gps-proxy.supwilai-ambulance.workers.dev'
 };
