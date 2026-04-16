@@ -24,8 +24,7 @@ const CONFIG = {
   GPS_PROXY_URL: '',
   GPS_PROXY_FALLBACK: '',
 
-  // ========== OCR PROXY (Cloudflare — ยังใช้ร่วมของ Supwilai ได้) ==========
-  // TheGood ใช้ OCR ต่อได้จริง เพราะ worker เป็นแค่ relay ไปหา Gemini
-  // ถ้าต้องการแยก → deploy CF Worker ใหม่ แล้วเปลี่ยน URL
-  OCR_PROXY_URL: 'https://gps-proxy.supwilai-ambulance.workers.dev'
+  // ========== OCR PROXY (TheGood own Cloudflare Worker) ==========
+  // Deployed via cloudflare/ folder — see docs/THEGOOD_OCR_WORKER_SETUP.html
+  OCR_PROXY_URL: 'https://thegood-ocr-proxy.officethegood.workers.dev'
 };
