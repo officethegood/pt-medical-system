@@ -4413,12 +4413,15 @@
           <input type="password" id="ocr-apikey-input" class="form-control form-control-sm" placeholder="AIzaSy..." autocomplete="off">
           <div class="form-text small">เก็บไว้ใน browser ของเครื่องนี้เท่านั้น (localStorage)</div>
 
-          <label class="form-label fw-semibold small mt-3">Model (แนะนำ 2.5 Pro สำหรับภาษาไทย)</label>
+          <label class="form-label fw-semibold small mt-3">Model</label>
           <select id="ocr-model-select" class="form-select form-select-sm">
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro (แนะนำ — ไทยแม่น)</option>
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash (เร็วกว่า)</option>
-            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (แนะนำ — เร็ว + free tier 10 RPM)</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (เบาสุด)</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (แม่นสุด แต่ free tier 5 RPM — เสี่ยง 429)</option>
           </select>
+          <div class="form-text small text-muted">
+            Free tier: Flash = 10 req/นาที, Pro = 5 req/นาที · ถ่ายบัตรครั้งละยิง 3 request (หน้า/หลัง/ใบหน้า) → แนะนำ Flash
+          </div>
 
           <div class="d-flex gap-2 mt-3">
             <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="closeIdCardScanner()">ยกเลิก</button>
@@ -4513,6 +4516,21 @@
     var OCR_PDPA_KEY = 'ocr_pdpa_accepted_v1';
     var OCR_APIKEY = 'ocr_gemini_api_key';
     var OCR_MODEL = 'ocr_gemini_model';
+
+    // One-time migration: old default was 'gemini-2.5-pro' which hits free-tier
+    // rate limit (5 RPM) when OCRing 3 images in parallel. Reset to Flash (10 RPM)
+    // for anyone who still has the old default saved. Run once per browser.
+    (function migrateOCRModel() {
+      try {
+        var MIGRATION_KEY = 'ocr_model_migrated_v2';
+        if (localStorage.getItem(MIGRATION_KEY)) return;
+        var saved = localStorage.getItem(OCR_MODEL);
+        if (saved === 'gemini-2.5-pro') {
+          localStorage.setItem(OCR_MODEL, 'gemini-2.5-flash');
+        }
+        localStorage.setItem(MIGRATION_KEY, '1');
+      } catch (_) {}
+    })();
 
     function openIdCardScanner(mode) {
       _ocrTargetMode = mode || 'desktop';
@@ -4735,7 +4753,7 @@
     function resetApiKey() {
       if (!confirm('ต้องการตั้งค่า API key ใหม่ใช่หรือไม่?')) return;
       document.getElementById('ocr-apikey-input').value = localStorage.getItem(OCR_APIKEY) || '';
-      document.getElementById('ocr-model-select').value = localStorage.getItem(OCR_MODEL) || 'gemini-2.5-pro';
+      document.getElementById('ocr-model-select').value = localStorage.getItem(OCR_MODEL) || 'gemini-2.5-flash';
       showOCRStep('apikey');
     }
 
@@ -4835,7 +4853,7 @@
     async function extractIdCardData() {
       var proxyUrl = getOCRProxyUrl();
       var apiKey = localStorage.getItem(OCR_APIKEY);
-      var model = localStorage.getItem(OCR_MODEL) || 'gemini-2.5-pro';
+      var model = localStorage.getItem(OCR_MODEL) || 'gemini-2.5-flash';
       // Only require API key if proxy is not configured
       if (!proxyUrl && !apiKey) { showOCRStep('apikey'); return; }
       if (!_ocrImageBase64) { setOCRStatus('กรุณาเลือกรูปก่อน', 'error'); return; }
@@ -4879,10 +4897,21 @@
         try {
           parsed = await callGeminiOCR(model, apiKey, body);
         } catch (e) {
-          // Auto-fallback: if Pro is overloaded (503), try Flash once
-          if (e.status === 503 && model === 'gemini-2.5-pro') {
-            setOCRStatus('⚠ 2.5 Pro โหลดเต็ม — กำลังสลับไปใช้ 2.5 Flash (ไทยอาจเพี้ยน ตรวจสอบก่อนบันทึก)...', 'info');
-            parsed = await callGeminiOCR('gemini-2.5-flash', apiKey, body);
+          // Auto-fallback chain:
+          //   Pro (503/429) → Flash (503/429) → Flash-Lite
+          if ((e.status === 503 || e.status === 429) && model === 'gemini-2.5-pro') {
+            setOCRStatus('⚠ 2.5 Pro ติด rate limit — สลับไป 2.5 Flash...', 'info');
+            try {
+              parsed = await callGeminiOCR('gemini-2.5-flash', apiKey, body);
+            } catch (e2) {
+              if (e2.status === 503 || e2.status === 429) {
+                setOCRStatus('⚠ 2.5 Flash ติดด้วย — สลับไป Flash Lite...', 'info');
+                parsed = await callGeminiOCR('gemini-2.5-flash-lite', apiKey, body);
+              } else throw e2;
+            }
+          } else if ((e.status === 503 || e.status === 429) && model === 'gemini-2.5-flash') {
+            setOCRStatus('⚠ 2.5 Flash ติด rate limit — สลับไป Flash Lite...', 'info');
+            parsed = await callGeminiOCR('gemini-2.5-flash-lite', apiKey, body);
           } else {
             throw e;
           }
