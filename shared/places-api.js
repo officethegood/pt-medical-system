@@ -88,7 +88,6 @@
       if (!apiKey) throw new Error('No Google Maps API key configured');
 
       var body = {
-        includedTypes: opts.types || ['hospital'],
         maxResultCount: Math.min(opts.maxResults || 20, 20),
         locationRestriction: {
           circle: {
@@ -99,6 +98,13 @@
         languageCode: opts.languageCode || 'th',
         rankPreference: opts.rankPreference || 'DISTANCE'
       };
+      // Prefer primaryTypes (strict match on place's PRIMARY type)
+      // over types (matches ANY tagged type, may include bycatch).
+      if (opts.primaryTypes && opts.primaryTypes.length) {
+        body.includedPrimaryTypes = opts.primaryTypes;
+      } else {
+        body.includedTypes = opts.types || ['hospital'];
+      }
 
       var res = await fetch(PLACES_ENDPOINT, {
         method: 'POST',
@@ -198,36 +204,54 @@
 
     _geoCache: {},
     _geoInflight: {}, // pending promises per cacheKey
+    _geoCooldownUntil: 0, // Unix ms — skip geocoding until this time
 
     /**
      * Reverse geocode lat/lng → Thai administrative names.
      * Uses google.maps.Geocoder from Maps JS SDK (works with referrer-restricted
      * keys, unlike the REST Geocoding API which requires IP restrictions).
-     * Results cached per (lat,lng) rounded to 4 decimals (~11 m).
-     * Returns {subdistrict, district, province, formatted} (all strings;
-     * empty strings if Google couldn't resolve).
+     *
+     * Resilience features:
+     * - Cache key rounded to 3 decimals (~111 m grid) — vehicles at rest hit cache.
+     * - In-flight dedup: same coord in progress → returns the same Promise.
+     * - Cooldown: on REQUEST_DENIED / OVER_QUERY_LIMIT → pause geocoding for 60s
+     *   so console isn't spammed during API-propagation windows.
+     * - Always resolves (never rejects). Empty result on any failure.
      */
     reverseGeocode: function(lat, lng) {
-      if (!window.MapConfig) return Promise.reject(new Error('MapConfig not loaded'));
-      if (lat == null || lng == null) return Promise.reject(new Error('lat/lng required'));
+      var empty = { subdistrict: '', district: '', province: '', formatted: '' };
+      if (!window.MapConfig) return Promise.resolve(empty);
+      if (lat == null || lng == null) return Promise.resolve(empty);
 
-      var cacheKey = Number(lat).toFixed(4) + ',' + Number(lng).toFixed(4);
+      // Cooldown after a permanent-ish error
+      if (Date.now() < this._geoCooldownUntil) return Promise.resolve(empty);
+
+      var cacheKey = Number(lat).toFixed(3) + ',' + Number(lng).toFixed(3);
       if (this._geoCache[cacheKey]) return Promise.resolve(this._geoCache[cacheKey]);
       if (this._geoInflight[cacheKey]) return this._geoInflight[cacheKey];
 
       var self = this;
       var p = MapConfig.loadGoogleSDK().then(function() {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function(resolve) {
           var geocoder = new google.maps.Geocoder();
           geocoder.geocode({
             location: { lat: Number(lat), lng: Number(lng) },
             language: 'th'
           }, function(results, status) {
+            delete self._geoInflight[cacheKey];
+
             if (status !== 'OK' || !results || !results.length) {
-              var empty = { subdistrict: '', district: '', province: '', formatted: '' };
-              self._geoCache[cacheKey] = empty;
-              delete self._geoInflight[cacheKey];
-              resolve(empty); // don't reject — callers can just check for empty
+              // Transient / permanent error — apply cooldown if looks permanent
+              if (status === 'REQUEST_DENIED' || status === 'OVER_QUERY_LIMIT' ||
+                  status === 'INVALID_REQUEST') {
+                self._geoCooldownUntil = Date.now() + 60000; // 60s cooldown
+              }
+              // Cache empty only for ZERO_RESULTS (legitimately no address).
+              // Don't cache for transient errors — allow retry after cooldown.
+              if (status === 'ZERO_RESULTS') {
+                self._geoCache[cacheKey] = empty;
+              }
+              resolve(empty);
               return;
             }
             var result = results[0] || {};
@@ -242,10 +266,12 @@
               else if (t.indexOf('locality') !== -1 && !parsed.subdistrict) parsed.subdistrict = c.long_name;
             });
             self._geoCache[cacheKey] = parsed;
-            delete self._geoInflight[cacheKey];
             resolve(parsed);
           });
         });
+      }).catch(function() {
+        delete self._geoInflight[cacheKey];
+        return empty;
       });
       this._geoInflight[cacheKey] = p;
       return p;
@@ -275,6 +301,104 @@
       if (d) parts.push('อ.' + d);
       if (p) parts.push('จ.' + p);
       return parts.join(' ');
+    },
+
+    /**
+     * Get driving directions between two points via google.maps.DirectionsService.
+     * Uses Maps JS SDK (works with referrer-restricted keys).
+     * Requires 'Directions API' to be enabled in the Google Cloud project.
+     * @returns {Promise<{distance, distanceMeters, duration, durationSeconds, path: [[lat,lng],...], startAddress, endAddress}>}
+     */
+    getDirections: async function(origin, destination, opts) {
+      opts = opts || {};
+      if (!window.MapConfig) throw new Error('MapConfig not loaded');
+      await MapConfig.loadGoogleSDK();
+      return new Promise(function(resolve, reject) {
+        if (!google || !google.maps || !google.maps.DirectionsService) {
+          reject(new Error('DirectionsService unavailable'));
+          return;
+        }
+        var service = new google.maps.DirectionsService();
+        service.route({
+          origin: { lat: Number(origin.lat), lng: Number(origin.lng) },
+          destination: { lat: Number(destination.lat), lng: Number(destination.lng) },
+          travelMode: (opts.mode || google.maps.TravelMode.DRIVING),
+          language: 'th',
+          region: 'TH',
+          drivingOptions: opts.departureTime ? {
+            departureTime: opts.departureTime,
+            trafficModel: google.maps.TrafficModel.BEST_GUESS
+          } : undefined
+        }, function(result, status) {
+          if (status !== 'OK' || !result || !result.routes || !result.routes[0]) {
+            reject(new Error('Directions ' + status));
+            return;
+          }
+          var route = result.routes[0];
+          var leg = (route.legs && route.legs[0]) || {};
+          var path = (route.overview_path || []).map(function(p) {
+            return [p.lat(), p.lng()];
+          });
+          resolve({
+            distance: leg.distance ? leg.distance.text : '',
+            distanceMeters: leg.distance ? leg.distance.value : null,
+            duration: leg.duration ? leg.duration.text : '',
+            durationSeconds: leg.duration ? leg.duration.value : null,
+            path: path,
+            startAddress: leg.start_address || '',
+            endAddress: leg.end_address || '',
+            summary: route.summary || ''
+          });
+        });
+      });
+    },
+
+    /**
+     * Get driving distance + duration between one origin and multiple destinations.
+     * Uses google.maps.DistanceMatrixService (Maps JS SDK).
+     * Requires 'Distance Matrix API' enabled in Google Cloud project.
+     * @param {{lat, lng}} origin
+     * @param {Array<{lat, lng}>} destinations — max 25 per request
+     * @returns {Promise<Array<{status, distance, distanceMeters, duration, durationSeconds}>>}
+     */
+    getDistanceMatrix: async function(origin, destinations, opts) {
+      opts = opts || {};
+      if (!window.MapConfig) throw new Error('MapConfig not loaded');
+      if (!destinations || !destinations.length) return [];
+      await MapConfig.loadGoogleSDK();
+      return new Promise(function(resolve, reject) {
+        if (!google || !google.maps || !google.maps.DistanceMatrixService) {
+          reject(new Error('DistanceMatrixService unavailable'));
+          return;
+        }
+        var service = new google.maps.DistanceMatrixService();
+        service.getDistanceMatrix({
+          origins: [{ lat: Number(origin.lat), lng: Number(origin.lng) }],
+          destinations: destinations.map(function(d) {
+            return { lat: Number(d.lat), lng: Number(d.lng) };
+          }),
+          travelMode: (opts.mode || google.maps.TravelMode.DRIVING),
+          language: 'th',
+          region: 'TH',
+          unitSystem: google.maps.UnitSystem.METRIC
+        }, function(response, status) {
+          if (status !== 'OK' || !response || !response.rows || !response.rows[0]) {
+            reject(new Error('DistanceMatrix ' + status));
+            return;
+          }
+          var elements = response.rows[0].elements || [];
+          resolve(elements.map(function(el) {
+            if (!el || el.status !== 'OK') return { status: el ? el.status : 'NO_DATA' };
+            return {
+              status: 'OK',
+              distance: el.distance ? el.distance.text : '',
+              distanceMeters: el.distance ? el.distance.value : null,
+              duration: el.duration ? el.duration.text : '',
+              durationSeconds: el.duration ? el.duration.value : null
+            };
+          }));
+        });
+      });
     },
 
     /** Format distance for display: "320 m" or "1.2 km" */

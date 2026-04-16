@@ -667,9 +667,20 @@
           <div class="mb-3">
             <label class="field-label">ประเภทที่ค้นหา</label>
             <div class="segmented-group" id="hospitals-type-group">
-              <button type="button" class="segmented-btn active" data-type="hospital"><i class="bi bi-hospital"></i> โรงพยาบาล</button>
-              <button type="button" class="segmented-btn" data-type="gas_station"><i class="bi bi-fuel-pump-fill"></i> ปั้มน้ำมัน</button>
-              <button type="button" class="segmented-btn" data-type="text"><i class="bi bi-search"></i> พิมพ์ค้นหา</button>
+              <button type="button" class="segmented-btn active" data-type="hospital"><i class="bi bi-hospital-fill"></i> รพ.</button>
+              <button type="button" class="segmented-btn" data-type="clinic"><i class="bi bi-heart-pulse-fill"></i> คลินิก</button>
+              <button type="button" class="segmented-btn" data-type="pharmacy"><i class="bi bi-capsule"></i> ร้านยา</button>
+              <button type="button" class="segmented-btn" data-type="gas_station"><i class="bi bi-fuel-pump-fill"></i> ปั้ม</button>
+              <button type="button" class="segmented-btn" data-type="text"><i class="bi bi-search"></i> พิมพ์</button>
+            </div>
+            <div id="hospitals-emergency-group" style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+              <span style="font-size:0.7rem; color:#94a3b8; align-self:center; margin-right:4px;">ฉุกเฉิน:</span>
+              <button type="button" class="emergency-btn" data-type="police" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:4px 12px; border-radius:14px; font-size:0.72rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <i class="bi bi-shield-fill-exclamation"></i> ตำรวจ
+              </button>
+              <button type="button" class="emergency-btn" data-type="fire_station" style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:4px 12px; border-radius:14px; font-size:0.72rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <i class="bi bi-fire"></i> ดับเพลิง
+              </button>
             </div>
             <input type="hidden" id="hospitals-type" value="hospital">
           </div>
@@ -1384,8 +1395,23 @@
 
     function setSearchType(type) {
       document.getElementById('hospitals-type').value = type;
+      // Main row buttons
       document.querySelectorAll('#hospitals-type-group .segmented-btn').forEach(function(b) {
         b.classList.toggle('active', b.getAttribute('data-type') === type);
+      });
+      // Emergency row buttons — custom active styling per color theme
+      document.querySelectorAll('#hospitals-emergency-group .emergency-btn').forEach(function(b) {
+        var t = b.getAttribute('data-type');
+        var isActive = t === type;
+        if (t === 'police') {
+          b.style.background = isActive ? '#1e40af' : '#eff6ff';
+          b.style.color = isActive ? '#fff' : '#1e40af';
+          b.style.borderColor = isActive ? '#1e40af' : '#bfdbfe';
+        } else if (t === 'fire_station') {
+          b.style.background = isActive ? '#b91c1c' : '#fef2f2';
+          b.style.color = isActive ? '#fff' : '#b91c1c';
+          b.style.borderColor = isActive ? '#b91c1c' : '#fecaca';
+        }
       });
       var textWrap = document.getElementById('hospitals-text-wrap');
       if (textWrap) textWrap.style.display = (type === 'text') ? '' : 'none';
@@ -1412,13 +1438,29 @@
             return;
           }
           results = await PlacesAPI.searchText({ query: q, lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng, radius: radius });
-        } else if (type === 'gas_station') {
-          results = await PlacesAPI.searchNearbyGasStations(_hospitalOrigin.lat, _hospitalOrigin.lng, radius);
         } else {
-          results = await PlacesAPI.searchNearbyHospitals(_hospitalOrigin.lat, _hospitalOrigin.lng, radius);
+          // Map UI type → Google primary type(s). Using includedPrimaryTypes
+          // gives stricter results: place's PRIMARY category must match.
+          // Without this, 'hospital' results include dental/beauty clinics
+          // tagged as hospital secondarily.
+          var primaryTypes;
+          if (type === 'clinic') {
+            primaryTypes = ['doctor', 'dentist'];
+          } else {
+            // hospital, pharmacy, gas_station, police, fire_station
+            primaryTypes = [type];
+          }
+          results = await PlacesAPI.searchNearby({
+            lat: _hospitalOrigin.lat,
+            lng: _hospitalOrigin.lng,
+            radius: radius,
+            primaryTypes: primaryTypes
+          });
         }
         loading.style.display = 'none';
         renderHospitalList(results);
+        // Phase 4: enrich list with Distance Matrix road distance + ETA (non-blocking)
+        enrichWithDistanceMatrix(results);
       } catch (e) {
         loading.style.display = 'none';
         var msg = e.message || String(e);
@@ -1442,24 +1484,45 @@
     function renderHospitalList(hospitals) {
       var list = document.getElementById('hospitals-list');
       if (!hospitals.length) {
-        list.innerHTML = '<div style="text-align:center; padding:30px 0; color:var(--slate-600);">ไม่พบโรงพยาบาลในรัศมีนี้</div>';
+        list.innerHTML = '<div style="text-align:center; padding:30px 0; color:var(--slate-600);">ไม่พบผลลัพธ์ในรัศมีนี้</div>';
         return;
       }
+      // If any hospital has road duration → we've been enriched by Distance Matrix,
+      // and the list is already sorted by ETA (see enrichWithDistanceMatrix).
+      var hasRoadData = hospitals.some(function(h){ return h.roadDurationSeconds != null; });
+
       var html = '';
       hospitals.forEach(function(h, idx) {
-        var distText = PlacesAPI.formatDistance(h.distanceM);
+        // Distance: prefer road distance if available, else straight-line
+        var distText = h.roadDistance
+          ? ('<span style="font-weight:600; color:var(--red-600);"><i class="bi bi-signpost-split"></i> ' + esc(h.roadDistance) + '</span>')
+          : ('<span style="font-weight:600; color:var(--slate-600);"><i class="bi bi-signpost-split"></i> ' + PlacesAPI.formatDistance(h.distanceM) + ' <small>(เส้นตรง)</small></span>');
+        // ETA: only shown if road data available
+        var etaText = h.roadDuration
+          ? '<span style="font-weight:700; color:#16a34a;"><i class="bi bi-clock-fill"></i> ' + esc(h.roadDuration) + '</span>'
+          : '';
         var rating = h.rating ? ('<span style="color:#f59e0b;"><i class="bi bi-star-fill"></i> ' + h.rating.toFixed(1) + '</span> <span style="color:var(--slate-500); font-size:0.75rem;">(' + h.ratingCount + ')</span>') : '';
         var phoneBtn = h.phone ? '<a href="tel:' + esc(h.phone) + '" class="btn btn-sm btn-outline-success rounded-pill" style="font-size:0.72rem;"><i class="bi bi-telephone-fill"></i> ' + esc(h.phone) + '</a>' : '';
         var gmapBtn = h.googleMapsUri ? '<a href="' + esc(h.googleMapsUri) + '" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:0.72rem;"><i class="bi bi-map"></i> Google Maps</a>' : '';
+        // "เร็วสุด" badge on #1 when ranked by road ETA
+        var fastestBadge = (hasRoadData && idx === 0 && h.roadDuration)
+          ? '<span style="background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:700; box-shadow:0 2px 6px rgba(22,163,74,0.4);">⚡ เร็วสุด</span>'
+          : '';
+        // Highlight the fastest row with a green border
+        var rowStyle = (hasRoadData && idx === 0)
+          ? 'padding:12px; border:2px solid #16a34a; border-radius:10px; margin-bottom:10px; background:#f0fdf4;'
+          : 'padding:12px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:#fff;';
         html += ''
-          + '<div style="padding:12px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:#fff;">'
+          + '<div style="' + rowStyle + '">'
           +   '<div style="display:flex; justify-content:space-between; align-items:start; gap:10px;">'
           +     '<div style="flex:1; min-width:0;">'
-          +       '<div style="font-weight:700; color:var(--navy-900); font-size:0.95rem;">' + (idx+1) + '. ' + esc(h.name) + '</div>'
+          +       '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">'
+          +         '<div style="font-weight:700; color:var(--navy-900); font-size:0.95rem;">' + (idx+1) + '. ' + esc(h.name) + '</div>'
+          +         fastestBadge
+          +       '</div>'
           +       '<div style="color:var(--slate-600); font-size:0.78rem; margin-top:2px;">' + esc(h.address) + '</div>'
-          +       '<div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:0.8rem;">'
-          +         '<span style="font-weight:600; color:var(--red-600);"><i class="bi bi-signpost-split"></i> ' + distText + '</span>'
-          +         rating
+          +       '<div style="margin-top:6px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; font-size:0.8rem;">'
+          +         distText + etaText + rating
           +       '</div>'
           +       '<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">'
           +         '<button class="btn btn-sm btn-danger rounded-pill" style="font-size:0.72rem;" onclick="plotHospitalMarker(' + idx + ')"><i class="bi bi-geo-alt-fill"></i> แสดงบนแผนที่</button>'
@@ -1473,6 +1536,49 @@
       window._hospitalsCache = hospitals;
     }
 
+    /**
+     * Phase 4 — Enrich places list with actual road distance + ETA,
+     * re-sort by ETA, and re-render. Silently falls back if Distance
+     * Matrix API is not enabled or fails.
+     * Limits to top 10 to control API cost.
+     */
+    async function enrichWithDistanceMatrix(places) {
+      if (!places || !places.length || !_hospitalOrigin) return;
+      if (!window.PlacesAPI || typeof PlacesAPI.getDistanceMatrix !== 'function') return;
+      var top = places.slice(0, 10);
+      try {
+        var matrix = await PlacesAPI.getDistanceMatrix(
+          { lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng },
+          top
+        );
+        // Merge matrix data into corresponding places
+        top.forEach(function(p, i) {
+          var m = matrix[i];
+          if (m && m.status === 'OK') {
+            p.roadDistance = m.distance;
+            p.roadDistanceMeters = m.distanceMeters;
+            p.roadDuration = m.duration;
+            p.roadDurationSeconds = m.durationSeconds;
+          }
+        });
+        // Build full list: enriched top + original rest (unchanged order)
+        var rest = places.slice(10);
+        // Sort enriched part by ETA ascending (places with no road data go last)
+        top.sort(function(a, b) {
+          var aSec = a.roadDurationSeconds != null ? a.roadDurationSeconds : Infinity;
+          var bSec = b.roadDurationSeconds != null ? b.roadDurationSeconds : Infinity;
+          return aSec - bSec;
+        });
+        var merged = top.concat(rest);
+        renderHospitalList(merged);
+      } catch (e) {
+        var msg = String(e && e.message || e);
+        // Silent: keep the Haversine-sorted list on any failure.
+        // Log to console so dev can diagnose if needed.
+        console.warn('[DistanceMatrix] enrichment failed, keeping straight-line sort:', msg);
+      }
+    }
+
     function plotHospitalMarker(idx) {
       var h = (window._hospitalsCache || [])[idx];
       if (!h) return;
@@ -1484,7 +1590,7 @@
       });
       var marker = L.marker([h.lat, h.lng], { icon: icon }).addTo(map);
 
-      // Directions link from vehicle origin → hospital
+      // Google Maps directions link (external app) from vehicle → place
       var directionsUrl = '';
       if (_hospitalOrigin) {
         directionsUrl = 'https://www.google.com/maps/dir/?api=1'
@@ -1493,40 +1599,92 @@
                       + '&travelmode=driving';
       }
 
-      marker.bindPopup(
-        '<div style="min-width:220px; font-family:Sarabun,sans-serif;">'
-        + '<div style="font-weight:700; color:#0c1e3d; margin-bottom:4px;">' + esc(h.name) + '</div>'
-        + '<div style="font-size:0.8rem; color:#64748b; margin-bottom:6px;">' + esc(h.address) + '</div>'
-        + '<div style="font-size:0.78rem; color:#dc2626;"><b>ระยะทาง:</b> ' + PlacesAPI.formatDistance(h.distanceM) + ' (เส้นตรง)</div>'
-        + (h.phone ? '<div style="font-size:0.78rem; margin-top:3px;"><b>โทร:</b> <a href="tel:' + esc(h.phone) + '">' + esc(h.phone) + '</a></div>' : '')
-        + '<div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">'
-        + (directionsUrl ? '<a href="' + esc(directionsUrl) + '" target="_blank" style="flex:1; background:#dc2626; color:#fff; text-decoration:none; text-align:center; padding:5px 8px; border-radius:6px; font-size:0.72rem; font-weight:600;"><i class="bi bi-signpost-2-fill"></i> เส้นทาง</a>' : '')
-        + (h.googleMapsUri ? '<a href="' + esc(h.googleMapsUri) + '" target="_blank" style="flex:1; background:#2563eb; color:#fff; text-decoration:none; text-align:center; padding:5px 8px; border-radius:6px; font-size:0.72rem; font-weight:600;"><i class="bi bi-map"></i> Google Maps</a>' : '')
-        + '</div>'
-        + '</div>'
-      );
+      // Initial popup (straight-line distance). Will be enriched with road
+      // distance + ETA once Directions API returns.
+      function buildPopupHtml(extra) {
+        extra = extra || {};
+        var distanceLine = extra.roadDistance
+          ? '<div style="font-size:0.78rem; color:#dc2626;"><b>ระยะทาง (ถนน):</b> ' + esc(extra.roadDistance) + '</div>'
+          : '<div style="font-size:0.78rem; color:#dc2626;"><b>ระยะทาง:</b> ' + PlacesAPI.formatDistance(h.distanceM) + ' (เส้นตรง)</div>';
+        var etaLine = extra.duration
+          ? '<div style="font-size:0.78rem; color:#16a34a; font-weight:700; margin-top:2px;"><i class="bi bi-clock-fill"></i> ETA: ' + esc(extra.duration) + '</div>'
+          : '';
+        var summaryLine = extra.summary
+          ? '<div style="font-size:0.7rem; color:#64748b; margin-top:2px;">ทางหลัก: ' + esc(extra.summary) + '</div>'
+          : '';
+        var loadingLine = extra.loading
+          ? '<div style="font-size:0.7rem; color:#64748b; margin-top:2px;"><span class="spinner-border spinner-border-sm" style="width:0.8rem; height:0.8rem;"></span> กำลังคำนวณเส้นทาง...</div>'
+          : '';
+        var errorLine = extra.routingError
+          ? '<div style="font-size:0.7rem; color:#b91c1c; margin-top:2px;"><i class="bi bi-exclamation-triangle"></i> ' + esc(extra.routingError) + '</div>'
+          : '';
+        return '<div style="min-width:240px; font-family:Sarabun,sans-serif;">'
+          + '<div style="font-weight:700; color:#0c1e3d; margin-bottom:4px;">' + esc(h.name) + '</div>'
+          + '<div style="font-size:0.8rem; color:#64748b; margin-bottom:6px;">' + esc(h.address) + '</div>'
+          + distanceLine + etaLine + summaryLine + loadingLine + errorLine
+          + (h.phone ? '<div style="font-size:0.78rem; margin-top:3px;"><b>โทร:</b> <a href="tel:' + esc(h.phone) + '">' + esc(h.phone) + '</a></div>' : '')
+          + '<div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">'
+          + (directionsUrl ? '<a href="' + esc(directionsUrl) + '" target="_blank" style="flex:1; background:#dc2626; color:#fff; text-decoration:none; text-align:center; padding:5px 8px; border-radius:6px; font-size:0.72rem; font-weight:600;"><i class="bi bi-signpost-2-fill"></i> เปิดใน Google Maps</a>' : '')
+          + (h.googleMapsUri ? '<a href="' + esc(h.googleMapsUri) + '" target="_blank" style="flex:1; background:#2563eb; color:#fff; text-decoration:none; text-align:center; padding:5px 8px; border-radius:6px; font-size:0.72rem; font-weight:600;"><i class="bi bi-map"></i> รายละเอียด</a>' : '')
+          + '</div>'
+          + '</div>';
+      }
+
+      marker.bindPopup(buildPopupHtml({ loading: !!_hospitalOrigin }));
       _hospitalMarkers.push(marker);
 
-      // Draw dashed line from vehicle origin → hospital for visual route
+      // Draw initial straight-line fallback while Directions is loading
+      var routeLine = null;
       if (_hospitalOrigin) {
-        var line = L.polyline([
+        routeLine = L.polyline([
           [_hospitalOrigin.lat, _hospitalOrigin.lng],
           [h.lat, h.lng]
-        ], {
-          color: '#dc2626',
-          weight: 3,
-          opacity: 0.65,
-          dashArray: '8, 8'
-        }).addTo(map);
-        _hospitalMarkers.push(line);
+        ], { color: '#dc2626', weight: 3, opacity: 0.65, dashArray: '8, 8' }).addTo(map);
+        _hospitalMarkers.push(routeLine);
 
-        // Fit map to show BOTH vehicle and hospital (so dispatcher can see
-        // the route for emergency routing decisions)
+        // Initial bounds (straight line)
         var bounds = L.latLngBounds([
           [_hospitalOrigin.lat, _hospitalOrigin.lng],
           [h.lat, h.lng]
         ]);
         map.fitBounds(bounds, { padding: [80, 80], maxZoom: 15 });
+
+        // Fetch actual road route and replace straight line + enrich popup
+        PlacesAPI.getDirections(
+          { lat: _hospitalOrigin.lat, lng: _hospitalOrigin.lng },
+          { lat: h.lat, lng: h.lng }
+        ).then(function(route) {
+          // Remove straight-line fallback
+          if (routeLine) {
+            map.removeLayer(routeLine);
+            var idx2 = _hospitalMarkers.indexOf(routeLine);
+            if (idx2 !== -1) _hospitalMarkers.splice(idx2, 1);
+          }
+          // Draw real road route (solid line, thicker)
+          var roadLine = L.polyline(route.path, {
+            color: '#dc2626', weight: 5, opacity: 0.8,
+            lineCap: 'round', lineJoin: 'round'
+          }).addTo(map);
+          _hospitalMarkers.push(roadLine);
+
+          // Refit bounds to road route extent
+          try { map.fitBounds(roadLine.getBounds(), { padding: [60, 60], maxZoom: 15 }); } catch(e){}
+
+          // Enrich popup with road distance + ETA
+          marker.setPopupContent(buildPopupHtml({
+            roadDistance: route.distance,
+            duration: route.duration,
+            summary: route.summary
+          }));
+        }).catch(function(err) {
+          var msg = String(err && err.message || err);
+          var friendly = 'ใช้เส้นตรงประมาณการ (' + msg + ')';
+          if (msg.indexOf('NOT_FOUND') !== -1) friendly = 'หาเส้นทางถนนไม่ได้ ใช้เส้นตรง';
+          else if (msg.indexOf('ZERO_RESULTS') !== -1) friendly = 'ไม่มีถนนเชื่อม ใช้เส้นตรง';
+          else if (msg.indexOf('REQUEST_DENIED') !== -1) friendly = 'ต้อง enable Directions API ใน Google Cloud';
+          else if (msg.indexOf('OVER_QUERY_LIMIT') !== -1) friendly = 'เกินโควต้า Google API';
+          marker.setPopupContent(buildPopupHtml({ routingError: friendly }));
+        });
       } else {
         map.setView([h.lat, h.lng], 15);
       }
@@ -1553,13 +1711,22 @@
       if (_hospitalOrigin) runHospitalSearch();
     });
 
-    // Search type tab wiring
+    // Search type tab wiring (main row)
     document.addEventListener('click', function(ev) {
       var btn = ev.target.closest('#hospitals-type-group .segmented-btn');
       if (!btn) return;
       var type = btn.getAttribute('data-type');
       setSearchType(type);
       if (type !== 'text' && _hospitalOrigin) runHospitalSearch();
+    });
+
+    // Emergency button wiring (police / fire_station)
+    document.addEventListener('click', function(ev) {
+      var btn = ev.target.closest('#hospitals-emergency-group .emergency-btn');
+      if (!btn) return;
+      var type = btn.getAttribute('data-type');
+      setSearchType(type);
+      if (_hospitalOrigin) runHospitalSearch();
     });
 
     // Text query Enter key
