@@ -1,5 +1,5 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v5';
+var CACHE_NAME = 'pt-medical-v6';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
@@ -57,9 +57,9 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Network-first for HTML pages AND JS files (always get latest code)
+  // Network-first for HTML, JS AND CSS (always get latest code/styles)
   if (event.request.mode === 'navigate' || url.indexOf('.html') > -1 ||
-      url.indexOf('.js') > -1 || url.endsWith('/')) {
+      url.indexOf('.js') > -1 || url.indexOf('.css') > -1 || url.endsWith('/')) {
     event.respondWith(
       fetch(event.request).then(function(response) {
         if (response.ok) {
