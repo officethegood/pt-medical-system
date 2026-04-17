@@ -218,7 +218,7 @@ input[type="time"] { font-variant-numeric: tabular-nums; }
     min-height: 100%;
     display: -webkit-flex; display: flex;
     -webkit-flex-direction: column; flex-direction: column;
-    -webkit-justify-content: center; justify-content: center;
+    -webkit-justify-content: safe center; justify-content: safe center;
 }
 .landing-card {
     background: white;
