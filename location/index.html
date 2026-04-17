@@ -151,7 +151,12 @@
             <h3 class="dashboard-header mb-1"><i class="bi bi-geo-alt-fill text-success me-2"></i>ฐานข้อมูลพิกัดสถานที่</h3>
             <p class="text-muted small mb-0">จัดการข้อมูลพิกัดสถานที่ผู้ป่วย/ลูกค้า</p>
           </div>
-          <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-sm" onclick="loc_openFormNew()"><i class="bi bi-plus-lg me-1"></i> เพิ่มพิกัดใหม่</button>
+          <div class="d-flex gap-2">
+            <button id="loc-backfill-btn" class="btn btn-outline-warning btn-sm rounded-pill px-3 fw-bold shadow-sm" style="display:none;" onclick="loc_backfillProvinces()" title="อัปเดตจังหวัด/อำเภอจากพิกัด สำหรับเคสที่ไม่ระบุ">
+              <i class="bi bi-geo-alt me-1"></i> อัปเดตพื้นที่ <span id="loc-backfill-count" class="badge bg-warning text-dark ms-1">0</span>
+            </button>
+            <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-sm" onclick="loc_openFormNew()"><i class="bi bi-plus-lg me-1"></i> เพิ่มพิกัดใหม่</button>
+          </div>
         </div>
         <div class="search-panel mb-3">
           <div class="row g-2 align-items-end">
@@ -432,7 +437,8 @@
 
       // Show admin/monitor buttons for Admin role
       var role = getUserRole();
-      if (role === 'Admin' || role === 'admin') {
+      window._loc_isAdmin = (role === 'Admin' || role === 'admin');
+      if (window._loc_isAdmin) {
         var adminBtn = document.getElementById('btn-admin-settings');
         if (adminBtn) adminBtn.style.display = '';
         var monitorBtn = document.getElementById('btn-monitor');
@@ -497,6 +503,7 @@
         loc_populateFilters();
         loc_switchTab('dashboard');
         loc_renderTokensTable();
+        loc_updateBackfillBadge();
         Swal.close();
       } catch (err) {
         Swal.close();
@@ -871,6 +878,8 @@
 
     // --- SAVE (Supabase + Cloudinary) ---
     // Reverse geocode: get district/province from lat/lng via Nominatim (free, no API key)
+    // Bangkok quirk: Nominatim returns city="กรุงเทพมหานคร" and no state/province field,
+    // because BKK is a special administrative area, not a regular จังหวัด.
     async function loc_reverseGeocode(lat, lng) {
       var result = { district: '', province: '' };
       try {
@@ -878,15 +887,96 @@
         var data = await res.json();
         if (data && data.address) {
           var a = data.address;
-          // district: county or city_district or suburb
-          result.district = (a.county || a.city_district || a.suburb || a.town || a.city || '').replace('อำเภอ', '').replace('เขต', '').trim();
-          // province: state or province
-          result.province = (a.state || a.province || '').replace('จังหวัด', '').replace('จ.', '').trim();
+          // Province first — needed to decide district fallback
+          // Order: state (regular provinces) → province (alt) → city (Bangkok case)
+          result.province = (a.state || a.province || a.city || '').replace('จังหวัด', '').replace('จ.', '').trim();
+          // District — don't fall back to a.city if it equals the province (avoids "กรุงเทพมหานคร" as district)
+          var distCandidates = [a.county, a.city_district, a.suburb, a.town];
+          if (a.city && a.city !== result.province) distCandidates.push(a.city);
+          var rawDist = distCandidates.find(function(v){ return v; }) || '';
+          result.district = rawDist.replace('อำเภอ', '').replace('เขต', '').trim();
         }
       } catch (e) { console.warn('Reverse geocode failed:', e); }
       if (!result.district) result.district = 'ไม่ระบุอำเภอ';
       if (!result.province) result.province = 'ไม่ระบุจังหวัด';
       return result;
+    }
+
+    // Records that still need province/district filled in
+    function loc_getBackfillTargets() {
+      var bad = ['ไม่ระบุจังหวัด', 'ไม่ระบุอำเภอ', 'ไม่ระบุ', '', null, undefined];
+      return loc_customers.filter(function(c) {
+        if (!c.lat || !c.lng) return false;
+        return bad.indexOf(c.province) !== -1 || bad.indexOf(c.district) !== -1;
+      });
+    }
+
+    function loc_updateBackfillBadge() {
+      var btn = document.getElementById('loc-backfill-btn');
+      var cnt = document.getElementById('loc-backfill-count');
+      if (!btn || !cnt) return;
+      var targets = loc_getBackfillTargets();
+      if (window._loc_isAdmin && targets.length > 0) {
+        btn.style.display = '';
+        cnt.textContent = targets.length;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    // Bulk re-geocode all records with missing province/district (admin only)
+    // Throttled at 1.1s/record to respect Nominatim's 1 req/sec policy.
+    async function loc_backfillProvinces() {
+      if (!window._loc_isAdmin) return;
+      var targets = loc_getBackfillTargets();
+      if (targets.length === 0) {
+        Swal.fire('ไม่มีข้อมูลต้องอัปเดต', 'พื้นที่ของทุกเคสระบุครบแล้ว', 'info');
+        return;
+      }
+      var confirm = await Swal.fire({
+        icon: 'question',
+        title: 'อัปเดตพื้นที่จากพิกัด?',
+        html: 'จะ reverse geocode ' + targets.length + ' รายการจาก lat/lng → จังหวัด/อำเภอ<br><small class="text-muted">ใช้เวลา ~' + Math.ceil(targets.length * 1.1) + ' วินาที (Nominatim rate limit)</small>',
+        showCancelButton: true, confirmButtonText: 'อัปเดตเลย', cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#16a34a'
+      });
+      if (!confirm.isConfirmed) return;
+
+      var ok = 0, fail = 0, skipped = 0;
+      Swal.fire({
+        title: 'กำลังอัปเดต...',
+        html: '<div id="loc-bf-prog">เริ่มต้น...</div>',
+        allowOutsideClick: false, didOpen: function() { Swal.showLoading(); }
+      });
+
+      for (var i = 0; i < targets.length; i++) {
+        var c = targets[i];
+        var prog = document.getElementById('loc-bf-prog');
+        if (prog) prog.innerHTML = (i + 1) + ' / ' + targets.length + ' — <b>' + (c.name || c.id) + '</b><br><small class="text-muted">สำเร็จ ' + ok + ' · ผิดพลาด ' + fail + '</small>';
+        try {
+          var geo = await loc_reverseGeocode(c.lat, c.lng);
+          // Skip if result is still "ไม่ระบุ*" — no point writing the same placeholder
+          if (geo.province === 'ไม่ระบุจังหวัด' && geo.district === 'ไม่ระบุอำเภอ') {
+            skipped++;
+          } else {
+            var upd = { province: geo.province, district: geo.district };
+            var resp = await _supabase.from('loc_customers').update(upd).eq('id', c.id);
+            if (resp.error) { fail++; console.warn('backfill failed for', c.id, resp.error); }
+            else { ok++; c.province = geo.province; c.district = geo.district; }
+          }
+        } catch (err) {
+          fail++; console.warn('backfill error for', c.id, err);
+        }
+        // Throttle — Nominatim asks for 1 req/sec max
+        if (i < targets.length - 1) await new Promise(function(r) { setTimeout(r, 1100); });
+      }
+
+      Swal.fire({
+        icon: fail === 0 ? 'success' : 'warning',
+        title: 'อัปเดตเสร็จสิ้น',
+        html: 'สำเร็จ <b>' + ok + '</b> · ข้าม <b>' + skipped + '</b> · ผิดพลาด <b>' + fail + '</b>'
+      });
+      await loc_fetchData();
     }
 
     async function loc_saveCustomer(e) {
