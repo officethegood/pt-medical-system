@@ -2024,7 +2024,7 @@
             html += '<tr data-case-id="' + esc(rec.id) + '">' +
               '<td><div class="fw-semibold">' + esc(dateStr) + '</div><div class="text-muted small">' + esc(timeStr) + '</div></td>' +
               '<td class="hide-mobile"><code class="small text-muted">' + esc(shortId) + '</code></td>' +
-              '<td><div class="fw-semibold text-truncate d-flex align-items-center" style="max-width:240px;"><span class="text-truncate">' + esc(pi.name || 'ไม่ระบุชื่อ') + '</span>' + flags + '</div><div class="text-muted small">' + esc(g.ch) + ' · ' + esc(pi.age || '-') + ' ปี</div></td>' +
+              '<td><div class="fw-semibold text-truncate" style="max-width:240px;">' + esc(pi.name || 'ไม่ระบุชื่อ') + '</div><div class="text-muted small d-flex align-items-center flex-wrap">' + esc(g.ch) + ' · ' + esc(pi.age || '-') + ' ปี' + flags + '</div></td>' +
               '<td class="hide-mobile small text-muted text-truncate" style="max-width:220px;">' + esc(pi.origin || '?') + ' → ' + esc(pi.destination || '?') + '</td>' +
               '<td class="hide-mobile">' + typeBadge + '</td>' +
               '<td><span class="mini-triage tri-' + tKey + '"></span><span class="small">' + esc(_triageShort(rec.triageLevel)) + '</span></td>' +
