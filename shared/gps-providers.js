@@ -35,14 +35,22 @@ async function gpsLoadProxyConfig(supabaseClient) {
 //   CONFIG.GPS_PROXY_URL      — Render fallback (hard-coded in config.js)
 //   CONFIG.GPS_PROXY_FALLBACK — GAS fallback (hard-coded in config.js)
 
+// Safari (iOS) aggressively caches GET responses that lack Cache-Control headers.
+// DSM Reverse Proxy doesn't send cache headers by default → auto-refresh gets stale data.
+// Fix: cache: 'no-store' + cache-bust query param (_t=timestamp) on every request.
 async function gpsFetch(url) {
   var synoUrl    = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_SYNOLOGY) ? CONFIG.GPS_PROXY_SYNOLOGY : '';
   var renderUrl  = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_URL)      ? CONFIG.GPS_PROXY_URL      : '';
   var gasUrl     = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_FALLBACK) ? CONFIG.GPS_PROXY_FALLBACK : '';
 
+  var noCacheOpts = {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+  };
+
   // HTTPS direct — no proxy needed
   if (!url.startsWith('http://')) {
-    var r0 = await fetch(url);
+    var r0 = await fetch(url, noCacheOpts);
     return await r0.json();
   }
 
@@ -51,10 +59,17 @@ async function gpsFetch(url) {
     try {
       // strip scheme+host from original URL: http://203.170.193.90/a/b?c=1 → /a/b?c=1
       var pathAndQuery = url.replace(/^https?:\/\/[^\/]+/, '');
+      // Cache-bust for iOS Safari (strips aggressive heuristic caching)
+      pathAndQuery += (pathAndQuery.indexOf('?') >= 0 ? '&' : '?') + '_t=' + Date.now();
       var synoFinal = synoUrl.replace(/\/+$/, '') + pathAndQuery;
       var c1 = new AbortController();
       var t1 = setTimeout(function() { c1.abort(); }, 5000);
-      var r1 = await fetch(synoFinal, { signal: c1.signal, credentials: 'omit' });
+      var r1 = await fetch(synoFinal, {
+        signal: c1.signal,
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
       clearTimeout(t1);
       if (r1.ok) return await r1.json();
       console.warn('GPS Proxy: Synology returned HTTP ' + r1.status + ', falling back to Render');
@@ -68,15 +83,15 @@ async function gpsFetch(url) {
     try {
       var c2 = new AbortController();
       var t2 = setTimeout(function() { c2.abort(); }, 5000);
-      var rFinal = renderUrl.replace(/\/+$/, '') + '/?url=' + encodeURIComponent(url);
-      var r2 = await fetch(rFinal, { signal: c2.signal });
+      var rFinal = renderUrl.replace(/\/+$/, '') + '/?url=' + encodeURIComponent(url) + '&_t=' + Date.now();
+      var r2 = await fetch(rFinal, Object.assign({ signal: c2.signal }, noCacheOpts));
       clearTimeout(t2);
       return await r2.json();
     } catch(e2) {
       console.warn('GPS Proxy: Render fail (' + (e2.message || e2) + '), falling back to GAS');
       if (gasUrl) {
-        var gFinal = gasUrl + '?url=' + encodeURIComponent(url);
-        var r3 = await fetch(gFinal);
+        var gFinal = gasUrl + '?url=' + encodeURIComponent(url) + '&_t=' + Date.now();
+        var r3 = await fetch(gFinal, noCacheOpts);
         return await r3.json();
       }
       throw e2;
@@ -85,8 +100,8 @@ async function gpsFetch(url) {
 
   // ===== Tier 3: GAS only (if no Render configured) =====
   if (gasUrl) {
-    var gFinal2 = gasUrl + '?url=' + encodeURIComponent(url);
-    var r4 = await fetch(gFinal2);
+    var gFinal2 = gasUrl + '?url=' + encodeURIComponent(url) + '&_t=' + Date.now();
+    var r4 = await fetch(gFinal2, noCacheOpts);
     return await r4.json();
   }
 
