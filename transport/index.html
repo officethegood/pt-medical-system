@@ -270,8 +270,33 @@
     .closed-table-wrap .btn-micro:hover { background:#e2e8f0; color:#1e293b; }
 
     @media (max-width: 768px) {
-      .active-cards { grid-template-columns:1fr; }
+      /* Active cards — tighter spacing */
+      .active-cards { grid-template-columns:1fr; gap:12px; }
+      .active-card .card-head { padding:8px 12px; }
+      .active-card .patient-row { padding:10px 12px 6px; gap:10px; }
+      .active-card .gender-avatar { width:36px; height:36px; font-size:0.9rem; }
+      .active-card .patient-name { font-size:0.95rem; }
+      .active-card .patient-sub { font-size:0.7rem; }
+      .active-card .triage-badge { font-size:0.65rem; padding:2px 8px; }
+      .active-card .route-row { padding:6px 12px; font-size:0.76rem; }
+      .active-card .meta-strip { padding:6px 12px; gap:5px; }
+      .active-card .meta-chip { font-size:0.65rem; padding:2px 7px; }
+      .active-card .action-row { padding:7px 12px; }
+      .active-card .btn-open-case { font-size:0.82rem; padding:7px 8px; }
+      .active-card .btn-iconbtn { width:32px; }
+
+      /* Closed table — compact + remove overflow clip so action column stays visible */
+      .closed-table-wrap { overflow-x:auto; border-radius:10px; }
       .closed-table-wrap .hide-mobile { display:none; }
+      .closed-table-wrap table { font-size:0.8rem; }
+      .closed-table-wrap thead th { padding:6px 6px; font-size:0.6rem; }
+      .closed-table-wrap tbody td { padding:6px 4px; }
+      .closed-table-wrap tbody td.text-end,
+      .closed-table-wrap thead th.text-end { white-space:nowrap; padding-right:6px; min-width:115px; }
+      .closed-table-wrap .btn-micro { padding:2px 3px; font-size:0.8rem; line-height:1; }
+
+      /* Shrink FAB on mobile so it doesn't overlap table actions */
+      .fab-btn { bottom:16px; right:16px; width:48px; height:48px; font-size:1.2rem; }
     }
   </style>
 </head>
@@ -1954,14 +1979,14 @@
         var esc = escapeHtml;
         var isAdmin = (getUserRole() === 'Admin' || getUserRole() === 'admin');
         var html = '<table class="table table-hover"><thead><tr>' +
-          '<th style="width:90px;">วันที่</th>' +
-          '<th style="width:100px;">รหัสเคส</th>' +
+          '<th style="width:72px;">วันที่</th>' +
+          '<th class="hide-mobile" style="width:100px;">รหัสเคส</th>' +
           '<th>ผู้ป่วย</th>' +
           '<th class="hide-mobile" style="width:220px;">เส้นทาง</th>' +
           '<th class="hide-mobile" style="width:110px;">ประเภท</th>' +
-          '<th style="width:75px;">Triage</th>' +
+          '<th style="width:64px;">Triage</th>' +
           '<th class="hide-mobile" style="width:120px;">ทีม</th>' +
-          '<th class="text-end" style="width:130px;">จัดการ</th>' +
+          '<th class="text-end" style="width:110px;">จัดการ</th>' +
           '</tr></thead><tbody>';
         closeds.forEach(function(rec) {
             var pi = rec.patientInfo || {};
@@ -1989,7 +2014,7 @@
 
             html += '<tr data-case-id="' + esc(rec.id) + '">' +
               '<td><div class="fw-semibold">' + esc(dateStr) + '</div><div class="text-muted small">' + esc(timeStr) + '</div></td>' +
-              '<td><code class="small text-muted">' + esc(shortId) + '</code></td>' +
+              '<td class="hide-mobile"><code class="small text-muted">' + esc(shortId) + '</code></td>' +
               '<td><div class="fw-semibold text-truncate" style="max-width:220px;">' + esc(pi.name || 'ไม่ระบุชื่อ') + '</div><div class="text-muted small">' + esc(g.ch) + ' · ' + esc(pi.age || '-') + ' ปี</div></td>' +
               '<td class="hide-mobile small text-muted text-truncate" style="max-width:220px;">' + esc(pi.origin || '?') + ' → ' + esc(pi.destination || '?') + '</td>' +
               '<td class="hide-mobile">' + typeBadge + '</td>' +
