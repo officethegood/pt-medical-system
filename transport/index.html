@@ -135,8 +135,8 @@
     /* Triage buttons: Red, Pink, Yellow, Green */
     .btn-triage-resus { color:#dc3545; border-color:#dc3545; background:#fff; }
     .btn-check:checked + .btn-triage-resus { background:#dc3545; color:#fff; border-color:#dc3545; }
-    .btn-triage-emer { color:#d63384; border-color:#d63384; background:#fff; }
-    .btn-check:checked + .btn-triage-emer { background:#d63384; color:#fff; border-color:#d63384; }
+    .btn-triage-emergency { color:#d63384; border-color:#d63384; background:#fff; }
+    .btn-check:checked + .btn-triage-emergency { background:#d63384; color:#fff; border-color:#d63384; }
     .btn-triage-urgent { color:#cc9a06; border-color:#ffc107; background:#fff; }
     .btn-check:checked + .btn-triage-urgent { background:#ffc107; color:#000; border-color:#ffc107; }
     .btn-triage-less { color:#198754; border-color:#198754; background:#fff; }
@@ -245,29 +245,84 @@
     .active-card .btn-iconbtn.public { background:#16a34a; border-color:#15803d; color:#fff; }
     .active-card .btn-iconbtn.public:hover { background:#15803d; }
 
-    /* Closed list (compact table) */
-    .closed-table-wrap {
+    /* Closed list — row layout (no table, grid-based) */
+    .closed-list {
       background:#fff; border-radius:12px; overflow:hidden;
       box-shadow:0 1px 3px rgba(0,0,0,0.05);
     }
-    .closed-table-wrap table { margin:0; font-size:0.88rem; }
-    .closed-table-wrap thead th {
-      background:#f8fafc; color:#64748b; font-size:0.68rem;
-      text-transform:uppercase; letter-spacing:0.05em;
-      padding:9px 10px; border:0; font-weight:700;
+    .closed-row {
+      display:grid; align-items:center;
+      grid-template-columns:4px 130px 1fr 1.4fr auto auto;
+      gap:10px; padding:10px 14px;
+      border-top:1px solid #f1f5f9;
+      cursor:pointer; transition:background 0.12s;
     }
-    .closed-table-wrap tbody td { padding:9px 10px; vertical-align:middle; border-top:1px solid #f1f5f9; }
-    .closed-table-wrap tbody tr { cursor:pointer; transition:background 0.12s; }
-    .closed-table-wrap tbody tr:hover { background:#f8fafc; }
-    .closed-table-wrap .mini-triage { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
-    .closed-table-wrap .mini-triage.tri-resus { background:#dc2626; }
-    .closed-table-wrap .mini-triage.tri-emerg { background:#d63384; }
-    .closed-table-wrap .mini-triage.tri-urgent { background:#f59e0b; }
-    .closed-table-wrap .mini-triage.tri-nonurg { background:#16a34a; }
-    .closed-table-wrap .btn-micro {
-      background:transparent; border:0; color:#64748b; padding:4px 6px; border-radius:4px; font-size:0.9rem;
+    .closed-row:first-child { border-top:0; }
+    .closed-row:hover { background:#f8fafc; }
+    .closed-row .triage-strip { width:4px; border-radius:2px; align-self:stretch; }
+    .closed-row .triage-strip.tri-resus { background:#dc2626; }
+    .closed-row .triage-strip.tri-emerg { background:#d63384; }
+    .closed-row .triage-strip.tri-urgent { background:#f59e0b; }
+    .closed-row .triage-strip.tri-nonurg { background:#16a34a; }
+
+    /* Date cell: date / time / case-id pill stacked */
+    .closed-row .c-date {
+      font-variant-numeric:tabular-nums; color:#64748b; white-space:nowrap;
     }
-    .closed-table-wrap .btn-micro:hover { background:#e2e8f0; color:#1e293b; }
+    .closed-row .c-date b { color:#0f172a; font-size:0.88rem; display:block; font-weight:700; }
+    .closed-row .c-date small { font-size:0.72rem; display:block; }
+    .closed-row .c-date .case-id-in-date {
+      display:block; font-family:'Consolas', monospace; font-size:0.72rem;
+      color:#64748b; font-weight:600;
+      background:#f1f5f9; padding:1px 7px; border-radius:4px;
+      margin-top:3px; width:fit-content;
+    }
+
+    /* Name cell */
+    .closed-row .c-name-box { min-width:0; }
+    .closed-row .c-name {
+      font-weight:700; color:#0f172a; font-size:0.92rem;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .closed-row .c-sub {
+      font-size:0.75rem; color:#64748b; margin-top:2px;
+      display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    }
+    .closed-row .flag-chip {
+      display:inline-flex; align-items:center; gap:3px;
+      padding:1px 7px; border-radius:4px; font-size:0.7rem; font-weight:600;
+      cursor:pointer;
+    }
+    .closed-row .flag-chip.consent { background:#dcfce7; color:#15803d; }
+    .closed-row .flag-chip.refer { background:#e0f2fe; color:#0369a1; }
+
+    /* Route cell */
+    .closed-row .c-route {
+      color:#64748b; font-size:0.82rem;
+      display:flex; align-items:center; gap:6px; min-width:0;
+    }
+    .closed-row .c-route > span {
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+    }
+    .closed-row .c-route .arrow { color:#94a3b8; flex-shrink:0; }
+
+    /* Team cell (triage label hidden — strip provides the color) */
+    .closed-row .c-meta { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+    .closed-row .c-meta .team {
+      font-size:0.78rem; color:#64748b; font-variant-numeric:tabular-nums;
+    }
+
+    /* Actions cell */
+    .closed-row .c-actions { display:flex; align-items:center; gap:2px; white-space:nowrap; }
+    .closed-row .c-actions .btn-ico {
+      width:30px; height:30px; border:0; background:transparent;
+      color:#64748b; border-radius:6px; cursor:pointer;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:0.88rem; padding:0;
+    }
+    .closed-row .c-actions .btn-ico:hover { background:#e2e8f0; color:#0f172a; }
+    .closed-row .c-actions .btn-ico.reopen:hover { background:#fef3c7; color:#92400e; }
+    .closed-row .c-actions .btn-ico.delete:hover { background:#fee2e2; color:#991b1b; }
 
     @media (max-width: 768px) {
       /* Active cards — tighter spacing */
@@ -285,15 +340,34 @@
       .active-card .btn-open-case { font-size:0.82rem; padding:7px 8px; }
       .active-card .btn-iconbtn { width:32px; }
 
-      /* Closed table — compact + remove overflow clip so action column stays visible */
-      .closed-table-wrap { overflow-x:auto; border-radius:10px; }
-      .closed-table-wrap .hide-mobile { display:none; }
-      .closed-table-wrap table { font-size:0.8rem; }
-      .closed-table-wrap thead th { padding:6px 6px; font-size:0.6rem; }
-      .closed-table-wrap tbody td { padding:6px 4px; }
-      .closed-table-wrap tbody td.text-end,
-      .closed-table-wrap thead th.text-end { white-space:nowrap; padding-right:6px; min-width:115px; }
-      .closed-table-wrap .btn-micro { padding:2px 3px; font-size:0.8rem; line-height:1; }
+      /* Closed list — grid with named areas, all info visible, stacked cleanly */
+      .closed-row {
+        grid-template-columns:4px 1fr auto;
+        grid-template-areas:
+          "strip date   actions"
+          "strip name   actions"
+          "strip route  actions"
+          "strip meta   actions";
+        gap:3px 10px; padding:10px 12px; align-items:start;
+      }
+      .closed-row .triage-strip { grid-area:strip; align-self:stretch; }
+      .closed-row .c-date {
+        grid-area:date; display:flex; gap:6px; align-items:baseline; font-size:0.7rem;
+      }
+      .closed-row .c-date b { display:inline; font-size:0.72rem; }
+      .closed-row .c-date small { display:inline; font-size:0.7rem; }
+      .closed-row .c-name-box { grid-area:name; min-width:0; }
+      .closed-row .c-name { white-space:normal; }
+      .closed-row .c-route { grid-area:route; font-size:0.74rem; flex-wrap:wrap; }
+      .closed-row .c-route > span {
+        max-width:none; white-space:normal; overflow:visible;
+      }
+      .closed-row .c-meta { grid-area:meta; font-size:0.72rem; gap:6px; flex-wrap:wrap; }
+      .closed-row .c-actions {
+        grid-area:actions; align-self:center;
+        display:grid; grid-template-columns:repeat(2,1fr); gap:2px;
+      }
+      .closed-row .c-actions .btn-ico { width:30px; height:30px; font-size:0.82rem; }
 
       /* Shrink FAB on mobile so it doesn't overlap table actions */
       .fab-btn { bottom:16px; right:16px; width:48px; height:48px; font-size:1.2rem; }
@@ -426,7 +500,7 @@
               <span class="count-badge" id="closed-count">0</span>
               <span class="line-filler"></span>
             </div>
-            <div id="closed-table-container" class="closed-table-wrap"></div>
+            <div id="closed-table-container" class="closed-list"></div>
           </div>
 
           <!-- Empty state -->
@@ -1676,7 +1750,7 @@
 
         var applyFilters = function(q) {
             if (searchDateStr) q = q.gte('created_at', searchDateStr + 'T00:00:00').lte('created_at', searchDateStr + 'T23:59:59');
-            if (searchName) q = q.or('case_id.ilike.%' + searchName + '%,patient_info->>name.ilike.%' + searchName + '%');
+            if (searchName) q = q.or('case_id.ilike.%' + searchName + '%,patient_info->>name.ilike.%' + searchName + '%,patient_info->>origin.ilike.%' + searchName + '%,patient_info->>destination.ilike.%' + searchName + '%');
             return q;
         };
 
@@ -1962,70 +2036,72 @@
     function _buildClosedTable(closeds) {
         var esc = escapeHtml;
         var isAdmin = (getUserRole() === 'Admin' || getUserRole() === 'admin');
-        var html = '<table class="table table-hover"><thead><tr>' +
-          '<th style="width:72px;">วันที่</th>' +
-          '<th class="hide-mobile" style="width:100px;">รหัสเคส</th>' +
-          '<th>ผู้ป่วย</th>' +
-          '<th class="hide-mobile" style="width:220px;">เส้นทาง</th>' +
-          '<th class="hide-mobile" style="width:110px;">ประเภท</th>' +
-          '<th style="width:64px;">Triage</th>' +
-          '<th class="hide-mobile" style="width:120px;">ทีม</th>' +
-          '<th class="text-end" style="width:110px;">จัดการ</th>' +
-          '</tr></thead><tbody>';
+        var html = '';
         closeds.forEach(function(rec) {
             var pi = rec.patientInfo || {};
             var oi = rec.opInfo || {};
-            var g = _genderKey(pi.gender);
             var tKey = _triageKey(rec.triageLevel);
             var shortId = rec.id ? rec.id.replace('CASE-', '') : '-';
             var dateStr = '-', timeStr = '';
             if (rec.timestamp && rec.timestamp.toDate) {
                 var d = rec.timestamp.toDate();
-                dateStr = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
+                dateStr = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
                 timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
             }
             var opLevel = oi.level || '-';
             var opUnit = oi.unitNo || '-';
-            var opType = oi.type || '';
-            var typeBadge = opType ? '<span class="badge bg-secondary-subtle text-secondary border">' + esc(opType) + '</span>' : '<span class="text-muted small">-</span>';
-
-            var adminActions = '';
-            if (isAdmin) {
-                adminActions =
-                  '<button class="btn-micro" data-act="reopen" title="เปิดเคสกลับ"><i class="bi bi-unlock"></i></button>' +
-                  '<button class="btn-micro" data-act="delete" title="ลบ"><i class="bi bi-trash"></i></button>';
-            }
+            var teamStr = opLevel !== '-' ? (opLevel + (opUnit !== '-' ? ' · ' + opUnit : '')) : (opUnit !== '-' ? opUnit : '-');
 
             var referCount = (rec.referDocs && rec.referDocs.length) || 0;
             var flags = '';
             if (rec.consentSigned) {
-                flags += ' <i class="bi bi-check-circle-fill text-success ms-1" title="มี Consent ลงนาม" data-act="consent" style="cursor:pointer;font-size:0.85rem;"></i>';
+                flags += '<span class="flag-chip consent" data-act="consent"><i class="bi bi-check-circle-fill"></i> Consent</span>';
             }
             if (referCount > 0) {
-                flags += ' <span class="ms-1" data-act="refer" title="เอกสารแนบ (' + referCount + ' ไฟล์)" style="cursor:pointer;color:#0369a1;font-size:0.8rem;white-space:nowrap;"><i class="bi bi-paperclip"></i>' + referCount + '</span>';
+                flags += '<span class="flag-chip refer" data-act="refer" title="เอกสารแนบ (' + referCount + ' ไฟล์)"><i class="bi bi-paperclip"></i> ' + referCount + '</span>';
             }
 
-            html += '<tr data-case-id="' + esc(rec.id) + '">' +
-              '<td><div class="fw-semibold">' + esc(dateStr) + '</div><div class="text-muted small">' + esc(timeStr) + '</div></td>' +
-              '<td class="hide-mobile"><code class="small text-muted">' + esc(shortId) + '</code></td>' +
-              '<td><div class="fw-semibold text-truncate" style="max-width:240px;">' + esc(pi.name || 'ไม่ระบุชื่อ') + '</div><div class="text-muted small d-flex align-items-center flex-wrap">' + esc(g.ch) + ' · ' + esc(pi.age || '-') + ' ปี' + flags + '</div></td>' +
-              '<td class="hide-mobile small text-muted text-truncate" style="max-width:220px;">' + esc(pi.origin || '?') + ' → ' + esc(pi.destination || '?') + '</td>' +
-              '<td class="hide-mobile">' + typeBadge + '</td>' +
-              '<td><span class="mini-triage tri-' + tKey + '"></span><span class="small">' + esc(_triageShort(rec.triageLevel)) + '</span></td>' +
-              '<td class="hide-mobile small text-muted">' + esc(opLevel) + (opUnit !== '-' ? ' / ' + esc(opUnit) : '') + '</td>' +
-              '<td class="text-end">' +
-                '<button class="btn-micro" data-act="view" title="ดู / Print"><i class="bi bi-eye"></i></button>' +
-                '<button class="btn-micro" data-act="print" title="Print"><i class="bi bi-printer"></i></button>' +
+            var genderShort = pi.gender === 'Male' ? 'ช' : (pi.gender === 'Female' ? 'ญ' : (pi.gender === 'Other' ? 'อื่นๆ' : '-'));
+
+            var adminActions = '';
+            if (isAdmin) {
+                adminActions =
+                  '<button class="btn-ico reopen" data-act="reopen" title="เปิดเคสกลับ"><i class="bi bi-unlock"></i></button>' +
+                  '<button class="btn-ico delete" data-act="delete" title="ลบ"><i class="bi bi-trash"></i></button>';
+            }
+
+            html += '<div class="closed-row" data-case-id="' + esc(rec.id) + '">' +
+              '<div class="triage-strip tri-' + tKey + '"></div>' +
+              '<div class="c-date">' +
+                '<b>' + esc(dateStr) + '</b>' +
+                '<small>' + esc(timeStr) + '</small>' +
+                '<span class="case-id-in-date">#' + esc(shortId) + '</span>' +
+              '</div>' +
+              '<div class="c-name-box">' +
+                '<div class="c-name">' + esc(pi.name || 'ไม่ระบุชื่อ') + '</div>' +
+                '<div class="c-sub">' + esc(genderShort) + ' · ' + esc(pi.age || '-') + ' ปี' + flags + '</div>' +
+              '</div>' +
+              '<div class="c-route">' +
+                '<i class="bi bi-geo-alt-fill" style="color:#2563eb;"></i>' +
+                '<span>' + esc(pi.origin || '?') + '</span>' +
+                '<i class="bi bi-arrow-right arrow"></i>' +
+                '<span class="fw-medium">' + esc(pi.destination || '?') + '</span>' +
+              '</div>' +
+              '<div class="c-meta">' +
+                '<span class="team">' + esc(teamStr) + '</span>' +
+              '</div>' +
+              '<div class="c-actions">' +
+                '<button class="btn-ico" data-act="view" title="ดู / Print"><i class="bi bi-eye"></i></button>' +
+                '<button class="btn-ico" data-act="print" title="Print"><i class="bi bi-printer"></i></button>' +
                 adminActions +
-              '</td>' +
-            '</tr>';
+              '</div>' +
+            '</div>';
         });
-        html += '</tbody></table>';
         return html;
     }
 
     function _bindClosedRowHandlers() {
-        var rows = document.querySelectorAll('#closed-table-container tbody tr');
+        var rows = document.querySelectorAll('#closed-table-container .closed-row');
         rows.forEach(function(tr) {
             tr.addEventListener('click', function(ev) {
                 var tgt = ev.target.closest('[data-act]');
