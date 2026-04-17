@@ -1,6 +1,7 @@
 /* =============================================
    PT Medical System - Professional UX/UI Theme
    ============================================= */
+:root { color-scheme: light; }
 .bg-purple-subtle { background-color: #e8d5f5 !important; }
 .text-purple { color: #6f42c1 !important; }
 
