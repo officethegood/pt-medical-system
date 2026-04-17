@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>Location — Shared View</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="ดูข้อมูลสถานที่ผ่านลิงก์แชร์">
+  <meta name="theme-color" content="#16a34a">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { font-family: 'Sarabun', sans-serif; }
+    html, body { margin:0; padding:0; background:#f8fafc; color:#1e293b; min-height:100vh; }
+
+    .share-header {
+      background: linear-gradient(135deg, #0f2444 0%, #1e3a5f 100%);
+      color: #fff; padding: 18px 18px; position: relative;
+      box-shadow: 0 2px 10px rgba(15,36,68,0.15);
+    }
+    .share-header::after {
+      content: ''; position: absolute; left:0; right:0; bottom:0; height:3px;
+      background: linear-gradient(90deg, #16a34a, #22c55e, transparent);
+    }
+    .brand-row { display:flex; align-items:center; gap:12px; }
+    .brand-mark {
+      width:40px; height:40px; border-radius:10px;
+      background: linear-gradient(135deg, #16a34a, #14532d);
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 2px 8px rgba(22,163,74,0.35);
+    }
+    .brand-mark i { color:#fff; font-size:20px; }
+    .brand-title { font-size:1rem; font-weight:800; letter-spacing:0.2px; }
+    .brand-sub { font-size:0.7rem; opacity:0.75; font-weight:500; letter-spacing:0.5px; text-transform:uppercase; }
+    .share-expire {
+      display:inline-flex; align-items:center; gap:6px;
+      background: rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
+      color:#d1fae5; padding:5px 12px; border-radius:100px;
+      font-size:0.72rem; font-weight:600; margin-top:10px;
+    }
+
+    .container-narrow { max-width: 680px; margin: 0 auto; padding: 16px; }
+
+    .card-mod {
+      background:#fff; border:0; border-radius:16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+      margin-bottom: 16px; overflow:hidden;
+    }
+
+    .photo-wrap {
+      height: 240px; position: relative; background:#e2e8f0;
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .photo-wrap img { width:100%; height:100%; object-fit:cover; }
+    .photo-wrap .overlay {
+      position:absolute; bottom:0; left:0; right:0; padding:16px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      color:#fff;
+    }
+    .type-badge {
+      background: rgba(255,255,255,0.95); color:#1e293b;
+      font-weight:700; padding:4px 12px; border-radius:100px;
+      font-size:0.75rem; display:inline-block; margin-bottom:6px;
+    }
+    .type-badge.hospital { background:#fef2f2; color:#b91c1c; }
+    .type-badge.care { background:#fffbeb; color:#b45309; }
+    .type-badge.hotel { background:#f3e8ff; color:#6b21a8; }
+
+    .loc-name { font-size:1.4rem; font-weight:800; margin:0; color:#fff; }
+    .loc-sub { font-size:0.85rem; opacity:0.9; margin-top:2px; color:#fff; }
+
+    .info-section { padding:16px 18px; }
+    .info-row { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+    .info-row:last-child { border-bottom:0; }
+    .info-icon { color:#16a34a; font-size:1.1rem; margin-top:2px; }
+    .info-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px; color:#94a3b8; font-weight:600; margin-bottom:2px; }
+    .info-value { font-size:0.95rem; color:#1e293b; font-weight:500; }
+
+    .btn-nav {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color:#fff; border:0; padding:14px 20px; border-radius:12px;
+      font-weight:700; font-size:0.95rem; width:100%;
+      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+    }
+    .btn-nav:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(22,163,74,0.45); }
+    .btn-nav i { margin-right:6px; }
+
+    .btn-call {
+      background:#f8fafc; color:#16a34a; border:1px solid #d1fae5;
+      padding:10px 16px; border-radius:10px; font-weight:600; font-size:0.85rem;
+      text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn-call:hover { background:#f0fdf4; }
+
+    .map-wrap {
+      height: 320px; border-radius:12px; overflow:hidden;
+      border:1px solid #e2e8f0;
+    }
+    #map { width:100%; height:100%; }
+
+    .share-note {
+      background:#fef3c7; border-left:3px solid #f59e0b; color:#78350f;
+      padding:10px 14px; border-radius:8px; font-size:0.85rem; margin: 8px 0 0;
+    }
+
+    .state-page {
+      min-height: 80vh; display:flex; align-items:center; justify-content:center;
+      padding: 24px;
+    }
+    .state-card {
+      max-width: 420px; text-align:center; background:#fff; padding: 32px 28px;
+      border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+    .state-card .icon { font-size: 3rem; margin-bottom: 12px; }
+    .state-card.error .icon { color:#dc2626; }
+    .state-card.expired .icon { color:#f59e0b; }
+    .state-card .title { font-weight:800; font-size:1.2rem; margin-bottom:8px; }
+    .state-card .desc { color:#64748b; font-size:0.9rem; }
+
+    .loader {
+      width:40px; height:40px; border:3px solid #e2e8f0; border-top-color:#16a34a;
+      border-radius:50%; animation:spin 0.8s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer-brand {
+      text-align:center; padding: 20px; color:#94a3b8; font-size:0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading state -->
+  <div id="loadingView" class="state-page">
+    <div class="state-card">
+      <div class="loader"></div>
+      <div class="title">กำลังเชื่อมต่อ...</div>
+      <div class="desc">กำลังดึงข้อมูลสถานที่</div>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div id="errorView" class="state-page" style="display:none;">
+    <div class="state-card error">
+      <div class="icon"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="title" id="errorTitle">ลิงก์ไม่ถูกต้อง</div>
+      <div class="desc" id="errorMsg">กรุณาตรวจสอบลิงก์อีกครั้ง</div>
+    </div>
+  </div>
+
+  <!-- Main view -->
+  <div id="mainView" style="display:none;">
+    <div class="share-header">
+      <div class="container-narrow" style="padding:0;">
+        <div class="brand-row">
+          <div class="brand-mark"><i class="bi bi-geo-alt-fill"></i></div>
+          <div>
+            <div class="brand-title">สถานที่ที่ถูกแชร์</div>
+            <div class="brand-sub">Shared Location · Public View</div>
+          </div>
+        </div>
+        <div class="share-expire" id="expireText"><i class="bi bi-clock-history"></i> <span id="expireRemaining">--</span></div>
+      </div>
+    </div>
+
+    <div class="container-narrow">
+      <!-- Customer card -->
+      <div class="card-mod">
+        <div class="photo-wrap" id="photoWrap">
+          <img id="custPhoto" src="" alt="" style="display:none;">
+          <div id="photoFallback" style="text-align:center; color:#94a3b8;"><i class="bi bi-image" style="font-size:3rem;"></i><div class="small mt-2">ไม่มีรูป</div></div>
+          <div class="overlay">
+            <span id="typeBadge" class="type-badge">-</span>
+            <h1 class="loc-name" id="custName">-</h1>
+            <div class="loc-sub" id="custLocation">-</div>
+          </div>
+        </div>
+        <div class="info-section">
+          <div class="info-row" id="row-details" style="display:none;">
+            <i class="bi bi-info-circle info-icon"></i>
+            <div style="flex:1;">
+              <div class="info-label">รายละเอียด / จุดสังเกต</div>
+              <div class="info-value" id="custDetails">-</div>
+            </div>
+          </div>
+
+          <div class="info-row" id="row-phone" style="display:none;">
+            <i class="bi bi-telephone info-icon"></i>
+            <div style="flex:1;">
+              <div class="info-label">เบอร์ติดต่อ</div>
+              <div class="info-value"><a id="custPhone" href="#" class="btn-call"><i class="bi bi-telephone-fill"></i> <span></span></a></div>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <i class="bi bi-geo-alt-fill info-icon"></i>
+            <div style="flex:1;">
+              <div class="info-label">พิกัด</div>
+              <div class="info-value font-monospace small" id="custCoords">-</div>
+            </div>
+          </div>
+
+          <div id="noteWrap" style="display:none;">
+            <div class="share-note">
+              <i class="bi bi-sticky-fill me-1"></i> <span id="shareNote"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="card-mod">
+        <div class="map-wrap"><div id="map"></div></div>
+      </div>
+
+      <!-- Nav button -->
+      <button class="btn-nav" onclick="openNavigation()">
+        <i class="bi bi-cursor-fill"></i> เปิดแผนที่ / นำทาง
+      </button>
+
+      <div class="footer-brand">
+        PT Medical System · Shared Location
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../shared/config.js"></script>
+  <script>
+    var _supabase = null;
+    var _tokenData = null;
+    var _customer = null;
+    var _map = null;
+
+    function showError(title, msg) {
+      document.getElementById('loadingView').style.display = 'none';
+      document.getElementById('mainView').style.display = 'none';
+      var v = document.getElementById('errorView');
+      v.style.display = '';
+      document.getElementById('errorTitle').textContent = title || 'ผิดพลาด';
+      document.getElementById('errorMsg').textContent = msg || '';
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function fmtExpireRemaining(expireDate) {
+      var now = Date.now();
+      var ms = expireDate.getTime() - now;
+      if (ms <= 0) return 'หมดอายุแล้ว';
+      var mins = Math.floor(ms / 60000);
+      if (mins < 60) return 'หมดอายุในอีก ' + mins + ' นาที';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return 'หมดอายุในอีก ' + hrs + ' ชั่วโมง';
+      var days = Math.floor(hrs / 24);
+      return 'หมดอายุในอีก ' + days + ' วัน';
+    }
+
+    async function init() {
+      _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+      var token = new URLSearchParams(window.location.search).get('token');
+      if (!token) return showError('ลิงก์ไม่ถูกต้อง', 'ไม่พบ token ใน URL');
+
+      try {
+        // 1) Validate token
+        var tRes = await _supabase.from('loc_shared_tokens')
+          .select('*').eq('token', token).maybeSingle();
+
+        if (tRes.error || !tRes.data) {
+          return showError('ลิงก์ไม่ถูกต้อง', 'ลิงก์แชร์นี้ไม่มีในระบบ');
+        }
+        _tokenData = tRes.data;
+
+        if (_tokenData.status !== 'Active') {
+          return showError('ลิงก์ถูกระงับ', 'ลิงก์แชร์นี้ถูกยกเลิกแล้ว');
+        }
+
+        var expDate = _tokenData.expiry_date ? new Date(_tokenData.expiry_date) : null;
+        if (expDate && expDate.getTime() < Date.now()) {
+          return showError('ลิงก์หมดอายุ', 'ลิงก์แชร์นี้หมดอายุแล้ว กรุณาขอลิงก์ใหม่');
+        }
+
+        // 2) Fetch customer
+        var cRes = await _supabase.from('loc_customers')
+          .select('*').eq('id', _tokenData.customer_id).maybeSingle();
+
+        if (cRes.error || !cRes.data) {
+          return showError('ไม่พบข้อมูล', 'ไม่สามารถดึงข้อมูลสถานที่ได้');
+        }
+        _customer = cRes.data;
+
+        // 3) Render
+        renderCustomer();
+
+        // 4) Expire countdown
+        if (expDate) {
+          document.getElementById('expireRemaining').textContent = fmtExpireRemaining(expDate);
+          setInterval(function() {
+            document.getElementById('expireRemaining').textContent = fmtExpireRemaining(expDate);
+            if (expDate.getTime() < Date.now()) showError('ลิงก์หมดอายุ', 'ลิงก์หมดอายุในระหว่างที่ดู');
+          }, 30000);
+        } else {
+          document.getElementById('expireText').style.display = 'none';
+        }
+
+      } catch (e) {
+        console.error(e);
+        showError('เกิดข้อผิดพลาด', e.message || String(e));
+      }
+    }
+
+    // Field visibility from share_config (null = show all for backward-compat)
+    function canShow(field) {
+      var cfg = _tokenData && _tokenData.share_config;
+      if (cfg == null) return true;  // old token without config → show all
+      return cfg[field] !== false;    // default true if not specified
+    }
+
+    // Collapse photo area to solid green header (when no photo or hidden)
+    function collapsePhotoAreaToHeader() {
+      var wrap = document.getElementById('photoWrap');
+      var img = document.getElementById('custPhoto');
+      var fallback = document.getElementById('photoFallback');
+      if (wrap) {
+        wrap.style.height = 'auto';
+        wrap.style.minHeight = '0';
+        wrap.style.padding = '28px 20px 22px';
+        wrap.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+      }
+      if (img) img.style.display = 'none';
+      if (fallback) fallback.style.display = 'none';
+      var overlay = document.querySelector('#photoWrap .overlay');
+      if (overlay) {
+        overlay.style.background = 'none';
+        overlay.style.position = 'static';
+        overlay.style.padding = '0';
+      }
+    }
+
+    function renderCustomer() {
+      var c = _customer;
+      document.getElementById('loadingView').style.display = 'none';
+      document.getElementById('mainView').style.display = '';
+
+      // Photo: DB column is `photo_url` (not `photo` — that's the mapped
+      // local name in location/index.html). Check both for backward-compat.
+      var photoUrl = c.photo_url || c.photo || null;
+
+      if (canShow('photo') && photoUrl) {
+        var img = document.getElementById('custPhoto');
+        img.src = photoUrl;
+        img.style.display = '';
+        img.onerror = function() { img.style.display = 'none'; collapsePhotoAreaToHeader(); };
+        document.getElementById('photoFallback').style.display = 'none';
+      } else {
+        collapsePhotoAreaToHeader();
+      }
+
+      // Type badge (always show — identifies context)
+      var typeEl = document.getElementById('typeBadge');
+      var ct = c.customer_type || 'ลูกค้าทั่วไป';
+      typeEl.textContent = ct;
+      typeEl.className = 'type-badge';
+      if (ct === 'สถานพยาบาล') typeEl.classList.add('hospital');
+      else if (ct === 'ศูนย์ดูแล') typeEl.classList.add('care');
+      else if (ct === 'โรงแรม') typeEl.classList.add('hotel');
+
+      // Name (respects share_config.name)
+      document.getElementById('custName').textContent =
+        canShow('name') ? (c.name || '-') : '(ข้อมูลถูกซ่อน)';
+
+      // Location (district/province — always show, part of identity)
+      document.getElementById('custLocation').textContent =
+        'อ.' + (c.district || 'ไม่ระบุ') + ' จ.' + (c.province || 'ไม่ระบุ');
+
+      // Details (respects share_config.details)
+      if (canShow('details') && c.details) {
+        document.getElementById('row-details').style.display = '';
+        document.getElementById('custDetails').textContent = c.details;
+      }
+
+      // Phone (respects share_config.phone)
+      if (canShow('phone') && c.phone) {
+        document.getElementById('row-phone').style.display = '';
+        var phoneA = document.getElementById('custPhone');
+        phoneA.querySelector('span').textContent = c.phone;
+        phoneA.href = 'tel:' + String(c.phone).replace(/\D/g, '');
+      }
+
+      // Coordinates + Map + Nav button (respects share_config.coords)
+      if (canShow('coords') && c.lat != null && c.lng != null) {
+        var lat = Number(c.lat), lng = Number(c.lng);
+        document.getElementById('custCoords').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
+
+        // Map
+        _map = L.map('map', { maxZoom: 19, zoomControl: true }).setView([lat, lng], 16);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CartoDB', maxZoom: 19
+        }).addTo(_map);
+        var pin = L.divIcon({
+          className: '',
+          html: '<svg width="32" height="40" viewBox="0 0 32 40"><path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24C32 7.16 24.84 0 16 0z" fill="#16a34a" stroke="#fff" stroke-width="2"/><circle cx="16" cy="16" r="6" fill="#fff"/></svg>',
+          iconSize: [32, 40], iconAnchor: [16, 40]
+        });
+        L.marker([lat, lng], { icon: pin }).addTo(_map).bindPopup('<b>' + escapeHtml(canShow('name') ? (c.name || '') : 'สถานที่') + '</b>').openPopup();
+      } else {
+        // Hide coords row + map + nav button
+        var coordsRow = document.getElementById('custCoords').closest('.info-row');
+        if (coordsRow) coordsRow.style.display = 'none';
+        var mapCards = document.querySelectorAll('.card-mod');
+        if (mapCards.length > 1) mapCards[1].style.display = 'none';  // hide map card
+        var navBtn = document.querySelector('.btn-nav');
+        if (navBtn) navBtn.style.display = 'none';
+      }
+
+      // Note (always show if present — it's from the sharer, not customer data)
+      if (_tokenData.note) {
+        document.getElementById('noteWrap').style.display = '';
+        document.getElementById('shareNote').textContent = _tokenData.note;
+      }
+    }
+
+    function openNavigation() {
+      if (!_customer || _customer.lat == null || _customer.lng == null) return;
+      var url = 'https://www.google.com/maps/search/?api=1&query=' + _customer.lat + ',' + _customer.lng;
+      window.open(url, '_blank');
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -241,19 +241,130 @@
 
       <!-- TOKEN MANAGEMENT -->
       <div id="loc-tokens-view" class="view-section">
-        <div class="d-flex justify-content-between align-items-end mb-3 mt-2">
-          <div><h3 class="dashboard-header mb-1"><i class="bi bi-link-45deg text-success me-2"></i>จัดการลิงก์แชร์</h3><p class="text-muted small mb-0">ควบคุมและยกเลิกสิทธิ์ลิงก์แชร์</p></div>
+        <div class="d-flex justify-content-between align-items-end mb-3 mt-2 flex-wrap gap-2">
+          <div>
+            <h3 class="dashboard-header mb-1"><i class="bi bi-link-45deg text-success me-2"></i>จัดการลิงก์แชร์</h3>
+            <p class="text-muted small mb-0">ควบคุมและยกเลิกสิทธิ์ลิงก์แชร์ · กรองและลบข้อมูลเก่าได้</p>
+          </div>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <select id="loc-tokens-filter-status" class="form-select form-select-sm" style="width:auto;" onchange="loc_renderTokensTable()">
+              <option value="all">สถานะทั้งหมด</option>
+              <option value="active" selected>ใช้งานได้</option>
+              <option value="revoked">ถูกระงับ</option>
+              <option value="expired">หมดอายุ</option>
+            </select>
+            <input type="text" id="loc-tokens-search" class="form-control form-control-sm" placeholder="ค้นหาสถานที่/หมายเหตุ..." style="width:200px;" oninput="loc_renderTokensTable()">
+            <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="loc_bulkDeleteExpired()" title="ลบ tokens ที่หมดอายุ+ถูกระงับทิ้งถาวร">
+              <i class="bi bi-trash me-1"></i> ลบข้อมูลเก่า
+            </button>
+          </div>
         </div>
         <div class="card island-card overflow-hidden">
           <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light"><tr class="small text-secondary"><th class="ps-3">สถานที่</th><th>Token</th><th class="d-none d-md-table-cell">หมายเหตุ</th><th class="text-center">หมดอายุ</th><th class="text-center">สถานะ</th><th class="text-end pe-3">จัดการ</th></tr></thead>
+            <table class="table table-hover mb-0" style="font-size:0.88rem;">
+              <thead class="table-light"><tr class="small text-secondary">
+                <th class="ps-3">สถานที่ / ผู้สร้าง</th>
+                <th>ข้อมูลที่แชร์</th>
+                <th class="d-none d-md-table-cell">หมายเหตุ</th>
+                <th class="text-center">หมดอายุ</th>
+                <th class="text-center">สถานะ</th>
+                <th class="text-end pe-3">จัดการ</th>
+              </tr></thead>
               <tbody id="loc-tokens-table-body"><tr><td colspan="6" class="text-center text-muted py-5">ไม่มีข้อมูล</td></tr></tbody>
             </table>
           </div>
         </div>
+        <div class="text-muted small mt-2 px-2" id="loc-tokens-count"></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Share Link Modal (Bootstrap — not SweetAlert; user-reported text input issue) -->
+  <div class="modal fade" id="locShareModal" tabindex="-1" aria-hidden="true" style="z-index:1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-share-fill text-success me-2"></i>สร้างลิงก์แชร์
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <div class="small text-muted mb-2">สำหรับส่งต่อข้อมูลสถานที่:</div>
+          <div class="bg-light rounded-3 p-2 mb-3 small" id="locShareCustomerInfo">
+            <!-- populated by JS -->
+          </div>
+
+          <label for="locShareExpiry" class="form-label small fw-bold mb-1">อายุลิงก์</label>
+          <select id="locShareExpiry" class="form-select form-select-sm mb-3">
+            <option value="1">1 ชั่วโมง</option>
+            <option value="24" selected>24 ชั่วโมง (1 วัน)</option>
+            <option value="168">7 วัน</option>
+            <option value="720">30 วัน</option>
+          </select>
+
+          <label for="locShareNote" class="form-label small fw-bold mb-1">หมายเหตุ (ไม่บังคับ)</label>
+          <input type="text" id="locShareNote" class="form-control form-control-sm mb-3"
+                 placeholder="เช่น ส่งให้คุณ A ไปรับของแทน" maxlength="100" autocomplete="off">
+
+          <label class="form-label small fw-bold mb-2">ข้อมูลที่จะเปิดให้ผู้รับลิงก์เห็น</label>
+          <div class="border rounded-3 p-2 mb-2" style="background:#f0fdf4;" id="locShareFieldsWrap">
+            <!-- populated by JS -->
+          </div>
+          <div id="locShareValidation" class="text-danger small mb-0" style="display:none;"></div>
+        </div>
+        <div class="modal-footer border-top-0">
+          <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-success rounded-pill px-4" id="locShareSubmitBtn" onclick="loc_submitShareLink()">
+            <i class="bi bi-link-45deg me-1"></i> สร้างลิงก์
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Link Result Modal -->
+  <div class="modal fade" id="locShareResultModal" tabindex="-1" aria-hidden="true" style="z-index:1070;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header border-bottom-0 pb-0 bg-success-subtle">
+          <h5 class="modal-title fw-bold text-success">
+            <i class="bi bi-check-circle-fill me-2"></i>สร้างลิงก์สำเร็จ
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-2">ลิงก์สำหรับส่งต่อ (คลิกเพื่อเลือกและคัดลอก):</p>
+          <input type="text" id="locShareResultUrl" readonly
+                 class="form-control form-control-sm font-monospace small mb-2"
+                 style="background:#f0fdf4;" onclick="this.select()">
+          <button class="btn btn-success btn-sm w-100" onclick="loc_copyResultLink()">
+            <i class="bi bi-clipboard me-1"></i> คัดลอกลิงก์
+          </button>
+          <div class="small text-muted mt-2" id="locShareResultExpire"></div>
+          <div id="locShareResultWarning"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini Map Modal (nested inside Customer Detail Modal) -->
+  <div class="modal fade" id="locMiniMapModal" tabindex="-1" aria-hidden="true" style="z-index:1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="modal-header bg-light border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-map-fill text-primary me-2"></i><span id="loc-minimap-name">แผนที่</span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div id="loc-minimap" style="height:60vh; min-height:360px; width:100%;"></div>
+          <div class="px-3 py-2 border-top d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <span class="small text-muted"><i class="bi bi-geo-alt-fill"></i> <span id="loc-minimap-coords" class="font-monospace"></span></span>
+            <a id="loc-minimap-nav-link" href="#" target="_blank" class="btn btn-primary btn-sm rounded-pill"><i class="bi bi-cursor-fill me-1"></i>เปิดใน Google Maps</a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -276,15 +387,19 @@
             <a id="loc-modal-phone" href="#" class="badge bg-success-subtle text-success border px-3 py-2 text-decoration-none mb-3 d-inline-block"></a>
             <div class="mb-3"><p class="small fw-bold text-secondary text-uppercase mb-1">รายละเอียด / จุดสังเกต</p><div id="loc-modal-details" class="bg-light rounded-3 p-3 small"></div></div>
             <div class="mb-3"><p class="small fw-bold text-secondary text-uppercase mb-1">ตำแหน่งพิกัด</p>
-              <div class="d-flex align-items-center justify-content-between bg-primary bg-opacity-10 p-3 rounded-3">
+              <div class="d-flex align-items-center justify-content-between bg-primary bg-opacity-10 p-3 rounded-3 flex-wrap gap-2">
                 <span id="loc-modal-coords" class="font-monospace small"></span>
-                <a id="loc-modal-map-link" href="#" target="_blank" class="btn btn-primary btn-sm rounded-pill"><i class="bi bi-cursor-fill me-1"></i>นำทาง</a>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="loc_openMiniMap()"><i class="bi bi-map me-1"></i>ดูแผนที่</button>
+                  <a id="loc-modal-map-link" href="#" target="_blank" class="btn btn-primary btn-sm rounded-pill"><i class="bi bi-cursor-fill me-1"></i>นำทาง</a>
+                </div>
               </div>
             </div>
           </div>
         </div>
         <div class="modal-footer border-top-0 pt-0">
-          <div id="loc-modal-actions" class="d-flex gap-2 ms-auto">
+          <div id="loc-modal-actions" class="d-flex gap-2 ms-auto flex-wrap">
+            <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="loc_createShareLink()"><i class="bi bi-share-fill me-1"></i>แชร์ลิงก์</button>
             <button class="btn btn-sm btn-outline-warning rounded-pill px-3" onclick="loc_editFromModal()"><i class="bi bi-pencil me-1"></i>แก้ไข</button>
           </div>
         </div>
@@ -847,6 +962,63 @@
       bootstrap.Modal.getOrCreateInstance(document.getElementById('locCustomerModal')).show();
     }
 
+    // --- Mini-Map Modal (nested) — shows a single customer's pin on a Leaflet
+    //     map inside the app, so dispatchers don't have to leave for Google Maps.
+    var _miniMapInstance = null;
+    var _miniMapMarker = null;
+    function loc_openMiniMap() {
+      var c = loc_customers.find(function(x) { return x.id === loc_selectedCustomerId; });
+      if (!c || c.lat == null || c.lng == null) return;
+      var lat = Number(c.lat), lng = Number(c.lng);
+      document.getElementById('loc-minimap-name').textContent = c.name || 'แผนที่';
+      document.getElementById('loc-minimap-coords').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
+      document.getElementById('loc-minimap-nav-link').href = 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng;
+
+      var modalEl = document.getElementById('locMiniMapModal');
+      var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+      // Init map on the first 'shown' event — Leaflet needs the container to
+      // be visible + have a final size before initializing, otherwise tiles
+      // render at 0×0 and don't recover.
+      modalEl.addEventListener('shown.bs.modal', function onShown() {
+        modalEl.removeEventListener('shown.bs.modal', onShown);
+        if (!_miniMapInstance) {
+          _miniMapInstance = L.map('loc-minimap', { maxZoom: 19 }).setView([lat, lng], 16);
+          // Use MapConfig so it respects Admin's map provider. Falls back to
+          // OSM automatically if Google Maps isn't configured.
+          if (window.MapConfig) {
+            MapConfig.load(_supabase).then(function() {
+              return MapConfig.createTileLayer(_miniMapInstance, {
+                fallbackUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                fallbackAttribution: '&copy; OpenStreetMap'
+              });
+            });
+          } else {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(_miniMapInstance);
+          }
+        } else {
+          _miniMapInstance.setView([lat, lng], 16);
+          _miniMapInstance.invalidateSize();
+        }
+        // Update pin
+        var pct = c.customer_type || 'ลูกค้าทั่วไป';
+        var pinColors = {'ลูกค้าทั่วไป':'#0d6efd','ศูนย์ดูแล':'#fd7e14','สถานพยาบาล':'#dc3545','โรงแรม':'#6f42c1'};
+        var color = pinColors[pct] || '#6c757d';
+        var icon = L.divIcon({
+          className: 'loc-marker-icon',
+          html: '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="46" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="'+color+'"/><circle cx="12" cy="11" r="5" fill="#fff"/></svg>',
+          iconSize: [36, 46], iconAnchor: [18, 46], popupAnchor: [0, -46]
+        });
+        if (_miniMapMarker) _miniMapInstance.removeLayer(_miniMapMarker);
+        _miniMapMarker = L.marker([lat, lng], { icon: icon }).addTo(_miniMapInstance);
+        _miniMapMarker.bindPopup('<div style="font-family:Sarabun,sans-serif; min-width:160px;"><b>' + escapeHtml(c.name || '') + '</b><div style="font-size:0.78rem; color:#64748b;">อ.' + escapeHtml(c.district || '-') + ' จ.' + escapeHtml(c.province || '-') + '</div></div>').openPopup();
+        // Ensure layout is correct even after CSS transitions / resize
+        setTimeout(function() { _miniMapInstance && _miniMapInstance.invalidateSize(); }, 250);
+      });
+
+      modal.show();
+    }
+
     function loc_editFromModal() {
       bootstrap.Modal.getInstance(document.getElementById('locCustomerModal')).hide();
       loc_openFormEdit(loc_selectedCustomerId);
@@ -912,27 +1084,374 @@
       setTimeout(() => loc_leafletMap.invalidateSize(), 300);
     }
 
-    // --- TOKEN TABLE ---
+    // --- TOKEN TABLE (with filter + search + delete + share_config display) ---
+    function loc_shareConfigToIcons(cfg) {
+      // Compact icon row showing which fields are visible in this share
+      if (cfg == null) return '<span class="text-muted small">ทุกช่อง</span>';
+      var icons = [
+        { key:'name',    icon:'bi-person-fill',     label:'ชื่อ',         color:'#16a34a' },
+        { key:'phone',   icon:'bi-telephone-fill',  label:'เบอร์',        color:'#0ea5e9' },
+        { key:'coords',  icon:'bi-geo-alt-fill',    label:'พิกัด/แผนที่', color:'#f59e0b' },
+        { key:'details', icon:'bi-info-circle-fill',label:'รายละเอียด',   color:'#8b5cf6' },
+        { key:'photo',   icon:'bi-image-fill',      label:'รูป',          color:'#ec4899' }
+      ];
+      return icons.map(function(it) {
+        var on = cfg[it.key] === true;
+        return '<i class="bi ' + it.icon + ' me-1" ' +
+               'title="' + it.label + (on ? ' (แชร์)' : ' (ซ่อน)') + '" ' +
+               'style="color:' + (on ? it.color : '#e2e8f0') + '; font-size:0.95rem;"></i>';
+      }).join('');
+    }
+
     function loc_renderTokensTable() {
       var tbody = document.getElementById('loc-tokens-table-body');
-      if (!tbody || !loc_sharedTokensData.length) { if(tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">ไม่มีประวัติการสร้างลิงก์แชร์</td></tr>'; return; }
+      var countEl = document.getElementById('loc-tokens-count');
+      if (!tbody) return;
+
+      var filterStatus = (document.getElementById('loc-tokens-filter-status') || {}).value || 'all';
+      var searchQ = ((document.getElementById('loc-tokens-search') || {}).value || '').trim().toLowerCase();
       var now = Date.now();
+
+      // Filter
+      var filtered = (loc_sharedTokensData || []).filter(function(t) {
+        var exp = t.expiry_date ? new Date(t.expiry_date).getTime() : Infinity;
+        var isExp = exp < now;
+        var isRevoked = t.status === 'Revoked';
+        var isActive = !isRevoked && !isExp;
+
+        if (filterStatus === 'active' && !isActive) return false;
+        if (filterStatus === 'revoked' && !isRevoked) return false;
+        if (filterStatus === 'expired' && !(isExp && !isRevoked)) return false;
+
+        if (searchQ) {
+          var cust = loc_customers.find(function(c){ return c.id === t.customer_id; });
+          var hay = ((cust && cust.name) || '') + ' ' + (t.note || '') + ' ' + (t.created_by || '') + ' ' + (t.token || '');
+          if (hay.toLowerCase().indexOf(searchQ) === -1) return false;
+        }
+        return true;
+      });
+
+      // Count summary
+      var total = (loc_sharedTokensData || []).length;
+      var actives = (loc_sharedTokensData || []).filter(function(t){ var e=t.expiry_date?new Date(t.expiry_date).getTime():Infinity; return t.status!=='Revoked' && e>=now; }).length;
+      if (countEl) countEl.innerHTML = 'แสดง ' + filtered.length + ' จาก ' + total + ' · ใช้งานได้ <b class="text-success">' + actives + '</b>';
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">ไม่มีข้อมูลตามตัวกรอง</td></tr>';
+        return;
+      }
+
       var html = '';
-      loc_sharedTokensData.forEach(t => {
-        var exp = new Date(t.expiry_date).getTime();
+      filtered.forEach(function(t) {
+        var exp = t.expiry_date ? new Date(t.expiry_date).getTime() : Infinity;
         var isExp = exp < now;
         var statusText = 'ใช้งานได้', statusClass = 'bg-success-subtle text-success';
         if (t.status === 'Revoked') { statusText = 'ถูกระงับ'; statusClass = 'bg-danger-subtle text-danger'; }
         else if (isExp) { statusText = 'หมดอายุ'; statusClass = 'bg-secondary-subtle text-secondary'; }
-        var expText = t.expiry_date ? new Date(t.expiry_date).toLocaleString('th-TH', {dateStyle:'short',timeStyle:'short'}) : '-';
-        var revokeBtn = t.status !== 'Revoked' && !isExp ? '<button class="btn btn-sm btn-outline-danger rounded-pill" onclick="loc_revokeToken(\''+t.token+'\')">ยกเลิก</button>' : '-';
-        // Find customer name
-        var custName = '';
-        var cust = loc_customers.find(c => c.id === t.customer_id);
-        if (cust) custName = cust.name;
-        html += '<tr class="align-middle"><td class="ps-3"><div class="fw-medium small">'+escapeHtml(custName)+'</div><div class="text-muted" style="font-size:0.7rem;">โดย: '+escapeHtml(t.created_by||'')+'</div></td><td><code class="small">'+escapeHtml(t.token)+'</code></td><td class="d-none d-md-table-cell small text-muted">'+escapeHtml(t.note||'-')+'</td><td class="text-center small">'+expText+'</td><td class="text-center"><span class="badge '+statusClass+' rounded-pill">'+statusText+'</span></td><td class="text-end pe-3">'+revokeBtn+'</td></tr>';
+
+        var expText = t.expiry_date ? new Date(t.expiry_date).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }) : '-';
+        var cust = loc_customers.find(function(c){ return c.id === t.customer_id; });
+        var custName = cust ? cust.name : '<span class="text-danger">(ลูกค้าถูกลบ)</span>';
+
+        // Build action buttons
+        var actions = '';
+        if (t.status !== 'Revoked' && !isExp) {
+          // Active: Copy link + Revoke
+          actions += '<button class="btn btn-sm btn-outline-primary rounded-pill me-1" onclick="loc_copyTokenLink(\''+t.token+'\')" title="คัดลอกลิงก์"><i class="bi bi-clipboard"></i></button>';
+          actions += '<button class="btn btn-sm btn-outline-danger rounded-pill" onclick="loc_revokeToken(\''+t.token+'\')" title="ยกเลิก">ยกเลิก</button>';
+        } else {
+          // Revoked or Expired: Delete button
+          actions += '<button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="loc_deleteToken(\''+t.token+'\')" title="ลบถาวร"><i class="bi bi-trash"></i></button>';
+        }
+
+        html += '<tr class="align-middle">' +
+          '<td class="ps-3">' +
+            '<div class="fw-medium">' + (cust ? escapeHtml(custName) : custName) + '</div>' +
+            '<div class="text-muted" style="font-size:0.72rem;">' +
+              '<i class="bi bi-person"></i> ' + escapeHtml(t.created_by || '-') +
+              ' · <i class="bi bi-calendar"></i> ' + (t.created_at ? new Date(t.created_at).toLocaleDateString('th-TH') : '-') +
+              ' · <code style="font-size:0.7rem;">' + escapeHtml((t.token||'').substring(0,10)) + '…</code>' +
+            '</div>' +
+          '</td>' +
+          '<td>' + loc_shareConfigToIcons(t.share_config) + '</td>' +
+          '<td class="d-none d-md-table-cell small text-muted" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(t.note || '-') + '</td>' +
+          '<td class="text-center small">' + expText + '</td>' +
+          '<td class="text-center"><span class="badge ' + statusClass + ' rounded-pill">' + statusText + '</span></td>' +
+          '<td class="text-end pe-3" style="white-space:nowrap;">' + actions + '</td>' +
+        '</tr>';
       });
       tbody.innerHTML = html;
+    }
+
+    // Copy share link from table
+    function loc_copyTokenLink(token) {
+      var base = window.location.origin + (CONFIG.BASE_URL || '');
+      var url = base + '/location/share.html?token=' + encodeURIComponent(token);
+      navigator.clipboard.writeText(url).then(function() {
+        Swal.fire({ icon:'success', title:'คัดลอกลิงก์แล้ว', timer:1200, showConfirmButton:false });
+      }).catch(function() {
+        prompt('Copy this URL:', url);
+      });
+    }
+
+    // Delete token permanently (admin cleanup for expired/revoked tokens)
+    async function loc_deleteToken(token) {
+      var r = await Swal.fire({
+        title: 'ลบ token นี้ถาวร?',
+        html: 'ข้อมูลประวัติการแชร์นี้จะ<b>หายไปอย่างถาวร</b> — ย้อนไม่ได้',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'ลบถาวร',
+        cancelButtonText: 'ยกเลิก'
+      });
+      if (!r.isConfirmed) return;
+
+      try {
+        var res = await _supabase.from('loc_shared_tokens').delete().eq('token', token);
+        if (res.error) throw res.error;
+        try {
+          await _supabase.from('activity_log').insert({
+            username: (typeof getUserName === 'function' ? getUserName() : 'Unknown'),
+            role: (typeof getUserRole === 'function' ? getUserRole() : 'User'),
+            action: 'LOC_SHARE_DELETE',
+            target: token.substring(0, 10) + '...',
+            details: 'Permanently deleted share token'
+          });
+        } catch(_){}
+        // Refresh
+        var d = await _supabase.from('loc_shared_tokens').select('*').order('created_at', { ascending: false });
+        loc_sharedTokensData = d.data || [];
+        loc_renderTokensTable();
+        Swal.fire({ icon:'success', title:'ลบเรียบร้อย', timer:1000, showConfirmButton:false });
+      } catch (err) {
+        Swal.fire('ผิดพลาด', err.message || String(err), 'error');
+      }
+    }
+
+    // Bulk delete all revoked + expired tokens (admin cleanup)
+    async function loc_bulkDeleteExpired() {
+      var now = Date.now();
+      var targets = (loc_sharedTokensData || []).filter(function(t) {
+        var exp = t.expiry_date ? new Date(t.expiry_date).getTime() : Infinity;
+        return t.status === 'Revoked' || exp < now;
+      });
+      if (!targets.length) {
+        Swal.fire({ icon: 'info', title: 'ไม่มีข้อมูลเก่าให้ลบ', timer: 1500, showConfirmButton: false });
+        return;
+      }
+      var r = await Swal.fire({
+        title: 'ลบข้อมูลเก่าทั้งหมด?',
+        html: 'จะลบ <b>' + targets.length + '</b> รายการที่ <b>หมดอายุ</b> หรือ <b>ถูกระงับ</b> แบบถาวร<br>ย้อนกลับไม่ได้',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'ลบทั้งหมด (' + targets.length + ')',
+        cancelButtonText: 'ยกเลิก'
+      });
+      if (!r.isConfirmed) return;
+
+      Swal.fire({ title: 'กำลังลบ...', didOpen: function() { Swal.showLoading(); } });
+      try {
+        var tokens = targets.map(function(t) { return t.token; });
+        var res = await _supabase.from('loc_shared_tokens').delete().in('token', tokens);
+        if (res.error) throw res.error;
+        try {
+          await _supabase.from('activity_log').insert({
+            username: (typeof getUserName === 'function' ? getUserName() : 'Unknown'),
+            role: (typeof getUserRole === 'function' ? getUserRole() : 'User'),
+            action: 'LOC_SHARE_BULK_DELETE',
+            target: 'expired+revoked',
+            details: 'Bulk deleted ' + tokens.length + ' expired/revoked tokens'
+          });
+        } catch(_){}
+        var d = await _supabase.from('loc_shared_tokens').select('*').order('created_at', { ascending: false });
+        loc_sharedTokensData = d.data || [];
+        loc_renderTokensTable();
+        Swal.fire({ icon:'success', title:'ลบเรียบร้อย', text:'ลบ ' + tokens.length + ' รายการ', timer:1500, showConfirmButton:false });
+      } catch (err) {
+        Swal.fire('ผิดพลาด', err.message || String(err), 'error');
+      }
+    }
+
+    // ============================================================
+    // SHARE LINK — create new shareable public link for a customer
+    // ============================================================
+    // Generate cryptographically random token (URL-safe)
+    function loc_generateToken() {
+      var bytes = new Uint8Array(24);
+      (window.crypto || window.msCrypto).getRandomValues(bytes);
+      var b64 = btoa(String.fromCharCode.apply(null, bytes));
+      return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '').substring(0, 32);
+    }
+
+    // Privacy checkboxes — which fields are visible in public share view
+    // (matches GAS original: name, phone, coords, details, photo)
+    var LOC_SHARE_FIELDS = [
+      { key: 'name',    label: 'ชื่อลูกค้า/เจ้าของบ้าน',     default: true  },
+      { key: 'phone',   label: 'เบอร์โทรศัพท์ติดต่อ',          default: false },
+      { key: 'coords',  label: 'พิกัดและปุ่มเปิดแผนที่',      default: true  },
+      { key: 'details', label: 'รายละเอียดจุดสังเกต',          default: false },
+      { key: 'photo',   label: 'รูปถ่ายสถานที่',                default: true  }
+    ];
+
+    // Remember the customer being shared (shared between open + submit)
+    var _locShareTargetCustomerId = null;
+
+    // Open Bootstrap share modal (replaces SweetAlert due to text-input issue)
+    function loc_createShareLink() {
+      var c = loc_customers.find(function(x) { return x.id === loc_selectedCustomerId; });
+      if (!c) return;
+      _locShareTargetCustomerId = c.id;
+
+      // Populate customer info
+      document.getElementById('locShareCustomerInfo').innerHTML =
+        '<i class="bi bi-geo-alt-fill text-success me-1"></i>' + escapeHtml(c.name || '-') +
+        '<div class="text-muted" style="font-size:0.75rem;">' +
+        'อ.' + escapeHtml(c.district || '-') + ' จ.' + escapeHtml(c.province || '-') +
+        '</div>';
+
+      // Reset form
+      document.getElementById('locShareExpiry').value = '24';
+      document.getElementById('locShareNote').value = '';
+      document.getElementById('locShareValidation').style.display = 'none';
+
+      // Build checkboxes
+      var wrap = document.getElementById('locShareFieldsWrap');
+      wrap.innerHTML = LOC_SHARE_FIELDS.map(function(f) {
+        return '<label class="d-flex align-items-center gap-2 py-1 mb-0" style="cursor:pointer; font-size:0.88rem;">' +
+          '<input type="checkbox" class="form-check-input mt-0 loc-share-field-cb" ' +
+          'data-field="' + f.key + '" ' + (f.default ? 'checked' : '') + '>' +
+          '<span>' + f.label + '</span>' +
+        '</label>';
+      }).join('');
+
+      // Show modal
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('locShareModal')).show();
+
+      // Focus note field after modal fully shown
+      var modalEl = document.getElementById('locShareModal');
+      modalEl.addEventListener('shown.bs.modal', function onShown() {
+        modalEl.removeEventListener('shown.bs.modal', onShown);
+        var note = document.getElementById('locShareNote');
+        if (note) note.focus();
+      });
+    }
+
+    // Actual submit logic (called by "สร้างลิงก์" button in modal)
+    async function loc_submitShareLink() {
+      var c = loc_customers.find(function(x) { return x.id === _locShareTargetCustomerId; });
+      if (!c) { alert('ไม่พบข้อมูลลูกค้า'); return; }
+
+      var expiryHours = parseInt(document.getElementById('locShareExpiry').value, 10);
+      var note = (document.getElementById('locShareNote').value || '').trim();
+
+      var shareConfig = {};
+      document.querySelectorAll('.loc-share-field-cb').forEach(function(cb) {
+        shareConfig[cb.dataset.field] = cb.checked;
+      });
+
+      var anyChecked = Object.keys(shareConfig).some(function(k) { return shareConfig[k]; });
+      if (!anyChecked) {
+        var v = document.getElementById('locShareValidation');
+        v.textContent = 'กรุณาเลือกข้อมูลที่จะแชร์อย่างน้อย 1 รายการ';
+        v.style.display = '';
+        return;
+      }
+
+      var submitBtn = document.getElementById('locShareSubmitBtn');
+      var originalBtn = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> กำลังสร้าง...';
+
+      var token = loc_generateToken();
+      var expiryDate = new Date(Date.now() + expiryHours * 3600 * 1000);
+
+      try {
+        var baseRow = {
+          token: token,
+          customer_id: c.id,
+          expiry_date: expiryDate.toISOString(),
+          status: 'Active',
+          note: note || null,
+          created_by: (typeof getUserName === 'function' ? getUserName() : 'Unknown')
+        };
+        var insertRow = Object.assign({ share_config: shareConfig }, baseRow);
+        var res = await _supabase.from('loc_shared_tokens').insert(insertRow).select().single();
+
+        var schemaMissing = false;
+        if (res.error) {
+          var em = (res.error.message || '').toLowerCase();
+          if (em.indexOf('share_config') >= 0 || em.indexOf('schema cache') >= 0) {
+            console.warn('loc_shared_tokens.share_config column missing — run sql/loc_shared_tokens_add_share_config.sql');
+            schemaMissing = true;
+            res = await _supabase.from('loc_shared_tokens').insert(baseRow).select().single();
+            if (res.error) throw res.error;
+          } else {
+            throw res.error;
+          }
+        }
+
+        // Activity log
+        var sharedLabels = LOC_SHARE_FIELDS.filter(function(f){return shareConfig[f.key];}).map(function(f){return f.label;}).join(', ');
+        var hiddenLabels = LOC_SHARE_FIELDS.filter(function(f){return !shareConfig[f.key];}).map(function(f){return f.label;}).join(', ');
+        try {
+          await _supabase.from('activity_log').insert({
+            username: (typeof getUserName === 'function' ? getUserName() : 'Unknown'),
+            role: (typeof getUserRole === 'function' ? getUserRole() : 'User'),
+            action: 'LOC_SHARE',
+            target: c.name || c.id,
+            details: 'อายุ ' + expiryHours + ' ชม. · หมดอายุ ' + expiryDate.toLocaleString('th-TH') +
+                     ' · เปิดให้เห็น: ' + (sharedLabels || '-') +
+                     (hiddenLabels ? ' · ซ่อน: ' + hiddenLabels : '') +
+                     (note ? ' · หมายเหตุ: ' + note : '') +
+                     ' · token: ' + token.substring(0, 8) + '...'
+          });
+        } catch(_){}
+
+        // Build share URL
+        var base = window.location.origin + (CONFIG.BASE_URL || '');
+        var shareUrl = base + '/location/share.html?token=' + encodeURIComponent(token);
+
+        // Close create modal, open result modal
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('locShareModal')).hide();
+        var resultModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('locShareResultModal'));
+        document.getElementById('locShareResultUrl').value = shareUrl;
+        document.getElementById('locShareResultExpire').textContent = 'หมดอายุ: ' + expiryDate.toLocaleString('th-TH');
+        document.getElementById('locShareResultWarning').innerHTML = schemaMissing
+          ? '<div class="alert alert-warning small mt-3 mb-0" style="font-size:0.8rem;">' +
+            '<i class="bi bi-exclamation-triangle-fill me-1"></i> <b>Privacy feature ยังไม่เปิด</b> — ลิงก์นี้จะโชว์ทุกช่อง<br>' +
+            'Admin: รัน <code>sql/loc_shared_tokens_add_share_config.sql</code> ใน Supabase</div>'
+          : '';
+        resultModal.show();
+
+        // Refresh table if currently showing
+        try {
+          var tRes = await _supabase.from('loc_shared_tokens').select('*').order('created_at', { ascending: false });
+          loc_sharedTokensData = tRes.data || [];
+          if (document.getElementById('loc-tokens-view').classList.contains('active')) {
+            loc_renderTokensTable();
+          }
+        } catch(_){}
+      } catch (err) {
+        alert('ผิดพลาด: ' + (err.message || String(err)));
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtn;
+      }
+    }
+
+    // Copy URL from result modal
+    function loc_copyResultLink() {
+      var input = document.getElementById('locShareResultUrl');
+      if (!input) return;
+      input.select();
+      input.setSelectionRange(0, 99999);
+      (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.reject())
+        .catch(function(){ document.execCommand('copy'); })
+        .finally(function() {
+          Swal.fire({ icon: 'success', title: 'คัดลอกเรียบร้อย', timer: 1200, showConfirmButton: false });
+        });
     }
 
     async function loc_revokeToken(token) {
