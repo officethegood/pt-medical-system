@@ -880,14 +880,14 @@
                     <div class="col-md-4">
                       <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">เวลา Arrest</label>
                       <div class="input-group input-group-sm">
-                        <input type="time" lang="en-GB" class="form-control bg-light" id="arrest_pre_time" name="arrest_pre_time">
+                        <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="([01]?\d|2[0-3]):[0-5]\d" class="form-control bg-light" id="arrest_pre_time" name="arrest_pre_time" oninput="maskTime(this)">
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="stampArrestNow('arrest_pre_time')"><i class="bi bi-clock"></i> Now</button>
                       </div>
                     </div>
                     <div class="col-md-4">
                       <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">เริ่ม CPR</label>
                       <div class="input-group input-group-sm">
-                        <input type="time" lang="en-GB" class="form-control bg-light" id="arrest_pre_cpr_time" name="arrest_pre_cpr_time" onchange="calcArrestCprDuration('pre')">
+                        <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="([01]?\d|2[0-3]):[0-5]\d" class="form-control bg-light" id="arrest_pre_cpr_time" name="arrest_pre_cpr_time" oninput="maskTime(this)" onchange="calcArrestCprDuration('pre')">
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="stampArrestNow('arrest_pre_cpr_time'); calcArrestCprDuration('pre')"><i class="bi bi-clock"></i> Now</button>
                       </div>
                     </div>
@@ -918,7 +918,7 @@
                       <div class="col-md-4">
                         <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">ROSC Time</label>
                         <div class="input-group input-group-sm">
-                          <input type="time" lang="en-GB" class="form-control bg-light" id="arrest_pre_rosc_time" name="arrest_pre_rosc_time" onchange="calcArrestCprDuration('pre')">
+                          <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="([01]?\d|2[0-3]):[0-5]\d" class="form-control bg-light" id="arrest_pre_rosc_time" name="arrest_pre_rosc_time" oninput="maskTime(this)" onchange="calcArrestCprDuration('pre')">
                           <button type="button" class="btn btn-outline-success btn-sm" onclick="stampArrestNow('arrest_pre_rosc_time'); calcArrestCprDuration('pre')"><i class="bi bi-clock"></i> Now</button>
                         </div>
                       </div>
@@ -929,7 +929,7 @@
                       <div class="col-md-4">
                         <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">Pronounced Dead Time</label>
                         <div class="input-group input-group-sm">
-                          <input type="time" lang="en-GB" class="form-control bg-light" id="arrest_pre_dead_time" name="arrest_pre_dead_time" onchange="calcArrestCprDuration('pre')">
+                          <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="([01]?\d|2[0-3]):[0-5]\d" class="form-control bg-light" id="arrest_pre_dead_time" name="arrest_pre_dead_time" oninput="maskTime(this)" onchange="calcArrestCprDuration('pre')">
                           <button type="button" class="btn btn-outline-dark btn-sm" onclick="stampArrestNow('arrest_pre_dead_time'); calcArrestCprDuration('pre')"><i class="bi bi-clock"></i> Now</button>
                         </div>
                       </div>
@@ -1239,22 +1239,6 @@
                  </div>
               </div>
 
-              <!-- Refer Documents (Edit Modal version) -->
-              <div class="card border-0 shadow-sm rounded-3 mt-3" id="edit-refer-card">
-                <div class="card-body p-3">
-                   <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                      <h6 class="card-title fw-bold text-dark mb-0"><i class="bi bi-paperclip text-info me-2"></i>เอกสารแนบ (ใบ Refer)
-                         <span class="badge bg-light text-muted border ms-1" style="font-size:0.65rem;" id="refer-edit-count-badge">0/5</span>
-                      </h6>
-                      <div>
-                         <input type="file" id="refer-edit-file-input" accept="image/*,application/pdf" multiple style="display:none;" onchange="handleReferFileSelect(event, 'edit')">
-                         <button type="button" class="btn btn-info text-white rounded-pill btn-sm" id="refer-edit-add-btn" onclick="document.getElementById('refer-edit-file-input').click()"><i class="bi bi-plus-lg me-1"></i> แนบไฟล์</button>
-                      </div>
-                   </div>
-                   <p class="text-muted small mb-2">JPG/PNG/PDF — สูงสุด 5 ไฟล์</p>
-                   <div id="refer-edit-docs-list" class="d-flex flex-wrap gap-2"></div>
-                </div>
-              </div>
            </form>
         </div>
         <div class="modal-footer border-top-0 pt-0">
@@ -1361,7 +1345,7 @@
                 var statusEl = document.getElementById('formStatus');
                 if (statusEl && statusEl.value !== 'Completed' && typeof saveData === 'function') {
                     saveData(false, true);
-                    console.log('[Auto-Save] Draft saved at ' + new Date().toLocaleTimeString('th-TH'));
+                    console.log('[Auto-Save] Draft saved at ' + new Date().toLocaleTimeString('th-TH', { hour12: false }));
                 }
             }
         }, 120000);
@@ -1998,7 +1982,7 @@
             if (rec.timestamp && rec.timestamp.toDate) {
                 var d = rec.timestamp.toDate();
                 dateStr = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
-                timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
             }
             var opLevel = oi.level || '-';
             var opUnit = oi.unitNo || '-';
@@ -3219,7 +3203,7 @@
             html:
                 '<style>.swal2-popup input::placeholder { color: #ccc !important; opacity: 1; } .swal2-popup input { color: #212529; font-weight: 600; } .swal2-popup .swal-invalid { border: 2px solid #dc3545 !important; background-color: #fff5f5 !important; }</style>' +
                 '<div class="row g-2 text-start" style="font-size:0.9rem;">' +
-                    '<div class="col-12"><label class="form-label fw-bold small mb-1"><i class="bi bi-clock-fill text-danger me-1"></i> เวลาบันทึก (24 ชม.)</label><input type="time" id="swal-time" lang="en-GB" class="form-control form-control-sm" value="' + (f.init_vitals_time.value || new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false})) + '"></div>' +
+                    '<div class="col-12"><label class="form-label fw-bold small mb-1"><i class="bi bi-clock-fill text-danger me-1"></i> เวลาบันทึก (24 ชม.)</label><input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" pattern="([01]?\\d|2[0-3]):[0-5]\\d" id="swal-time" class="form-control form-control-sm" oninput="maskTime(this)" value="' + (f.init_vitals_time.value || new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false})) + '"></div>' +
                     '<div class="col-6"><label class="form-label fw-bold small mb-1">BP (mmHg)</label><input type="text" id="swal-bp" class="form-control form-control-sm text-center" value="' + f.init_bp.value + '" placeholder="เช่น 120/80"></div>' +
                     '<div class="col-6"><label class="form-label fw-bold small mb-1">PR (/min)</label><input type="text" id="swal-pr" class="form-control form-control-sm text-center" value="' + f.init_pr.value + '" placeholder="เช่น 80"></div>' +
                     '<div class="col-6"><label class="form-label fw-bold small mb-1">RR (/min)</label><input type="text" id="swal-rr" class="form-control form-control-sm text-center" value="' + f.init_rr.value + '" placeholder="เช่น 20"></div>' +

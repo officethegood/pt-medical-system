@@ -572,7 +572,7 @@
         if (!transportList || !faList) return;
 
         monitorShowLoading();
-        document.getElementById('monitor-last-refresh').textContent = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('monitor-last-refresh').textContent = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         monitorStartCountdown();
 
         try {
@@ -783,7 +783,7 @@
             var dateStr = '-';
             if (rec.createdAt) {
                 var d = new Date(rec.createdAt);
-                dateStr = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                dateStr = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
             }
             var shortId = rec.id ? rec.id.replace('CASE-', '') : '-';
 

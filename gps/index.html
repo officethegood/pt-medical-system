@@ -866,7 +866,7 @@
       enrichVehicleAddresses();
 
       _lastRefreshAt = new Date();
-      var now = _lastRefreshAt.toLocaleTimeString('th-TH');
+      var now = _lastRefreshAt.toLocaleTimeString('th-TH', { hour12: false });
       document.getElementById('refreshText').textContent = 'Updated ' + now;
       setTimeout(function() { indicator.style.display = 'none'; }, 2000);
 
@@ -886,7 +886,7 @@
       }
 
       var diffSec = Math.floor((Date.now() - _lastRefreshAt.getTime()) / 1000);
-      var timeStr = _lastRefreshAt.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      var timeStr = _lastRefreshAt.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false});
 
       var label;
       if (diffSec < 5)       label = 'เพิ่งอัปเดต';
