@@ -24,6 +24,85 @@
         @keyframes blink-border-anim { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .blink-badge { animation: blink-badge-anim 1.2s ease-in-out infinite; }
         @keyframes blink-badge-anim { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* ===== Section header ===== */
+        .monitor-section-header {
+            display:flex; align-items:baseline; gap:10px;
+            margin: 18px 0 10px; padding-bottom:8px; border-bottom:2px solid #e2e8f0;
+        }
+        .monitor-section-header h5 { margin:0; font-weight:800; }
+        .monitor-section-header .count-pill {
+            color:#fff; padding:2px 11px; border-radius:100px;
+            font-size:0.78rem; font-weight:700;
+        }
+        .monitor-section-header .line-filler { flex:1; }
+
+        /* Live indicator */
+        .monitor-live-badge {
+            display:inline-flex; align-items:center; gap:6px;
+            background:rgba(220,38,38,0.08); border:1px solid rgba(220,38,38,0.3);
+            color:#991b1b; padding:3px 10px; border-radius:100px;
+            font-size:0.72rem; font-weight:700;
+        }
+        .monitor-live-badge .dot {
+            width:7px; height:7px; background:#dc2626; border-radius:50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+        @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.85); } }
+
+        /* Critical badge on Monitor header */
+        .monitor-crit-pill {
+            display:none; align-items:center; gap:5px;
+            background:#fee2e2; border:1px solid #fca5a5; color:#991b1b;
+            padding:3px 11px; border-radius:100px; font-size:0.8rem; font-weight:700;
+        }
+        .monitor-crit-pill.active { display:inline-flex; animation: crit-pulse 1.5s infinite; }
+        @keyframes crit-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(220,38,38,0.4); } 50% { box-shadow:0 0 0 6px rgba(220,38,38,0); } }
+
+        /* Critical card outline (overlay on existing card) */
+        .monitor-crit-wrap .card {
+            outline:3px solid #dc2626; outline-offset:-1px;
+            animation: crit-card 2s infinite;
+        }
+        @keyframes crit-card {
+            0%,100% { box-shadow: 0 4px 12px rgba(220,38,38,0.2); }
+            50% { box-shadow: 0 4px 24px rgba(220,38,38,0.5); }
+        }
+
+        /* Toast alerts (top-right, stack) */
+        #monitor-toast-stack {
+            position:fixed; top:80px; right:20px; z-index:2100;
+            display:flex; flex-direction:column; gap:10px;
+            width:360px; max-width:calc(100vw - 40px); pointer-events:none;
+        }
+        .monitor-toast {
+            background:#fff; border-radius:12px;
+            border-left:6px solid #dc2626;
+            padding:12px 16px; box-shadow:0 8px 28px rgba(0,0,0,0.18);
+            pointer-events:auto; cursor:pointer;
+            animation: toast-slide-in 0.3s ease-out;
+        }
+        .monitor-toast.closing { animation: toast-slide-out 0.25s ease-in forwards; }
+        @keyframes toast-slide-in { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes toast-slide-out { to { transform:translateX(120%); opacity:0; } }
+        .monitor-toast .t-head {
+            display:flex; align-items:center; gap:8px;
+            color:#991b1b; font-weight:700; font-size:0.9rem; margin-bottom:2px;
+        }
+        .monitor-toast .t-name { font-weight:700; color:#0f172a; font-size:0.95rem; }
+        .monitor-toast .t-reasons {
+            font-size:0.78rem; color:#475569; margin-top:4px;
+            display:flex; flex-wrap:wrap; gap:4px;
+        }
+        .monitor-toast .t-reasons .r-chip {
+            background:#fee2e2; color:#991b1b;
+            padding:1px 7px; border-radius:4px; font-weight:600;
+        }
+        .monitor-toast .t-close {
+            position:absolute; top:8px; right:10px; background:transparent;
+            border:0; color:#94a3b8; font-size:1.1rem; padding:0; line-height:1;
+        }
+        .monitor-toast .t-close:hover { color:#0f172a; }
     </style>
 </head>
 <body style="background: #f0f2f5; font-family: 'Sarabun', sans-serif;">
@@ -123,11 +202,12 @@
         <!-- ==================== MONITOR VIEW ==================== -->
         <div class="container py-4" style="max-width:1200px;">
             <div id="monitor-view" class="view-section active">
-                <!-- Header with countdown timer -->
+                <!-- Header with countdown timer + critical alert -->
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1"><i class="bi bi-broadcast me-1"></i>LIVE</span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="monitor-live-badge"><span class="dot"></span> LIVE</span>
                         <span class="text-muted small">Read-Only &bull; อัปเดตล่าสุด: <b id="monitor-last-refresh">-</b></span>
+                        <span id="monitor-crit-pill" class="monitor-crit-pill"><i class="bi bi-exclamation-triangle-fill"></i> <span id="monitor-crit-count">0</span> Critical</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div style="position:relative;width:38px;height:38px;cursor:pointer;" onclick="loadMonitor()" title="คลิกเพื่อ Refresh ทันที">
@@ -135,7 +215,7 @@
                                 <circle cx="19" cy="19" r="16" fill="none" stroke="#e2e8f0" stroke-width="3"/>
                                 <circle id="monitor-countdown-ring" cx="19" cy="19" r="16" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:center;stroke-dasharray:100.53;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear;"/>
                             </svg>
-                            <div id="monitor-countdown-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:0.6rem;font-weight:700;color:#3b82f6;">3:00</div>
+                            <div id="monitor-countdown-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:0.6rem;font-weight:700;color:#3b82f6;">2:00</div>
                         </div>
                         <button id="monitor-refresh-btn" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="loadMonitor()">
                             <i class="bi bi-arrow-clockwise me-1" id="monitor-refresh-icon"></i> Refresh
@@ -144,23 +224,30 @@
                 </div>
 
                 <!-- Transport Section -->
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-truck me-2"></i>PT-Transport — Active Cases</h6>
-                    <span class="badge bg-primary rounded-pill" id="monitor-transport-count">0</span>
+                <div class="monitor-section-header">
+                    <i class="bi bi-truck text-primary"></i>
+                    <h5 class="text-primary">Transport — Active Cases</h5>
+                    <span class="count-pill" style="background:#2563eb;" id="monitor-transport-count">0</span>
+                    <span class="line-filler"></span>
                 </div>
                 <div id="monitor-transport-list" class="row g-3 mb-4">
                     <div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div><span class="text-muted ms-2 small">กำลังโหลด...</span></div>
                 </div>
 
                 <!-- First Aid Section -->
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-heart-pulse me-2"></i>PT-First Aid — Active Events</h6>
-                    <span class="badge bg-danger rounded-pill" id="monitor-fa-count">0</span>
+                <div class="monitor-section-header">
+                    <i class="bi bi-heart-pulse text-danger"></i>
+                    <h5 class="text-danger">First Aid — Active Events</h5>
+                    <span class="count-pill" style="background:#dc2626;" id="monitor-fa-count">0</span>
+                    <span class="line-filler"></span>
                 </div>
                 <div id="monitor-fa-list" class="row g-3 mb-3">
                     <div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm text-danger"></div><span class="text-muted ms-2 small">กำลังโหลด...</span></div>
                 </div>
             </div>
+
+            <!-- Toast stack for critical alerts -->
+            <div id="monitor-toast-stack"></div>
         </div>
 
         <!-- Fullscreen Preview Modal -->
@@ -392,10 +479,11 @@
     // MONITOR DASHBOARD (Card-based + Auto-refresh 3 min)
     // =============================================
     var monitorCountdownTimer = null;
-    var monitorCountdownSec = 180;
+    var MONITOR_COUNTDOWN_TOTAL_SEC = 120; // 2 minutes auto-refresh
+    var monitorCountdownSec = MONITOR_COUNTDOWN_TOTAL_SEC;
 
     function monitorStartCountdown() {
-        monitorCountdownSec = 180;
+        monitorCountdownSec = MONITOR_COUNTDOWN_TOTAL_SEC;
         if (monitorCountdownTimer) clearInterval(monitorCountdownTimer);
         monitorCountdownTimer = setInterval(function() {
             var monitorView = document.getElementById('monitor-view');
@@ -418,7 +506,7 @@
         var ring = document.getElementById('monitor-countdown-ring');
         var txt = document.getElementById('monitor-countdown-text');
         if (!ring || !txt) return;
-        var pct = monitorCountdownSec / 180;
+        var pct = monitorCountdownSec / MONITOR_COUNTDOWN_TOTAL_SEC;
         var circumference = 2 * Math.PI * 16;
         ring.style.strokeDashoffset = circumference * (1 - pct);
         var m = Math.floor(monitorCountdownSec / 60);
@@ -707,7 +795,7 @@
                 ? '<span class="badge text-white ms-1" style="font-size:0.65rem;padding:3px 8px;background:#16a34a;"><i class="bi bi-check-circle-fill me-1"></i>Consent' + consentCountLabel + '</span>'
                 : '<span class="badge ms-1" style="font-size:0.65rem;padding:3px 8px;background:#fef9c3;color:#92400e;border:1px solid #fde68a;"><i class="bi bi-file-earmark-check me-1"></i>Consent</span>';
 
-            html += '<div class="col-12 col-lg-6">' +
+            html += '<div class="col-12 col-lg-6" data-monitor-case="' + esc(rec.id) + '">' +
               '<div class="card border-0 shadow rounded-4 h-100 overflow-hidden" style="border-top:4px solid ' + triageColor + ' !important;">' +
                 // Card Header
                 '<div class="px-3 pt-3 pb-2" style="background:' + triageBg + ';">' +
@@ -777,6 +865,134 @@
               '</div></div>';
         });
         container.innerHTML = html;
+        // Apply critical alert markers (visual outline + header count + toast for new criticals)
+        if (typeof monitor_applyCriticalAlerts === 'function') monitor_applyCriticalAlerts(cases);
+    }
+
+    // =============================================
+    // CRITICAL ALERT DETECTION (vitals-based, visual-only)
+    // =============================================
+    // Set of case IDs previously flagged as critical — used to suppress repeat toasts
+    var monitor_knownCriticals = new Set();
+
+    function monitor_checkCritical(rec) {
+        var reasons = [];
+        var snap = {};
+        try { if (rec.rawSnapshot) snap = JSON.parse(rec.rawSnapshot); } catch(e) {}
+        var vArr = [];
+        try { if (rec.vitalsJson) vArr = JSON.parse(rec.vitalsJson); } catch(e) {}
+
+        // Arrest = always critical
+        var hasArrest = vArr.some(function(v) { return v.type === 'arrest' && v.arrest_outcome !== 'ROSC' && v.arrest_outcome !== 'Terminate CPR' && v.arrest_outcome !== 'Dead'; });
+        if (!hasArrest && (snap['circ_arrest'] || snap['arrest_pre_arrest'])) hasArrest = true;
+        if (hasArrest) reasons.push('ARREST');
+
+        // Latest V/S (non-arrest) — from log if present, else initial
+        var vs = null;
+        for (var i = vArr.length - 1; i >= 0; i--) {
+            if (vArr[i].type !== 'arrest') { vs = vArr[i]; break; }
+        }
+        if (!vs) {
+            vs = {
+                bp: snap['init_bp'] || '',
+                pr: snap['init_pr'] || '',
+                rr: snap['init_rr'] || '',
+                spo2: snap['init_spo2'] || '',
+                gcs_e: snap['gcs_e'] || '',
+                gcs_v: snap['gcs_v'] || '',
+                gcs_m: snap['gcs_m'] || ''
+            };
+        }
+
+        var toInt = function(s) { var n = parseInt(s, 10); return isNaN(n) ? null : n; };
+        var spo2 = toInt(vs.spo2);
+        if (spo2 !== null && spo2 < 90) reasons.push('SpO2 ' + spo2);
+
+        var pr = toInt(vs.pr);
+        if (pr !== null && (pr < 50 || pr > 140)) reasons.push('HR ' + pr);
+
+        var rr = toInt(vs.rr);
+        if (rr !== null && (rr < 10 || rr > 30)) reasons.push('RR ' + rr);
+
+        if (vs.bp && /^(\d+)\s*\/\s*(\d+)$/.test(vs.bp.trim())) {
+            var m = vs.bp.trim().match(/^(\d+)\s*\/\s*(\d+)$/);
+            var sbp = parseInt(m[1], 10);
+            if (sbp < 90 || sbp > 200) reasons.push('BP ' + vs.bp);
+        }
+
+        var ge = toInt(vs.gcs_e), gm = toInt(vs.gcs_m);
+        var gv = vs.gcs_v === 'VT' ? 1 : toInt(vs.gcs_v);
+        if (ge !== null && gv !== null && gm !== null) {
+            var total = ge + gv + gm;
+            if (total < 9) reasons.push('GCS ' + total);
+        }
+
+        return { critical: reasons.length > 0, reasons: reasons };
+    }
+
+    function monitor_applyCriticalAlerts(cases) {
+        var critCount = 0;
+        var newCritical = [];
+        var currentIds = new Set();
+
+        cases.forEach(function(rec) {
+            var r = monitor_checkCritical(rec);
+            if (!r.critical) return;
+            critCount++;
+            currentIds.add(rec.id);
+            var wrap = document.querySelector('[data-monitor-case="' + rec.id + '"]');
+            if (wrap) wrap.classList.add('monitor-crit-wrap');
+            if (!monitor_knownCriticals.has(rec.id)) {
+                newCritical.push({ rec: rec, reasons: r.reasons });
+            }
+        });
+
+        // Remove stale entries from knownCriticals (cases no longer critical or gone)
+        monitor_knownCriticals.forEach(function(id) {
+            if (!currentIds.has(id)) monitor_knownCriticals.delete(id);
+        });
+        // Add new ones so we don't re-toast next refresh
+        newCritical.forEach(function(n) { monitor_knownCriticals.add(n.rec.id); });
+
+        // Header pill
+        var pill = document.getElementById('monitor-crit-pill');
+        var cnt = document.getElementById('monitor-crit-count');
+        if (cnt) cnt.textContent = critCount;
+        if (pill) pill.classList.toggle('active', critCount > 0);
+
+        // Show toast for each newly-critical case
+        newCritical.forEach(function(n) { monitor_showCriticalToast(n.rec, n.reasons); });
+    }
+
+    function monitor_showCriticalToast(rec, reasons) {
+        var stack = document.getElementById('monitor-toast-stack');
+        if (!stack) return;
+        var pi = rec.patientInfo || {};
+        var ptName = pi.name || 'ไม่ระบุชื่อ';
+        var shortId = rec.id ? rec.id.replace('CASE-', '') : '';
+        var reasonHtml = reasons.map(function(r) { return '<span class="r-chip">' + escapeHtml(r) + '</span>'; }).join('');
+
+        var toast = document.createElement('div');
+        toast.className = 'monitor-toast';
+        toast.style.position = 'relative';
+        toast.innerHTML =
+            '<button class="t-close" aria-label="close">&times;</button>' +
+            '<div class="t-head"><i class="bi bi-exclamation-triangle-fill"></i> CRITICAL — #' + escapeHtml(shortId) + '</div>' +
+            '<div class="t-name">' + escapeHtml(ptName) + '</div>' +
+            '<div class="t-reasons">' + reasonHtml + '</div>';
+
+        var remove = function() {
+            toast.classList.add('closing');
+            setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 260);
+        };
+        toast.querySelector('.t-close').addEventListener('click', function(ev) { ev.stopPropagation(); remove(); });
+        toast.addEventListener('click', function() {
+            remove();
+            if (typeof monitorPreviewCase === 'function') monitorPreviewCase(rec.id);
+        });
+        stack.appendChild(toast);
+        // Auto-remove after 12s
+        setTimeout(remove, 12000);
     }
 
     // =============================================
@@ -947,7 +1163,10 @@
             versionDropdown +
             '<button onclick="monitorClosePrintView()" style="padding:10px 20px;font-size:16px;border-radius:6px;border:none;cursor:pointer;font-family:Sarabun,sans-serif;font-weight:600;margin:0 5px;background:#64748b;color:#fff;">✕ กลับ</button></div>';
 
-        printArea.innerHTML = toolbar + '<iframe id="monitor-consent-iframe" src="' + src + '" style="width:100%;border:none;min-height:calc(100vh - 60px);"></iframe>';
+        printArea.innerHTML = toolbar +
+            '<div style="max-width:900px;margin:0 auto;background:#fff;">' +
+              '<iframe id="monitor-consent-iframe" src="' + src + '" style="width:100%;border:none;min-height:calc(100vh - 80px);display:block;"></iframe>' +
+            '</div>';
         printContainer.style.display = 'block';
         document.getElementById('app-main-wrapper').style.display = 'none';
 
