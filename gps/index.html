@@ -57,6 +57,8 @@
     }
     /* ===== Mobile: Map-first + Bottom Sheet (Grab/Uber-style) ===== */
     .sheet-handle { display:none; }
+    /* Desktop: backdrop must not occupy a grid cell (would push map to next row) */
+    .sheet-backdrop { display: none; }
     @media (max-width: 768px) {
       .gps-layout {
         display: block; position: relative;
@@ -110,6 +112,7 @@
       .map-ctrl-btn { padding: 9px 10px; }
       /* Backdrop for full-mode */
       .sheet-backdrop {
+        display: block;
         position: absolute; inset: 0; background: rgba(15,40,71,0.35);
         z-index: 499; opacity: 0; pointer-events: none;
         transition: opacity 0.2s;
