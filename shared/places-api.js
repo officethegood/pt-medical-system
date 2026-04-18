@@ -30,6 +30,7 @@
     'places.nationalPhoneNumber',
     'places.internationalPhoneNumber',
     'places.primaryType',
+    'places.types',
     'places.businessStatus',
     'places.googleMapsUri'
   ].join(',');
@@ -47,6 +48,7 @@
       ratingCount: p.userRatingCount || 0,
       phone: p.nationalPhoneNumber || p.internationalPhoneNumber || '',
       type: p.primaryType || '',
+      types: p.types || [],
       status: p.businessStatus || '',
       googleMapsUri: p.googleMapsUri || '',
       distanceM: (placeLat != null && placeLng != null && originLat != null && originLng != null)
