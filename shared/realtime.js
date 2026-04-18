@@ -5,12 +5,30 @@ var RT = {
     channels: {},
     debounceTimers: {},
     statusEl: null,
+    _authSet: false,
+
+    // Supabase-js v2 sometimes needs an explicit realtime.setAuth() before
+    // the channel join ACKs, even when using the anon key (which is already
+    // the HTTP client's default). Without it subscribe() sits in TIMED_OUT.
+    _ensureAuth: function() {
+        if (RT._authSet) return;
+        try {
+            if (_supabase && _supabase.realtime && typeof _supabase.realtime.setAuth === 'function') {
+                _supabase.realtime.setAuth(CONFIG.SUPABASE_ANON_KEY);
+                RT._authSet = true;
+                console.log('[RT] realtime.setAuth(anon) called');
+            }
+        } catch(e) {
+            console.warn('[RT] setAuth failed:', e.message || e);
+        }
+    },
 
     // Subscribe to a table's changes with debounce
     subscribe: function(channelName, table, callback, debounceMs) {
         debounceMs = debounceMs || 1500;
         // Unsubscribe existing channel with same name
         RT.unsubscribe(channelName);
+        RT._ensureAuth();
 
         var channel = _supabase.channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: table }, function(payload) {
