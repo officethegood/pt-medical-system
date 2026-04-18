@@ -924,6 +924,33 @@
     // otherwise falls back to CartoDB Light tiles.
     MapConfig.load(_supabase).then(function() { return MapConfig.createTileLayer(map); });
 
+    // Re-sync Leaflet whenever the map container resizes. Mobile Chrome's
+    // dynamic viewport (dvh) changes as the address bar hides/shows, and the
+    // bottom sheet snap transitions change map-container height too. Without
+    // this, Leaflet keeps rendering tiles for the original size → blank strip.
+    (function observeMapSize(){
+      var mc = document.querySelector('.map-container');
+      if (!mc) return;
+      if ('ResizeObserver' in window) {
+        var ro = new ResizeObserver(function(){
+          if (window.map && map.invalidateSize) map.invalidateSize();
+        });
+        ro.observe(mc);
+      }
+      // Belt-and-braces: fire invalidate a couple of times after load
+      // (tile layer attaches async via MapConfig.load().then)
+      [100, 500, 1200].forEach(function(ms){
+        setTimeout(function(){
+          if (window.map && map.invalidateSize) map.invalidateSize();
+        }, ms);
+      });
+      window.addEventListener('load', function(){
+        setTimeout(function(){
+          if (window.map && map.invalidateSize) map.invalidateSize();
+        }, 100);
+      });
+    })();
+
     // Follow-mode: disable when user manually drags/zooms the map
     // (programmatic pan from follow sets _followSuppressUntil to ignore itself)
     function _userInteract() {
