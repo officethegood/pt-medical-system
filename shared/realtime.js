@@ -20,8 +20,9 @@ var RT = {
                     callback(payload);
                 }, debounceMs);
             })
-            .subscribe(function(status) {
-                RT.updateStatus(status);
+            .subscribe(function(status, err) {
+                try { console.log('[RT]', channelName, '→', status, err ? ('err=' + (err.message || err)) : ''); } catch(_){}
+                RT.updateStatus(status, err);
             });
 
         RT.channels[channelName] = channel;
@@ -42,8 +43,9 @@ var RT = {
                 }, debounceMs);
             });
         });
-        channel.subscribe(function(status) {
-            RT.updateStatus(status);
+        channel.subscribe(function(status, err) {
+            try { console.log('[RT]', channelName, '→', status, err ? ('err=' + (err.message || err)) : ''); } catch(_){}
+            RT.updateStatus(status, err);
         });
 
         RT.channels[channelName] = channel;
@@ -69,22 +71,40 @@ var RT = {
         });
     },
 
-    // Update connection status indicator in navbar
-    updateStatus: function(status) {
+    // Update connection status indicator in navbar.
+    // Once any channel reaches SUBSCRIBED we consider the overall connection
+    // healthy (green). A later CHANNEL_ERROR/TIMED_OUT on another channel
+    // won't downgrade us — Supabase realtime can keep working on other
+    // channels even if one times out (e.g., publication missing on one table).
+    _anyConnected: false,
+    updateStatus: function(status, err) {
         if (!RT.statusEl) {
             RT.statusEl = document.getElementById('rt-status');
         }
         if (!RT.statusEl) return;
 
         if (status === 'SUBSCRIBED') {
+            RT._anyConnected = true;
             RT.statusEl.style.background = '#22c55e';
             RT.statusEl.title = 'Realtime connected';
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            RT.statusEl.style.background = '#ef4444';
-            RT.statusEl.title = 'Realtime disconnected';
+        } else if (status === 'CHANNEL_ERROR') {
+            if (!RT._anyConnected) {
+                RT.statusEl.style.background = '#ef4444';
+                RT.statusEl.title = 'Realtime error' + (err ? ' — ' + (err.message || err) : '');
+            }
+        } else if (status === 'TIMED_OUT') {
+            if (!RT._anyConnected) {
+                RT.statusEl.style.background = '#f59e0b';
+                RT.statusEl.title = 'Realtime timed out — retrying...';
+            }
+        } else if (status === 'CLOSED') {
+            if (!RT._anyConnected) {
+                RT.statusEl.style.background = '#ef4444';
+                RT.statusEl.title = 'Realtime closed';
+            }
         } else {
             RT.statusEl.style.background = '#f59e0b';
-            RT.statusEl.title = 'Connecting...';
+            RT.statusEl.title = 'Connecting... (' + (status || 'no status') + ')';
         }
     },
 
