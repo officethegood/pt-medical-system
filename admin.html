@@ -81,9 +81,9 @@
   }
   .sidebar-item i { font-size:15px; width:18px; color:var(--atext-3); }
   .sidebar-item.active i { color:var(--aaccent); }
-  .sidebar-top {
-    padding:0 0 10px; margin-bottom:10px;
-    border-bottom:1px solid var(--aborder-soft);
+  .sidebar-footer {
+    padding:12px 8px 0; border-top:1px solid var(--aborder-soft);
+    margin-top:20px; background:var(--asurface);
   }
   .topbar-back {
     background:transparent; border:1px solid var(--aborder);
@@ -326,6 +326,7 @@
       box-shadow:2px 0 16px rgba(0,0,0,0.08);
     }
     .admin-sidebar.open { transform:translateX(0); }
+    .admin-sidebar .sidebar-footer { display:none; }
     .sidebar-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:99; }
     .sidebar-backdrop.open { display:block; }
     .admin-content { padding:20px 18px 60px; }
@@ -350,9 +351,6 @@
   <div class="sidebar-backdrop" id="sb-backdrop" onclick="adm_closeSidebar()"></div>
 
   <aside class="admin-sidebar" id="sb-sidebar">
-    <div class="sidebar-top">
-      <a class="sidebar-back" href="index.html" id="sb-back-link" onclick="return adm_back(event);"><i class="bi bi-arrow-left"></i> <span id="sb-back-label">กลับหน้าเลือกระบบ</span></a>
-    </div>
     <div class="sidebar-brand">
       <div class="brand-icon"><i class="bi bi-gear-fill"></i></div>
       <div style="min-width:0;">
@@ -391,6 +389,9 @@
       </div>
     </nav>
 
+    <div class="sidebar-footer">
+      <a class="sidebar-back" href="index.html" id="sb-back-link" onclick="return adm_back(event);"><i class="bi bi-arrow-left"></i> <span id="sb-back-label">กลับหน้าเลือกระบบ</span></a>
+    </div>
   </aside>
 
   <main class="admin-main">
