@@ -466,6 +466,39 @@
     .map-ctrl-btn.active-toggle { background: var(--green-600); color: #fff; }
     .map-ctrl-btn i { font-size: 0.9rem; }
 
+    .follow-chip {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 999;
+      display: inline-flex; align-items: center; gap: 7px;
+      background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-900) 100%);
+      color: #fff;
+      padding: 7px 14px 7px 12px;
+      border-radius: 100px;
+      font-size: 0.78rem; font-weight: 600;
+      box-shadow: 0 4px 14px rgba(15,40,71,0.3);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+    .follow-chip:hover { transform: translateX(-50%) translateY(-1px); box-shadow: 0 6px 18px rgba(15,40,71,0.4); }
+    .follow-chip .fc-pulse {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+      animation: followPulse 1.5s infinite;
+    }
+    @keyframes followPulse {
+      0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
+      70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+    .follow-chip .fc-name { font-weight: 800; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+    .follow-chip .fc-close { font-size: 0.75rem; opacity: 0.7; margin-left: 2px; }
+    .follow-chip:hover .fc-close { opacity: 1; }
+    @media (max-width: 768px) {
+      .follow-chip { top: 12px; font-size: 0.72rem; padding: 6px 11px 6px 10px; }
+      .follow-chip .fc-text { display: none; }
+    }
+
     .live-indicator {
       position: absolute; bottom: 16px; left: 16px; z-index: 999;
       background: rgba(15,40,71,0.92);
@@ -704,6 +737,15 @@
         <span class="live-dot"></span>
         <span id="refreshText">Live</span>
       </div>
+
+      <!-- Follow-mode chip: shown while map tracks selected vehicle -->
+      <div class="follow-chip" id="followChip" style="display:none;" onclick="stopFollowing()" title="กดเพื่อหยุดติดตาม">
+        <span class="fc-pulse"></span>
+        <i class="bi bi-geo-alt-fill"></i>
+        <span class="fc-text">กำลังติดตาม</span>
+        <span class="fc-name">--</span>
+        <i class="bi bi-x-lg fc-close"></i>
+      </div>
     </div>
 
   </div>
@@ -860,6 +902,8 @@
     var _markers = {};      // key -> L.marker
     var _autoInterval = null;
     var _selectedKey = null; // "deviceId_providerId"
+    var _followMode  = false; // map tracks selected vehicle on each refresh
+    var _followSuppressUntil = 0; // ignore programmatic move events until this ts
     var _isAdmin = false;
     var _lastRefreshAt = null; // Date of last successful fetch
     var _lastUpdateTicker = null;
@@ -876,6 +920,40 @@
     // (via GoogleMutant plugin) if Admin enabled it and provided API key,
     // otherwise falls back to CartoDB Light tiles.
     MapConfig.load(_supabase).then(function() { return MapConfig.createTileLayer(map); });
+
+    // Follow-mode: disable when user manually drags/zooms the map
+    // (programmatic pan from follow sets _followSuppressUntil to ignore itself)
+    function _userInteract() {
+      if (Date.now() < _followSuppressUntil) return;
+      if (_followMode) {
+        _followMode = false;
+        updateFollowChip();
+      }
+    }
+    map.on('dragstart', _userInteract);
+    map.on('zoomstart', function(){
+      // Leaflet's setView triggers zoomstart too — suppress during programmatic follow
+      if (Date.now() < _followSuppressUntil) return;
+      _userInteract();
+    });
+
+    function stopFollowing() {
+      _followMode = false;
+      updateFollowChip();
+    }
+
+    function updateFollowChip() {
+      var chip = document.getElementById('followChip');
+      if (!chip) return;
+      if (_followMode && _selectedKey) {
+        var v = (_vehicles || []).find(function(x){ return (x.device_id + '_' + x.provider) === _selectedKey; });
+        var name = v ? (v.nickname || v.device_name || v.device_id || 'รถ') : 'รถ';
+        chip.querySelector('.fc-name').textContent = name;
+        chip.style.display = '';
+      } else {
+        chip.style.display = 'none';
+      }
+    }
 
     // =============================================
     // INIT
@@ -1181,6 +1259,14 @@
       if (bounds.length > 0 && !_selectedKey) {
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
       }
+
+      // Follow mode: keep selected vehicle centered on each status refresh.
+      // User dragging/zooming the map disables follow (wired in init).
+      if (_followMode && _selectedKey && _markers[_selectedKey]) {
+        var ll = _markers[_selectedKey].getLatLng();
+        _followSuppressUntil = Date.now() + 500;
+        map.panTo(ll, { animate: true, duration: 0.6 });
+      }
     }
 
     function makeIcon(online, speed) {
@@ -1224,6 +1310,8 @@
 
     function fitAllMarkers() {
       _selectedKey = null;
+      _followMode = false;
+      updateFollowChip();
       // Clear any hospital search result when resetting to "ทั้งหมด"
       if (_hospitalMarkers && _hospitalMarkers.length) clearHospitalMarkers();
       var bounds = [];
@@ -1242,11 +1330,15 @@
         clearHospitalMarkers();
       }
       _selectedKey = key;
+      // Re-tap same card when follow was off → re-enable follow (easy toggle back on)
+      _followMode = true;
       var m = _markers[key];
       if (m) {
+        _followSuppressUntil = Date.now() + 600;
         map.setView(m.getLatLng(), 16);
         m.openPopup();
       }
+      updateFollowChip();
       // highlight card
       document.querySelectorAll('.v-card').forEach(function(c) { c.classList.remove('active'); });
       // find index
