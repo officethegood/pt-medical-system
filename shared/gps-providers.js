@@ -38,10 +38,11 @@ async function gpsFetch(url) {
   var renderUrl = _on('GPS_PROXY_RENDER_ENABLED')   ? (_get('GPS_PROXY_RENDER')   || '').trim() : '';
   var gasUrl    = _on('GPS_PROXY_GAS_ENABLED')      ? (_get('GPS_PROXY_GAS')      || '').trim() : '';
 
-  var noCacheOpts = {
-    cache: 'no-store',
-    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-  };
+  // NOTE: DO NOT add Cache-Control/Pragma request headers here.
+  // They turn a simple CORS request into a preflight (OPTIONS), which Render's
+  // CORS config rejects with "Request header field cache-control is not allowed".
+  // `cache: 'no-store'` + `_t=timestamp` cache-buster below handle staleness.
+  var noCacheOpts = { cache: 'no-store' };
 
   // HTTPS direct — no proxy needed
   if (!url.startsWith('http://')) {
@@ -62,8 +63,7 @@ async function gpsFetch(url) {
       var r1 = await fetch(synoFinal, {
         signal: c1.signal,
         credentials: 'omit',
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        cache: 'no-store'
       });
       clearTimeout(t1);
       if (r1.ok) return await r1.json();
