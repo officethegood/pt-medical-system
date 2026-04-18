@@ -59,7 +59,7 @@
               <i class="bi bi-person-circle me-2"></i>
               <span id="nav-user-display" class="small fw-medium"></span>
           </div>
-          <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
+          <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_admin_return', location.href); window.location.href='../admin.html'">
               <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
           </button>
           <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
@@ -625,7 +625,7 @@
         var ct = c.customer_type || 'ลูกค้าทั่วไป';
         var ctColors = {'ลูกค้าทั่วไป':'bg-primary-subtle text-primary','ศูนย์ดูแล':'bg-warning-subtle text-warning-emphasis','สถานพยาบาล':'bg-danger-subtle text-danger','โรงแรม':'bg-purple-subtle text-purple'};
         var badge = '<span class="badge rounded-pill '+(ctColors[ct]||'bg-secondary-subtle text-secondary')+'" style="font-size:0.65rem;">'+escapeHtml(ct)+'</span>';
-        html += '<tr class="align-middle"><td class="ps-3" style="cursor:pointer;" onclick="loc_openModal(\''+c.id+'\')"><div class="d-flex align-items-center gap-3"><img src="'+photo+'" onerror="this.src=\'https://via.placeholder.com/150\'" class="rounded-3 border" style="width:70px;height:50px;object-fit:cover;"><div><div class="fw-medium">'+escapeHtml(c.name||'')+' '+badge+'</div></div></div></td><td class="d-none d-md-table-cell text-muted">'+escapeHtml(c.phone||'-')+'</td><td>อ.'+escapeHtml(c.district||'ไม่ระบุ')+'<br><span class="text-muted small">จ.'+escapeHtml(c.province||'ไม่ระบุ')+'</span></td><td class="text-center"><a href="https://www.google.com/maps/search/?api=1&query='+c.lat+','+c.lng+'" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-pin-map me-1"></i>Maps</a></td><td class="text-end pe-3"><div class="d-flex gap-1 justify-content-end"><button class="btn btn-sm btn-outline-success rounded-circle" onclick="loc_openModal(\''+c.id+'\')"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-outline-warning rounded-circle" onclick="loc_openFormEdit(\''+c.id+'\')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-danger rounded-circle" onclick="loc_deleteCustomer(\''+c.id+'\')"><i class="bi bi-trash"></i></button></div></td></tr>';
+        html += '<tr class="align-middle"><td class="ps-3" style="cursor:pointer;" onclick="loc_openModal(\''+c.id+'\')"><div class="d-flex align-items-center gap-3"><img src="'+photo+'" onerror="this.src=\'https://via.placeholder.com/150\'" class="rounded-3 border" style="width:70px;height:50px;object-fit:cover;"><div><div class="fw-medium">'+escapeHtml(c.name||'')+' '+badge+'</div></div></div></td><td class="d-none d-md-table-cell text-muted">'+escapeHtml(c.phone||'-')+'</td><td>อ.'+escapeHtml(c.district||'ไม่ระบุ')+'<br><span class="text-muted small">จ.'+escapeHtml(c.province||'ไม่ระบุ')+'</span></td><td class="text-center"><a href="https://www.google.com/maps/search/?api=1&query='+c.lat+','+c.lng+'" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-pin-map me-1"></i>Maps</a></td><td class="text-end pe-3"><div class="d-flex gap-1 justify-content-end"><button class="btn btn-sm btn-outline-success rounded-circle" title="ดู" onclick="loc_openModal(\''+c.id+'\')"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-outline-info rounded-circle" title="แชร์ลิงก์" onclick="loc_shareCustomerFromRow(\''+c.id+'\')"><i class="bi bi-share-fill"></i></button><button class="btn btn-sm btn-outline-warning rounded-circle" title="แก้ไข" onclick="loc_openFormEdit(\''+c.id+'\')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-danger rounded-circle" title="ลบ" onclick="loc_deleteCustomer(\''+c.id+'\')"><i class="bi bi-trash"></i></button></div></td></tr>';
       });
       tbody.innerHTML = html;
       loc_updatePagination(start + 1, end, total);
@@ -1395,6 +1395,12 @@
     var _locShareTargetCustomerId = null;
 
     // Open Bootstrap share modal (replaces SweetAlert due to text-input issue)
+    // Share from customer row (set selected customer then open share form)
+    function loc_shareCustomerFromRow(id) {
+      loc_selectedCustomerId = id;
+      loc_createShareLink();
+    }
+
     function loc_createShareLink() {
       var c = loc_customers.find(function(x) { return x.id === loc_selectedCustomerId; });
       if (!c) return;

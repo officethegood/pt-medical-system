@@ -253,7 +253,8 @@
     }
     .closed-row {
       display:grid; align-items:center;
-      grid-template-columns:4px 130px 1fr 1.4fr auto auto;
+      /* Fixed last-two columns so pin in c-route always lines up across rows */
+      grid-template-columns:4px 130px 1fr 1.4fr 170px 130px;
       gap:10px; padding:10px 14px;
       border-top:1px solid #f1f5f9;
       cursor:pointer; transition:background 0.12s;
@@ -308,13 +309,17 @@
     .closed-row .c-route .arrow { color:#94a3b8; flex-shrink:0; }
 
     /* Team cell (triage label hidden — strip provides the color) */
-    .closed-row .c-meta { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+    .closed-row .c-meta {
+      display:flex; align-items:center; gap:8px; white-space:nowrap;
+      justify-content:flex-end; overflow:hidden; text-overflow:ellipsis;
+    }
     .closed-row .c-meta .team {
       font-size:0.78rem; color:#64748b; font-variant-numeric:tabular-nums;
+      overflow:hidden; text-overflow:ellipsis;
     }
 
     /* Actions cell */
-    .closed-row .c-actions { display:flex; align-items:center; gap:2px; white-space:nowrap; }
+    .closed-row .c-actions { display:flex; align-items:center; gap:2px; white-space:nowrap; justify-content:flex-end; }
     .closed-row .c-actions .btn-ico {
       width:30px; height:30px; border:0; background:transparent;
       color:#64748b; border-radius:6px; cursor:pointer;
@@ -322,6 +327,8 @@
       font-size:0.88rem; padding:0;
     }
     .closed-row .c-actions .btn-ico:hover { background:#e2e8f0; color:#0f172a; }
+    .closed-row .c-actions .btn-ico.is-public { background:#16a34a; color:#fff; }
+    .closed-row .c-actions .btn-ico.is-public:hover { background:#15803d; color:#fff; }
     .closed-row .c-actions .btn-ico.reopen:hover { background:#fef3c7; color:#92400e; }
     .closed-row .c-actions .btn-ico.delete:hover { background:#fee2e2; color:#991b1b; }
 
@@ -381,6 +388,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../shared/config.js"></script>
+  <script src="../shared/settings.js"></script>
   <script src="../shared/auth.js"></script>
   <script src="../shared/realtime.js"></script>
   <script src="../shared/cloudinary.js"></script>
@@ -411,7 +419,7 @@
               <i class="bi bi-person-circle me-2"></i>
               <span id="nav-user-display" class="small fw-medium"></span>
           </div>
-          <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
+          <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_admin_return', location.href); window.location.href='../admin.html'">
               <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
           </button>
           <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
@@ -1903,6 +1911,7 @@
         }
 
         // Closed section
+        window._closedRecords = closeds;  // cached for share dialog lookup
         if (closeds.length > 0) {
             closedSection.style.display = 'block';
             document.getElementById('closed-count').textContent = closeds.length;
@@ -2092,7 +2101,7 @@
                 '<span class="team">' + esc(teamStr) + '</span>' +
               '</div>' +
               '<div class="c-actions">' +
-                '<button class="btn-ico" data-act="view" title="ดู / Print"><i class="bi bi-eye"></i></button>' +
+                '<button class="btn-ico' + (rec.isPublic ? ' is-public' : '') + '" data-act="share" title="แชร์ Public Link (ให้คนภายนอกเปิด Print Preview ได้)"><i class="bi ' + (rec.isPublic ? 'bi-share-fill' : 'bi-share') + '"></i></button>' +
                 '<button class="btn-ico" data-act="print" title="Print"><i class="bi bi-printer"></i></button>' +
                 adminActions +
               '</div>' +
@@ -2114,6 +2123,11 @@
                 if (act === 'delete') { confirmDelete(caseId); return; }
                 if (act === 'consent') { openConsentFromDashboard(caseId); return; }
                 if (act === 'refer') { openReferGalleryFromDashboard(caseId); return; }
+                if (act === 'share') {
+                    var r = (window._closedRecords || []).find(function(x){ return x.id === caseId; });
+                    openShareDialog(caseId, r ? !!r.isPublic : false, r ? (r.publicExpiry || '') : '', r ? (r.publicToken || '') : '');
+                    return;
+                }
                 // view: admin can open, non-admin gets print preview dialog
                 var isAdmin = (getUserRole() === 'Admin' || getUserRole() === 'admin');
                 if (!isAdmin) {
@@ -4457,13 +4471,13 @@
 
         h += '<table class="header-tbl"><tr>';
         if (logoSrc) {
-            h += '<td style="width:60px;vertical-align:middle;"><img src="' + logoSrc + '" style="height:50px;"></td>';
+            h += '<td style="width:60px;vertical-align:middle;padding-left:0;"><img src="' + logoSrc + '" style="height:50px;"></td>';
         }
         h += '<td style="vertical-align:middle;">';
         h += '<div class="org-name">' + esc(PRINT_HEADER) + '</div>';
         h += '<div class="doc-title">PATIENT TRANSPORT RECORD (\u0e41\u0e1a\u0e1a\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e01\u0e32\u0e23\u0e19\u0e33\u0e2a\u0e48\u0e07\u0e1c\u0e39\u0e49\u0e1b\u0e48\u0e27\u0e22)</div>';
         h += '</td>';
-        h += '<td style="text-align:right;vertical-align:top;width:180px;">';
+        h += '<td style="text-align:right;vertical-align:top;white-space:nowrap;padding-right:0;width:1%;">';
         h += '<div class="doc-no">Doc No: <b>' + esc(d.id) + '</b></div>';
         h += '<div class="doc-no">NR Status: <b>' + esc(d.nrStatus || '-') + '</b></div>';
         h += '<div style="margin-top:4px;">';
@@ -5511,6 +5525,27 @@
 
         var res = await _supabase.from('transport_consents').insert(row);
         if (res.error) { console.error('Save consent error:', res.error); return null; }
+
+        // Auto-set NR Status = DNR on the case when consent has DNR items checked
+        try {
+          var dnrArr = (formData.data && Array.isArray(formData.data.dnr)) ? formData.data.dnr : [];
+          if (dnrArr.length > 0) {
+            // Update UI select (in current session)
+            var nrSel = document.querySelector('select[name="nr_status"]');
+            if (nrSel) nrSel.value = 'DNR';
+            // Persist: nr_status lives inside raw_data.rawSnapshot (JSON) — not a column
+            var cur = await _supabase.from('cases').select('raw_data').eq('case_id', caseId).maybeSingle();
+            if (cur && cur.data && cur.data.raw_data) {
+              var rd = cur.data.raw_data;
+              var snap = {};
+              try { snap = rd.rawSnapshot ? JSON.parse(rd.rawSnapshot) : {}; } catch(_){}
+              snap.nr_status = 'DNR';
+              rd.rawSnapshot = JSON.stringify(snap);
+              await _supabase.from('cases').update({ raw_data: rd }).eq('case_id', caseId);
+            }
+            console.log('[Consent] DNR detected (' + dnrArr.length + ' items) → nr_status=DNR for ' + caseId);
+          }
+        } catch(ex) { console.warn('DNR auto-set failed:', ex); }
 
         console.log('[Consent] Saved version ' + nextVersion + ' for ' + caseId);
         return nextVersion;

@@ -167,7 +167,7 @@
                         <i class="bi bi-person-circle me-2"></i>
                         <span id="nav-user-display" class="small fw-medium"></span>
                     </div>
-                    <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
+                    <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_admin_return', location.href); window.location.href='../admin.html'">
                         <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
                     </button>
                     <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="enterSystem('monitor')" title="Monitor Dashboard">
@@ -282,6 +282,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../shared/config.js"></script>
+    <script src="../shared/settings.js"></script>
     <script src="../shared/auth.js"></script>
     <script src="../shared/realtime.js"></script>
     <script src="../shared/gps-providers.js"></script>
@@ -1593,10 +1594,10 @@
 
         // Header
         h += '<table class="header-tbl"><tr>';
-        if (logoSrc) h += '<td style="width:60px;vertical-align:middle;"><img src="' + logoSrc + '" style="height:50px;"></td>';
+        if (logoSrc) h += '<td style="width:60px;vertical-align:middle;padding-left:0;"><img src="' + logoSrc + '" style="height:50px;"></td>';
         h += '<td style="vertical-align:middle;"><div class="org-name">' + esc(typeof PRINT_HEADER !== 'undefined' ? PRINT_HEADER : '') + '</div>';
         h += '<div class="doc-title">PATIENT TRANSPORT RECORD (แบบบันทึกการนำส่งผู้ป่วย)</div></td>';
-        h += '<td style="text-align:right;vertical-align:top;width:180px;">';
+        h += '<td style="text-align:right;vertical-align:top;white-space:nowrap;padding-right:0;width:1%;">';
         h += '<div class="doc-no">Doc No: <b>' + esc(data.id) + '</b></div>';
         h += '<div class="doc-no">Status: <b>' + esc(data.status || '-') + '</b></div>';
         h += '<div class="doc-no">NR Status: <b>' + esc(nrStatus) + '</b></div>';

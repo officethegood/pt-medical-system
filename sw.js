@@ -1,11 +1,13 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v6';
+var CACHE_NAME = 'pt-medical-v8';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
+  '/pt-medical-system/admin.html',
   '/pt-medical-system/shared/styles.css',
   '/pt-medical-system/shared/auth.js',
   '/pt-medical-system/shared/config.js',
+  '/pt-medical-system/shared/settings.js',
   '/pt-medical-system/shared/gps-providers.js',
   '/pt-medical-system/shared/realtime.js',
   '/pt-medical-system/assets/icon.svg',

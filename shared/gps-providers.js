@@ -3,23 +3,11 @@
 // รองรับหลาย GPS software (cmsv6, gpsone, ...)
 // =============================================
 
-// Load Synology proxy URL from Supabase settings (once per page, cached)
+// Load proxy URLs + enable flags from Supabase settings (via shared/settings.js)
 // Call await gpsLoadProxyConfig(_supabase) before first gpsFetch() on GPS pages.
-var _gpsProxyConfigLoaded = false;
 async function gpsLoadProxyConfig(supabaseClient) {
-  if (_gpsProxyConfigLoaded) return;
-  if (!supabaseClient || typeof CONFIG === 'undefined') return;
-  try {
-    var r = await supabaseClient.from('settings')
-      .select('key, value')
-      .eq('key', 'GPS_PROXY_SYNOLOGY')
-      .maybeSingle();
-    if (r && r.data && r.data.value) {
-      CONFIG.GPS_PROXY_SYNOLOGY = String(r.data.value).trim();
-    }
-    _gpsProxyConfigLoaded = true;
-  } catch(e) {
-    console.warn('gpsLoadProxyConfig:', e.message || e);
+  if (typeof settingsBootstrap === 'function') {
+    await settingsBootstrap(supabaseClient);
   }
 }
 
@@ -39,9 +27,16 @@ async function gpsLoadProxyConfig(supabaseClient) {
 // DSM Reverse Proxy doesn't send cache headers by default → auto-refresh gets stale data.
 // Fix: cache: 'no-store' + cache-bust query param (_t=timestamp) on every request.
 async function gpsFetch(url) {
-  var synoUrl    = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_SYNOLOGY) ? CONFIG.GPS_PROXY_SYNOLOGY : '';
-  var renderUrl  = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_URL)      ? CONFIG.GPS_PROXY_URL      : '';
-  var gasUrl     = (typeof CONFIG !== 'undefined' && CONFIG.GPS_PROXY_FALLBACK) ? CONFIG.GPS_PROXY_FALLBACK : '';
+  // Prefer settings.js (admin-editable + per-proxy toggle); fallback to raw CONFIG for legacy callers
+  var _get = (typeof settingsGet === 'function') ? settingsGet : function(k) {
+    var alias = { GPS_PROXY_SYNOLOGY:'GPS_PROXY_SYNOLOGY', GPS_PROXY_RENDER:'GPS_PROXY_URL', GPS_PROXY_GAS:'GPS_PROXY_FALLBACK' };
+    return (typeof CONFIG !== 'undefined' && CONFIG[alias[k] || k]) || '';
+  };
+  var _on = (typeof settingsEnabled === 'function') ? settingsEnabled : function() { return true; };
+
+  var synoUrl   = _on('GPS_PROXY_SYNOLOGY_ENABLED') ? (_get('GPS_PROXY_SYNOLOGY') || '').trim() : '';
+  var renderUrl = _on('GPS_PROXY_RENDER_ENABLED')   ? (_get('GPS_PROXY_RENDER')   || '').trim() : '';
+  var gasUrl    = _on('GPS_PROXY_GAS_ENABLED')      ? (_get('GPS_PROXY_GAS')      || '').trim() : '';
 
   var noCacheOpts = {
     cache: 'no-store',

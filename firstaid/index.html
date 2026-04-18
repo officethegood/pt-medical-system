@@ -115,7 +115,7 @@
                 <i class="bi bi-person-circle me-2"></i>
                 <span id="nav-user-display" class="small fw-medium"></span>
             </div>
-            <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_open_admin','1'); window.location.href='../'">
+            <button class="btn btn-warning btn-sm fw-semibold rounded-pill px-2 px-md-3 shadow-sm" id="btn-admin-settings" style="display:none;" onclick="sessionStorage.setItem('pt_admin_return', location.href); window.location.href='../admin.html'">
                 <i class="bi bi-gear-fill"></i><span class="d-none d-md-inline ms-1">Admin</span>
             </button>
             <button class="btn btn-sm rounded-pill px-2 px-md-3 fw-semibold shadow-sm" id="btn-monitor" style="display:none; background:#17a2b8; color:#fff; border:none;" onclick="window.location.href='../monitor/'" title="Monitor Dashboard">
@@ -131,7 +131,7 @@
               <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-location" onclick="window.location.href='../location/'" title="PT Location" style="min-width:40px;">
                 <i class="bi bi-geo-alt-fill"></i><span class="d-none d-lg-inline ms-1">Location</span>
               </button>
-              <button type="button" class="btn btn-sm rounded-pill-end sys-tog d-none" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px;">
+              <button type="button" class="btn btn-sm rounded-pill-end sys-tog" id="sys-tog-gps" onclick="window.location.href='../gps/'" title="GPS Tracking" style="min-width:40px; display:none;">
                 <i class="bi bi-broadcast"></i><span class="d-none d-lg-inline ms-1">GPS</span>
               </button>
             </div>
@@ -152,6 +152,7 @@
         #sys-tog-transport.active { background:#0d6efd; border-color:#0d6efd; }
         #sys-tog-firstaid.active { background:#dc3545; border-color:#dc3545; }
         #sys-tog-location.active { background:#198754; border-color:#198754; }
+        #sys-tog-gps.active { background:#6366f1; border-color:#6366f1; }
         .system-toggle .sys-tog:first-child { border-radius:50rem 0 0 50rem; }
         .system-toggle .sys-tog:last-child { border-radius:0 50rem 50rem 0; }
         .system-toggle .sys-tog:not(:first-child) { border-left:none; }
@@ -2860,7 +2861,7 @@
                     }
                     if (s.key === 'GPS_ENABLED' && s.value === '1') {
                         var gpsBtn = document.getElementById('sys-tog-gps');
-                        if (gpsBtn) gpsBtn.classList.remove('d-none');
+                        if (gpsBtn) gpsBtn.style.display = '';
                         var locBtn = document.getElementById('sys-tog-location');
                         if (locBtn) locBtn.classList.remove('rounded-pill-end');
                     }
