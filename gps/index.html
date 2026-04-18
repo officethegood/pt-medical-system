@@ -87,7 +87,8 @@
       .vehicle-panel.sheet-full { height: 88vh; }
       /* Hide filter tabs in peek mode — only title + search visible */
       .vehicle-panel.sheet-peek .filter-tabs,
-      .vehicle-panel.sheet-peek .panel-search { display: none; }
+      .vehicle-panel.sheet-peek .panel-search,
+      .vehicle-panel.sheet-peek .panel-view-tabs { display: none; }
       .vehicle-panel.sheet-peek .panel-section-header { padding-bottom: 6px; border-bottom: none; }
       .sheet-handle {
         display: flex; justify-content: center; align-items: center;
@@ -195,6 +196,28 @@
       position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
       color: var(--slate-400); font-size: 0.9rem;
     }
+
+    /* View-switcher (Fleet ↔ Shared) — admin only */
+    .panel-view-tabs {
+      display: flex; gap: 4px; margin-top: 4px; margin-bottom: 10px;
+      padding: 4px; background: var(--slate-100); border-radius: 10px;
+    }
+    .pv-tab {
+      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 7px 8px; background: transparent; border: none; border-radius: 7px;
+      font-size: 0.8rem; font-weight: 600; color: var(--slate-600); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pv-tab:hover { color: var(--navy-900); }
+    .pv-tab.active { background: #fff; color: var(--navy-900); box-shadow: 0 1px 3px rgba(15,40,71,0.08); }
+    .pv-tab i { font-size: 0.95rem; }
+    .pv-badge {
+      background: var(--slate-200); color: var(--slate-700);
+      padding: 1px 7px; border-radius: 10px;
+      font-size: 0.68rem; font-weight: 700; min-width: 20px; text-align: center;
+    }
+    .pv-tab.active .pv-badge { background: var(--navy-700); color: #fff; }
+    .pv-tab[data-view="shared"].active .pv-badge { background: var(--red-600); }
 
     .filter-tabs {
       display: flex; gap: 4px; margin-top: 10px;
@@ -345,10 +368,13 @@
 
     /* ==================== SHARE TOKENS SECTION ==================== */
     .tokens-section {
-      border-top: 1px solid var(--slate-200);
       padding: 14px 16px;
       background: var(--slate-50);
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
     }
+    .tokens-section #tokenList { flex: 1; overflow-y: auto; min-height: 0; }
     .tokens-section .section-title {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 10px;
@@ -612,11 +638,20 @@
             </button>
           </div>
         </div>
-        <div class="panel-search">
+        <!-- Tab switcher (only shown to admins — has shared links) -->
+        <div class="panel-view-tabs" id="panelViewTabs" style="display:none;">
+          <button type="button" class="pv-tab active" data-view="fleet" onclick="switchPanelView('fleet')">
+            <i class="bi bi-truck"></i> Fleet <span class="pv-badge" id="pv-fleet-count">0</span>
+          </button>
+          <button type="button" class="pv-tab" data-view="shared" onclick="switchPanelView('shared')">
+            <i class="bi bi-link-45deg"></i> Shared <span class="pv-badge" id="pv-shared-count">0</span>
+          </button>
+        </div>
+        <div class="panel-search" id="panelSearchWrap">
           <i class="bi bi-search"></i>
           <input type="text" id="vehicleSearch" placeholder="ค้นหาทะเบียน / ชื่อรถ..." oninput="filterVehicles()">
         </div>
-        <div class="filter-tabs">
+        <div class="filter-tabs" id="panelFilterTabs">
           <button class="filter-tab active" data-filter="all" onclick="setVehicleFilter('all')">ทั้งหมด</button>
           <button class="filter-tab" data-filter="online" onclick="setVehicleFilter('online')">Online</button>
           <button class="filter-tab" data-filter="offline" onclick="setVehicleFilter('offline')">Offline</button>
@@ -854,7 +889,9 @@
         if (_isAdmin) {
           document.getElementById('btn-admin-settings').style.display = '';
           document.getElementById('btn-monitor').style.display = '';
-          document.getElementById('tokenManagerSection').style.display = '';
+          // Show panel-view tabs (Fleet ↔ Shared). Token section stays hidden
+          // until user switches tab — managed by switchPanelView().
+          document.getElementById('panelViewTabs').style.display = '';
         }
       }
 
@@ -1078,6 +1115,8 @@
       // Update count pill (show filtered/total if filter active)
       var countEl = document.getElementById('vehicle-count');
       if (countEl) countEl.textContent = (_vehicleFilter !== 'all' || _vehicleSearch) ? (filtered.length + '/' + _vehicles.length) : _vehicles.length;
+      var pvFleet = document.getElementById('pv-fleet-count');
+      if (pvFleet) pvFleet.textContent = _vehicles.length;
     }
 
     // =============================================
@@ -1348,7 +1387,10 @@
         var tokens = res.data || [];
         var el = document.getElementById('tokenList');
         var countEl = document.getElementById('token-count');
-        if (countEl) countEl.textContent = tokens.filter(function(t){ return t.status === 'Active' && new Date(t.expires_at) > new Date(); }).length;
+        var activeCount = tokens.filter(function(t){ return t.status === 'Active' && new Date(t.expires_at) > new Date(); }).length;
+        if (countEl) countEl.textContent = activeCount;
+        var pvShared = document.getElementById('pv-shared-count');
+        if (pvShared) pvShared.textContent = activeCount;
 
         if (tokens.length === 0) {
           el.innerHTML = '<div class="empty-state" style="padding:20px 0;"><i class="bi bi-link-45deg" style="font-size:1.8rem;"></i><p style="font-size:0.78rem;">ยังไม่มีลิงก์แชร์</p></div>';
@@ -1958,6 +2000,24 @@
       var div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // =============================================
+    // PANEL VIEW SWITCHER (Fleet ↔ Shared) — admin-only tabs
+    // =============================================
+    function switchPanelView(view) {
+      var isFleet = (view !== 'shared');
+      document.querySelectorAll('#panelViewTabs .pv-tab').forEach(function(t){
+        t.classList.toggle('active', t.dataset.view === (isFleet ? 'fleet' : 'shared'));
+      });
+      var show = function(id, shown) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = shown ? '' : 'none';
+      };
+      show('panelSearchWrap',     isFleet);
+      show('panelFilterTabs',     isFleet);
+      show('vehicleList',         isFleet);
+      show('tokenManagerSection', !isFleet);
     }
 
     // =============================================
