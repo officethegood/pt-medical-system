@@ -55,10 +55,65 @@
     @media (max-width: 992px) {
       .gps-layout { grid-template-columns: 320px 1fr; }
     }
+    /* ===== Mobile: Map-first + Bottom Sheet (Grab/Uber-style) ===== */
+    .sheet-handle { display:none; }
     @media (max-width: 768px) {
-      .gps-layout { grid-template-columns: 1fr; height: auto; }
-      .vehicle-panel { max-height: 50vh; border-right: none !important; border-bottom: 1px solid var(--slate-200); }
-      .map-container { height: 60vh; min-height: 400px; }
+      .gps-layout {
+        display: block; position: relative;
+        height: calc(100vh - 56px); height: calc(100dvh - 56px);
+        overflow: hidden;
+      }
+      /* Map fills whole viewport below navbar */
+      .map-container {
+        position: absolute; inset: 0; height: auto; min-height: 0;
+      }
+      #map { min-height: 0; height: 100%; }
+      /* Vehicle panel = bottom sheet */
+      .vehicle-panel {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        height: 45vh; max-height: 88vh; min-height: 120px;
+        border-right: none !important;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -6px 22px rgba(15,40,71,0.14);
+        z-index: 500;
+        transition: height 0.22s cubic-bezier(.2,.8,.2,1);
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        touch-action: pan-y;
+      }
+      .vehicle-panel.sheet-dragging { transition: none; }
+      .vehicle-panel.sheet-peek { height: 120px; }
+      .vehicle-panel.sheet-half { height: 45vh; }
+      .vehicle-panel.sheet-full { height: 88vh; }
+      /* Hide filter tabs in peek mode — only title + search visible */
+      .vehicle-panel.sheet-peek .filter-tabs,
+      .vehicle-panel.sheet-peek .panel-search { display: none; }
+      .vehicle-panel.sheet-peek .panel-section-header { padding-bottom: 6px; border-bottom: none; }
+      .sheet-handle {
+        display: flex; justify-content: center; align-items: center;
+        padding: 8px 0 4px; cursor: grab; touch-action: none;
+        flex-shrink: 0;
+      }
+      .sheet-handle:active { cursor: grabbing; }
+      .sheet-handle-bar {
+        width: 44px; height: 5px; border-radius: 3px;
+        background: var(--slate-300);
+      }
+      .vehicle-list { flex: 1; overflow-y: auto; }
+      .panel-section-header { flex-shrink: 0; padding-top: 4px !important; }
+      /* Map controls: stack vertically on right so bottom sheet doesn't cover them */
+      .map-controls {
+        top: 12px; right: 12px; left: auto;
+        flex-direction: column; padding: 4px;
+      }
+      .map-ctrl-btn { padding: 9px 10px; }
+      /* Backdrop for full-mode */
+      .sheet-backdrop {
+        position: absolute; inset: 0; background: rgba(15,40,71,0.35);
+        z-index: 499; opacity: 0; pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .vehicle-panel.sheet-full ~ .sheet-backdrop { opacity: 1; pointer-events: auto; }
     }
 
     /* ==================== LEFT PANEL ==================== */
@@ -541,8 +596,10 @@
   <!-- ==================== MAIN LAYOUT ==================== -->
   <div class="gps-layout">
 
-    <!-- Left: Vehicle Panel -->
+    <!-- Left: Vehicle Panel (= Bottom Sheet on mobile) -->
     <div class="vehicle-panel" id="vehiclePanel">
+      <!-- Drag handle (mobile only) -->
+      <div class="sheet-handle" id="sheetHandle" aria-hidden="true"><span class="sheet-handle-bar"></span></div>
       <div class="panel-section-header">
         <div class="panel-title">
           <h5><i class="bi bi-broadcast-pin" style="color:var(--red-600);"></i> Fleet <span class="count-pill" id="vehicle-count">0</span></h5>
@@ -582,6 +639,9 @@
         <div id="tokenList"></div>
       </div>
     </div>
+
+    <!-- Backdrop for full bottom-sheet (mobile only) -->
+    <div class="sheet-backdrop" id="sheetBackdrop" onclick="sheetSnap('half')"></div>
 
     <!-- Right: Map -->
     <div class="map-container">
@@ -1899,6 +1959,104 @@
       div.textContent = str;
       return div.innerHTML;
     }
+
+    // =============================================
+    // MOBILE BOTTOM SHEET (drag + snap)
+    // =============================================
+    var SHEET_BREAKPOINT = 768;
+    function _isMobile() { return window.matchMedia('(max-width:' + SHEET_BREAKPOINT + 'px)').matches; }
+    function sheetSnap(state) {
+      if (!_isMobile()) return;
+      var panel = document.getElementById('vehiclePanel');
+      if (!panel) return;
+      panel.classList.remove('sheet-peek','sheet-half','sheet-full','sheet-dragging');
+      panel.style.height = '';
+      panel.classList.add('sheet-' + state);
+      // Let Leaflet know size changed so tiles fill properly
+      setTimeout(function(){ if (window.map && map.invalidateSize) map.invalidateSize(); }, 240);
+    }
+    (function initBottomSheet(){
+      var panel  = document.getElementById('vehiclePanel');
+      var handle = document.getElementById('sheetHandle');
+      if (!panel || !handle) return;
+      // Default to half on mobile
+      if (_isMobile()) panel.classList.add('sheet-half');
+
+      var startY = 0, startH = 0, dragging = false;
+      function px(v){ return parseFloat(v) || 0; }
+      function vh(p){ return (window.innerHeight * p) / 100; }
+      function onStart(e) {
+        if (!_isMobile()) return;
+        var t = e.touches ? e.touches[0] : e;
+        startY = t.clientY;
+        startH = panel.getBoundingClientRect().height;
+        dragging = true;
+        panel.classList.add('sheet-dragging');
+        panel.classList.remove('sheet-peek','sheet-half','sheet-full');
+      }
+      function onMove(e) {
+        if (!dragging) return;
+        var t = e.touches ? e.touches[0] : e;
+        var delta = startY - t.clientY;
+        var h = Math.max(120, Math.min(vh(88), startH + delta));
+        panel.style.height = h + 'px';
+        if (e.cancelable) e.preventDefault();
+      }
+      function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        var h = panel.getBoundingClientRect().height;
+        var targets = [
+          { name:'peek', v:120 },
+          { name:'half', v:vh(45) },
+          { name:'full', v:vh(85) }
+        ];
+        // snap to nearest
+        var nearest = targets.reduce(function(a,b){
+          return Math.abs(b.v - h) < Math.abs(a.v - h) ? b : a;
+        });
+        sheetSnap(nearest.name);
+      }
+      handle.addEventListener('touchstart', onStart, { passive:true });
+      handle.addEventListener('touchmove',  onMove,  { passive:false });
+      handle.addEventListener('touchend',   onEnd);
+      handle.addEventListener('mousedown',  onStart);
+      window.addEventListener('mousemove',  onMove);
+      window.addEventListener('mouseup',    onEnd);
+      // Tap handle (no drag) → cycle state peek→half→full→peek
+      var tapStartY = 0, tapStartT = 0;
+      handle.addEventListener('touchstart', function(e){
+        tapStartY = e.touches[0].clientY; tapStartT = Date.now();
+      }, { passive:true });
+      handle.addEventListener('touchend', function(e){
+        if (Date.now() - tapStartT > 250) return;
+        var dy = Math.abs((e.changedTouches[0].clientY) - tapStartY);
+        if (dy > 6) return; // it was a drag
+        if (panel.classList.contains('sheet-peek')) sheetSnap('half');
+        else if (panel.classList.contains('sheet-full')) sheetSnap('half');
+        else sheetSnap('full');
+      });
+      // On resize, re-snap if transitioning across breakpoint
+      window.addEventListener('resize', function(){
+        if (!_isMobile()) {
+          panel.classList.remove('sheet-peek','sheet-half','sheet-full','sheet-dragging');
+          panel.style.height = '';
+        } else if (!panel.classList.contains('sheet-peek') && !panel.classList.contains('sheet-half') && !panel.classList.contains('sheet-full')) {
+          panel.classList.add('sheet-half');
+        }
+      });
+    })();
+
+    // Auto-peek the sheet when a vehicle is focused (tap card)
+    (function hookFocusVehicle(){
+      if (typeof window.focusVehicle !== 'function') return;
+      var orig = window.focusVehicle;
+      window.focusVehicle = function(key) {
+        var r = orig.apply(this, arguments);
+        if (_isMobile()) sheetSnap('peek');
+        return r;
+      };
+    })();
 
     // =============================================
     // START
