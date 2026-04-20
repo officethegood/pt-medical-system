@@ -502,9 +502,9 @@
       .follow-chip .fc-text { display: none; }
     }
 
-    /* Proxy tier chip — top-left on map */
+    /* Proxy tier chip — placed just below map-controls at top-right */
     .proxy-chip {
-      position: absolute; top: 16px; left: 12px; z-index: 998;
+      position: absolute; top: 70px; right: 16px; z-index: 998;
       display: inline-flex; align-items: center; gap: 6px;
       background: rgba(255,255,255,0.95);
       color: #1e293b;
@@ -527,7 +527,9 @@
     .proxy-chip[data-tier="Direct"]   .pc-dot { background: #6b7280; box-shadow: 0 0 0 2px rgba(107,114,128,0.25); }
     .proxy-chip .pc-ms { color: #64748b; font-weight: 500; margin-left: 2px; }
     @media (max-width: 768px) {
-      .proxy-chip { top: 12px; left: 8px; font-size: 0.66rem; padding: 4px 8px 4px 7px; }
+      /* On mobile map-controls is a column at top-right with ~3-4 buttons;
+         chip goes below Leaflet zoom on the left to avoid collision */
+      .proxy-chip { top: 110px; left: 12px; right: auto; font-size: 0.66rem; padding: 4px 8px 4px 7px; }
       .proxy-chip .pc-ms { display: none; }
     }
 
