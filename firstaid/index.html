@@ -2024,6 +2024,20 @@
         var form = document.getElementById('reg-form');
         if (!form.checkValidity()) { form.reportValidity(); return; }
 
+        // Manual validation for hidden-input toggle groups (checkValidity skips type=hidden)
+        var genderVal = (document.getElementById('reg-gender').value || '').trim();
+        if (!genderVal) {
+            var tg = document.getElementById('reg-gender-toggle');
+            if (tg) {
+                tg.scrollIntoView({ behavior:'smooth', block:'center' });
+                tg.style.transition = 'box-shadow 0.2s';
+                tg.style.boxShadow = '0 0 0 3px rgba(220,53,69,0.35)';
+                setTimeout(function(){ tg.style.boxShadow = ''; }, 1500);
+            }
+            Swal.fire({ icon:'warning', title:'กรุณาเลือกเพศ', timer:1500, showConfirmButton:false });
+            return;
+        }
+
         Swal.fire({ title: 'กำลังบันทึก...', didOpen: function() { Swal.showLoading(); } });
 
         // Collect treatments from ghost buttons
