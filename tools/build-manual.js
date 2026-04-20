@@ -56,7 +56,7 @@ tr:nth-child(even) td { background: #f9fafb; }
 .toc li { border-bottom: 1px dotted #d1d5db; padding: 6pt 0; }
 .page-break { page-break-before: always; }
 .step { counter-reset: step; list-style: none; padding-left: 0; }
-.step li { counter-increment: step; padding-left: 32pt; position: relative; margin: 8pt 0; }
+.step li { counter-increment: step; padding-left: 32pt; position: relative; margin: 8pt 0; page-break-inside: avoid; break-inside: avoid; }
 .step li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 24pt; height: 24pt; background: #0d47a1; color: #fff; border-radius: 50%; text-align: center; line-height: 24pt; font-weight: 700; font-size: 11pt; }
 .badge { display: inline-block; padding: 1pt 6pt; border-radius: 3pt; font-size: 10pt; font-weight: 600; color: #fff; }
 .badge-a { background: #16a34a; }
