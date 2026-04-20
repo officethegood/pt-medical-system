@@ -396,6 +396,12 @@
     }
 
     async function loadNavSettings() {
+        // Bootstrap GPS proxy settings via shared helper so settingsGet() works
+        // in gps-providers.js (was: manual CONFIG.GPS_PROXY_SYNOLOGY = ... which
+        // settingsGet never reads → Synology tier always skipped)
+        if (typeof gpsLoadProxyConfig === 'function') {
+            try { await gpsLoadProxyConfig(_supabase); } catch(e) { console.warn('gpsLoadProxyConfig:', e.message || e); }
+        }
         try {
             var res = await _supabase.from('settings').select('*');
             (res.data || []).forEach(function(s) {
@@ -405,9 +411,6 @@
                 }
                 if (s.key === 'PRINT_HEADER' && s.value) {
                     window.PRINT_HEADER = s.value;
-                }
-                if (s.key === 'GPS_PROXY_SYNOLOGY' && s.value && typeof CONFIG !== 'undefined') {
-                    CONFIG.GPS_PROXY_SYNOLOGY = String(s.value).trim();
                 }
                 if (s.key === 'GPS_ENABLED' && s.value === '1') {
                     var gpsBtn = document.getElementById('sys-tog-gps');

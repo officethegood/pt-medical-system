@@ -1052,19 +1052,21 @@
         }
       }
 
-      // Load logo + GPS proxy settings (Synology URL if configured)
+      // Bootstrap settings cache (populates settingsGet/_on used by gps-providers.js)
+      // Without this, Synology tier is skipped because settingsGet('GPS_PROXY_SYNOLOGY')
+      // falls back to DEFAULTS '' — even when admin has configured a URL.
+      if (typeof gpsLoadProxyConfig === 'function') {
+        try { await gpsLoadProxyConfig(_supabase); } catch(e) { console.warn('gpsLoadProxyConfig:', e.message || e); }
+      }
+
+      // Load logo (not managed by settings.js bootstrap)
       try {
-        var res = await _supabase.from('settings').select('*');
-        (res.data || []).forEach(function(s) {
-          if (s.key === 'APP_LOGO_URL' && s.value) {
-            var logo = document.getElementById('navbar-logo');
-            if (logo) { logo.src = s.value; logo.style.display = ''; }
-            document.getElementById('navbar-icon').style.display = 'none';
-          }
-          if (s.key === 'GPS_PROXY_SYNOLOGY' && s.value && typeof CONFIG !== 'undefined') {
-            CONFIG.GPS_PROXY_SYNOLOGY = String(s.value).trim();
-          }
-        });
+        var res = await _supabase.from('settings').select('key,value').eq('key', 'APP_LOGO_URL').maybeSingle();
+        if (res.data && res.data.value) {
+          var logo = document.getElementById('navbar-logo');
+          if (logo) { logo.src = res.data.value; logo.style.display = ''; }
+          document.getElementById('navbar-icon').style.display = 'none';
+        }
       } catch(e) {}
 
       // Load providers + vehicles
