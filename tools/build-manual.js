@@ -55,9 +55,10 @@ tr:nth-child(even) td { background: #f9fafb; }
 .toc ul { list-style: none; margin-left: 0; }
 .toc li { border-bottom: 1px dotted #d1d5db; padding: 6pt 0; }
 .page-break { page-break-before: always; }
-.step { counter-reset: step; list-style: none; padding-left: 0; }
-.step li { counter-increment: step; padding-left: 32pt; position: relative; margin: 8pt 0; page-break-inside: avoid; break-inside: avoid; }
-.step li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 24pt; height: 24pt; background: #0d47a1; color: #fff; border-radius: 50%; text-align: center; line-height: 24pt; font-weight: 700; font-size: 11pt; }
+.step { list-style: none; padding-left: 0; }
+.step li { margin: 8pt 0; page-break-inside: avoid; break-inside: avoid; display: flex; align-items: flex-start; gap: 10pt; }
+.step-num { flex: 0 0 24pt; width: 24pt; height: 24pt; background: #0d47a1; color: #fff; border-radius: 50%; text-align: center; line-height: 24pt; font-weight: 700; font-size: 11pt; display: inline-block; }
+.step-body { flex: 1; min-width: 0; padding-top: 2pt; }
 .badge { display: inline-block; padding: 1pt 6pt; border-radius: 3pt; font-size: 10pt; font-weight: 600; color: #fff; }
 .badge-a { background: #16a34a; }
 .badge-v { background: #f59e0b; }
@@ -542,6 +543,16 @@ ${img('a11-gps-main', 'GPS Tracking · มุมมอง Admin เห็นท�
 
   async function buildPdf(html, outPath, title) {
     console.log('Building', title, '...');
+    // Transform <ol class="step"><li>...</li>...</ol> → inject explicit step numbers
+    // (CSS counter + ::before breaks across PDF pages)
+    html = html.replace(/<ol class="step">([\s\S]*?)<\/ol>/g, function(_m, inner) {
+      let i = 0;
+      const out = inner.replace(/<li>([\s\S]*?)<\/li>/g, function(_m2, body) {
+        i++;
+        return `<li><span class="step-num">${i}</span><span class="step-body">${body}</span></li>`;
+      });
+      return `<ol class="step">${out}</ol>`;
+    });
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 90000 });
     // Wait for Sarabun font
     try { await Promise.race([page.evaluateHandle('document.fonts.ready'), new Promise(r => setTimeout(r, 10000))]); } catch(e) {}
