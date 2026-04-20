@@ -1046,6 +1046,23 @@
           </div>
         </div>
 
+        <div class="settings-section" id="docs-planning-section">
+          <div class="section-header"><h2><i class="bi bi-lightbulb"></i> Planning &amp; Roadmap</h2></div>
+          <div class="section-body">
+            <div class="docs-list">
+              <a class="doc-card" href="docs/IMPROVEMENT_PLAN.html" target="_blank" style="--doc-c:#dc2626;">
+                <div class="doc-card-icon"><i class="bi bi-clipboard-check"></i></div>
+                <div class="doc-card-body">
+                  <div class="doc-card-head"><div class="doc-card-title">Improvement Plan</div><span class="abadge abadge-warning">Living Doc</span></div>
+                  <div class="doc-card-desc">Roadmap, known issues, และ feature requests</div>
+                  <div class="doc-card-meta"><span><i class="bi bi-tag"></i> Roadmap</span></div>
+                </div>
+                <i class="bi bi-arrow-up-right doc-card-arrow"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
         <div class="settings-section">
           <div class="section-header"><h2><i class="bi bi-box-arrow-up-right"></i> External Resources</h2></div>
           <div class="section-body">
@@ -1650,9 +1667,20 @@
       var ms = Date.now() - start;
       var data = {};
       try { data = await resp.json(); } catch(_){}
-      if (resp.status === 405) {
+      // v2+ of worker: GET returns 200 with {ok:true, hasKey}
+      // v1 of worker: GET returns 405 (still online, just noisy in console)
+      if (resp.status === 200 && data && data.ok) {
+        if (data.hasKey === false) {
+          _setDot('proxy-ocr-spinner','warn');
+          _setText('proxy-ocr-ms','ไม่มี API key','var(--adanger)');
+        } else {
+          _setDot('proxy-ocr-spinner','ok');
+          _setText('proxy-ocr-ms', ms + ' ms · Online', ms<500?'var(--asuccess)':'var(--awarning)');
+        }
+      } else if (resp.status === 405) {
+        // Legacy worker — still online
         _setDot('proxy-ocr-spinner','ok');
-        _setText('proxy-ocr-ms', ms + ' ms · Online', ms<500?'var(--asuccess)':'var(--awarning)');
+        _setText('proxy-ocr-ms', ms + ' ms · Online (v1)', ms<500?'var(--asuccess)':'var(--awarning)');
       } else if (resp.status === 500 && data.error && /GEMINI_API_KEY/i.test(data.error)) {
         _setDot('proxy-ocr-spinner','warn');
         _setText('proxy-ocr-ms','ไม่มี API key','var(--adanger)');

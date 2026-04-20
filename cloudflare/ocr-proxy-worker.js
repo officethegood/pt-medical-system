@@ -1,13 +1,12 @@
 /**
- * OCR Proxy — Cloudflare Worker (TheGood deployment)
+ * OCR Proxy — Cloudflare Worker
  * ซ่อน Gemini API key จาก browser + centralize billing
  *
  * Secrets required (ตั้งผ่าน `wrangler secret put`):
- *   GEMINI_API_KEY  — Gemini API key ของ TheGood
+ *   GEMINI_API_KEY  — Gemini API key ของหน่วยงาน
  *
  * Optional env:
- *   ALLOWED_ORIGINS — comma-separated allowed Origin headers
- *                     (e.g. "https://officethegood.github.io")
+ *   ALLOWED_ORIGINS — comma-separated (e.g. "https://xxx.pages.dev,https://abc.com")
  *                     ถ้าไม่ตั้ง → อนุญาตทุก origin (ไม่แนะนำ production)
  */
 
@@ -16,6 +15,17 @@ export default {
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders(request, env) });
+    }
+
+    // Health check — admin latency panel pings GET /; return 200 instead of 405
+    // so Chrome DevTools doesn't spam red errors. Real OCR still requires POST below.
+    if (request.method === 'GET') {
+      return jsonResponse({
+        ok: true,
+        service: 'ocr-proxy',
+        hasKey: !!env.GEMINI_API_KEY,
+        note: 'POST with {image, prompt} for OCR'
+      }, 200, request, env);
     }
 
     if (request.method !== 'POST') {
