@@ -502,6 +502,35 @@
       .follow-chip .fc-text { display: none; }
     }
 
+    /* Proxy tier chip — top-left on map */
+    .proxy-chip {
+      position: absolute; top: 16px; left: 12px; z-index: 998;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.95);
+      color: #1e293b;
+      padding: 5px 10px 5px 9px;
+      border-radius: 100px;
+      font-size: 0.72rem; font-weight: 600;
+      box-shadow: 0 2px 8px rgba(15,40,71,0.18);
+      border: 1px solid rgba(15,40,71,0.08);
+      white-space: nowrap;
+      cursor: help;
+      backdrop-filter: blur(6px);
+    }
+    .proxy-chip .pc-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #9ca3af;
+      box-shadow: 0 0 0 2px rgba(156,163,175,0.18);
+    }
+    .proxy-chip[data-tier="Synology"] .pc-dot { background: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.25); }
+    .proxy-chip[data-tier="Render"]   .pc-dot { background: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.25); }
+    .proxy-chip[data-tier="GAS"]      .pc-dot { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
+    .proxy-chip[data-tier="Direct"]   .pc-dot { background: #6b7280; box-shadow: 0 0 0 2px rgba(107,114,128,0.25); }
+    .proxy-chip .pc-ms { color: #64748b; font-weight: 500; margin-left: 2px; }
+    @media (max-width: 768px) {
+      .proxy-chip { top: 12px; left: 8px; font-size: 0.66rem; padding: 4px 8px 4px 7px; }
+      .proxy-chip .pc-ms { display: none; }
+    }
+
     .live-indicator {
       position: absolute; bottom: 16px; left: 16px; z-index: 999;
       background: rgba(15,40,71,0.92);
@@ -739,6 +768,13 @@
       <div class="live-indicator" id="refreshIndicator" style="display:none;">
         <span class="live-dot"></span>
         <span id="refreshText">Live</span>
+      </div>
+
+      <!-- Proxy tier chip: which GPS proxy is currently being used -->
+      <div class="proxy-chip" id="proxyChip" data-tier="" title="Proxy tier ที่กำลังใช้อยู่ — Synology (primary) → Render → GAS">
+        <span class="pc-dot"></span>
+        <span class="pc-label">Proxy: --</span>
+        <span class="pc-ms"></span>
       </div>
 
       <!-- Follow-mode chip: shown while map tracks selected vehicle -->
@@ -984,6 +1020,17 @@
         chip.style.display = 'none';
       }
     }
+
+    // GPS Proxy tier indicator — updates when shared/gps-providers.js dispatches gps-proxy-change
+    window.addEventListener('gps-proxy-change', function(ev) {
+      var chip = document.getElementById('proxyChip');
+      if (!chip || !ev.detail) return;
+      var t = ev.detail.tier || '--';
+      chip.setAttribute('data-tier', t);
+      chip.querySelector('.pc-label').textContent = 'Proxy: ' + t;
+      var msEl = chip.querySelector('.pc-ms');
+      if (msEl) msEl.textContent = (ev.detail.ms != null) ? (ev.detail.ms + 'ms') : '';
+    });
 
     // =============================================
     // INIT

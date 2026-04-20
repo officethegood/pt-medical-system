@@ -44,10 +44,25 @@ async function gpsFetch(url) {
   // `cache: 'no-store'` + `_t=timestamp` cache-buster below handle staleness.
   var noCacheOpts = { cache: 'no-store' };
 
+  // Announce which tier served the request — consumed by GPS page chip
+  function _setActiveProxy(tier, ms) {
+    var info = { tier: tier, ms: ms, at: Date.now() };
+    window._gpsActiveProxy = info;
+    try {
+      console.log('%c[GPS Proxy] ✓ via ' + tier + ' (' + ms + 'ms)',
+        'color:#fff;background:' + ({Synology:'#16a34a',Render:'#2563eb',GAS:'#f59e0b',Direct:'#6b7280'}[tier]||'#6b7280') +
+        ';padding:2px 6px;border-radius:3px;font-weight:600');
+    } catch(_){}
+    try { window.dispatchEvent(new CustomEvent('gps-proxy-change', { detail: info })); } catch(_){}
+  }
+
   // HTTPS direct — no proxy needed
   if (!url.startsWith('http://')) {
+    var t0 = Date.now();
     var r0 = await fetch(url, noCacheOpts);
-    return await r0.json();
+    var j0 = await r0.json();
+    _setActiveProxy('Direct', Date.now() - t0);
+    return j0;
   }
 
   // ===== Tier 1: Synology Reverse Proxy (path-rewrite) =====
@@ -60,13 +75,18 @@ async function gpsFetch(url) {
       var synoFinal = synoUrl.replace(/\/+$/, '') + pathAndQuery;
       var c1 = new AbortController();
       var t1 = setTimeout(function() { c1.abort(); }, 5000);
+      var tS = Date.now();
       var r1 = await fetch(synoFinal, {
         signal: c1.signal,
         credentials: 'omit',
         cache: 'no-store'
       });
       clearTimeout(t1);
-      if (r1.ok) return await r1.json();
+      if (r1.ok) {
+        var j1 = await r1.json();
+        _setActiveProxy('Synology', Date.now() - tS);
+        return j1;
+      }
       console.warn('GPS Proxy: Synology returned HTTP ' + r1.status + ', falling back to Render');
     } catch(e1) {
       console.warn('GPS Proxy: Synology fail (' + (e1.message || e1) + '), falling back to Render');
@@ -78,16 +98,22 @@ async function gpsFetch(url) {
     try {
       var c2 = new AbortController();
       var t2 = setTimeout(function() { c2.abort(); }, 5000);
+      var tR = Date.now();
       var rFinal = renderUrl.replace(/\/+$/, '') + '/?url=' + encodeURIComponent(url) + '&_t=' + Date.now();
       var r2 = await fetch(rFinal, Object.assign({ signal: c2.signal }, noCacheOpts));
       clearTimeout(t2);
-      return await r2.json();
+      var j2 = await r2.json();
+      _setActiveProxy('Render', Date.now() - tR);
+      return j2;
     } catch(e2) {
       console.warn('GPS Proxy: Render fail (' + (e2.message || e2) + '), falling back to GAS');
       if (gasUrl) {
+        var tG1 = Date.now();
         var gFinal = gasUrl + '?url=' + encodeURIComponent(url) + '&_t=' + Date.now();
         var r3 = await fetch(gFinal, noCacheOpts);
-        return await r3.json();
+        var j3 = await r3.json();
+        _setActiveProxy('GAS', Date.now() - tG1);
+        return j3;
       }
       throw e2;
     }
@@ -95,14 +121,20 @@ async function gpsFetch(url) {
 
   // ===== Tier 3: GAS only (if no Render configured) =====
   if (gasUrl) {
+    var tG2 = Date.now();
     var gFinal2 = gasUrl + '?url=' + encodeURIComponent(url) + '&_t=' + Date.now();
     var r4 = await fetch(gFinal2, noCacheOpts);
-    return await r4.json();
+    var j4 = await r4.json();
+    _setActiveProxy('GAS', Date.now() - tG2);
+    return j4;
   }
 
   // Last resort: direct (will fail on HTTPS page due to Mixed Content)
+  var tD = Date.now();
   var rDirect = await fetch(url);
-  return await rDirect.json();
+  var jD = await rDirect.json();
+  _setActiveProxy('Direct', Date.now() - tD);
+  return jD;
 }
 
 const GPS_ADAPTERS = {

@@ -1,5 +1,5 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v12';
+var CACHE_NAME = 'pt-medical-v13';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
