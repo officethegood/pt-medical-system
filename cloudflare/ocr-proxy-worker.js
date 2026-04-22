@@ -168,22 +168,30 @@ function detectCritical(row) {
   }
   if (!hasArrest && (snap['circ_arrest'] || snap['arrest_pre_arrest'])) hasArrest = true;
 
-  // Latest non-arrest vitals (from log if any, else initial)
-  let vs = null;
+  // Latest non-arrest vitals: merge latest vArr entry over initial (per-field, non-empty wins)
+  const initVs = {
+    bp:    snap['init_bp']   || '',
+    pr:    snap['init_pr']   || '',
+    rr:    snap['init_rr']   || '',
+    spo2:  snap['init_spo2'] || '',
+    gcs_e: snap['gcs_e'] || '',
+    gcs_v: snap['gcs_v'] || '',
+    gcs_m: snap['gcs_m'] || ''
+  };
+  let latestLog = null;
   for (let i = vArr.length - 1; i >= 0; i--) {
-    if (vArr[i].type !== 'arrest') { vs = vArr[i]; break; }
+    if (vArr[i].type !== 'arrest') { latestLog = vArr[i]; break; }
   }
-  if (!vs) {
-    vs = {
-      bp:    snap['init_bp']   || '',
-      pr:    snap['init_pr']   || '',
-      rr:    snap['init_rr']   || '',
-      spo2:  snap['init_spo2'] || '',
-      gcs_e: snap['gcs_e'] || '',
-      gcs_v: snap['gcs_v'] || '',
-      gcs_m: snap['gcs_m'] || ''
-    };
-  }
+  const pick = (k) => (latestLog && latestLog[k] != null && latestLog[k] !== '') ? latestLog[k] : initVs[k];
+  const vs = {
+    bp:    pick('bp'),
+    pr:    pick('pr'),
+    rr:    pick('rr'),
+    spo2:  pick('spo2'),
+    gcs_e: pick('gcs_e'),
+    gcs_v: pick('gcs_v'),
+    gcs_m: pick('gcs_m')
+  };
 
   const toInt = s => { const n = parseInt(s, 10); return isNaN(n) ? null : n; };
   const alerts = [];

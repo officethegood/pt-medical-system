@@ -918,22 +918,25 @@
         if (!hasArrest && (snap['circ_arrest'] || snap['arrest_pre_arrest'])) hasArrest = true;
         if (hasArrest) { reasons.push('ARREST'); alerts.push({ type:'ARREST', label:'Cardiac Arrest' }); }
 
-        // Latest V/S (non-arrest) — from log if present, else initial
-        var vs = null;
+        // Merge latest vArr entry over initial (per-field, non-empty wins)
+        var initVs = {
+            bp: snap['init_bp'] || '',
+            pr: snap['init_pr'] || '',
+            rr: snap['init_rr'] || '',
+            spo2: snap['init_spo2'] || '',
+            gcs_e: snap['gcs_e'] || '',
+            gcs_v: snap['gcs_v'] || '',
+            gcs_m: snap['gcs_m'] || ''
+        };
+        var latestLog = null;
         for (var i = vArr.length - 1; i >= 0; i--) {
-            if (vArr[i].type !== 'arrest') { vs = vArr[i]; break; }
+            if (vArr[i].type !== 'arrest') { latestLog = vArr[i]; break; }
         }
-        if (!vs) {
-            vs = {
-                bp: snap['init_bp'] || '',
-                pr: snap['init_pr'] || '',
-                rr: snap['init_rr'] || '',
-                spo2: snap['init_spo2'] || '',
-                gcs_e: snap['gcs_e'] || '',
-                gcs_v: snap['gcs_v'] || '',
-                gcs_m: snap['gcs_m'] || ''
-            };
-        }
+        var pick = function(k) { return (latestLog && latestLog[k] != null && latestLog[k] !== '') ? latestLog[k] : initVs[k]; };
+        var vs = {
+            bp: pick('bp'), pr: pick('pr'), rr: pick('rr'), spo2: pick('spo2'),
+            gcs_e: pick('gcs_e'), gcs_v: pick('gcs_v'), gcs_m: pick('gcs_m')
+        };
 
         var toInt = function(s) { var n = parseInt(s, 10); return isNaN(n) ? null : n; };
         var spo2 = toInt(vs.spo2);
