@@ -983,8 +983,11 @@
                 <select class="aselect" id="log-filter-action" style="max-width:300px;" onchange="loadActivityLog(1)">
                   <option value="all">ทั้งหมด</option>
                   <option value="LOGIN">LOGIN</option>
+                  <option value="CREATE_CASE">CREATE_CASE</option>
+                  <option value="OPEN_CASE">OPEN_CASE</option>
                   <option value="SAVE_CASE">SAVE_CASE</option>
                   <option value="CLOSE_CASE">CLOSE_CASE</option>
+                  <option value="REOPEN_CASE">REOPEN_CASE</option>
                   <option value="DELETE_CASE">DELETE_CASE</option>
                   <option value="SETTINGS_UPDATE">SETTINGS_UPDATE</option>
                   <option value="CREATE_EVENT">CREATE_EVENT</option>
@@ -2450,7 +2453,8 @@
     var el = document.getElementById('log-table-container');
     if (!logs || logs.length === 0) { el.innerHTML = '<div style="color:var(--atext-3); text-align:center; padding:24px;">ไม่มีข้อมูล</div>'; return; }
     var actionColors = {
-      LOGIN:'abadge-info', CLOSE_CASE:'abadge-success', REOPEN_CASE:'abadge-warning',
+      LOGIN:'abadge-info', CREATE_CASE:'abadge-success', OPEN_CASE:'abadge-info',
+      CLOSE_CASE:'abadge-success', REOPEN_CASE:'abadge-warning',
       DELETE_CASE:'abadge-danger', SAVE_CASE:'abadge-muted', SETTINGS_UPDATE:'abadge-muted',
       CREATE_EVENT:'abadge-success', CLOSE_EVENT:'abadge-muted', DELETE_EVENT:'abadge-danger',
       LOC_CREATE:'abadge-success', LOC_UPDATE:'abadge-muted', LOC_DELETE:'abadge-danger',

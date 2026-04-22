@@ -2533,6 +2533,7 @@
     // --- OPEN CASE (Supabase) ---
     async function openCase(id) {
        if (typeof notifyAck === 'function') notifyAck(id);
+       logActivity('OPEN_CASE', id, 'เปิดเคส');
        Swal.fire({title: 'Loading Case...', didOpen: function() { Swal.showLoading(); }});
 
        try {
