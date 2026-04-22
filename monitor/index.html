@@ -283,6 +283,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../shared/config.js"></script>
     <script src="../shared/settings.js"></script>
+    <script src="../shared/notify.js"></script>
     <script src="../shared/auth.js"></script>
     <script src="../shared/realtime.js"></script>
     <script src="../shared/gps-providers.js"></script>
@@ -440,6 +441,8 @@
             referDocs: referDocs,
             triageLevel: c.triage_level,
             createdAt: c.created_at,
+            openedBy: c.opened_by || '',
+            openedAt: c.opened_at || c.created_at,
             status: c.status
         };
     }
@@ -610,6 +613,16 @@
             window._monitorCases = cases;
             document.getElementById('monitor-transport-count').textContent = cases.length;
             renderMonitorTransport(cases);
+
+            // Deep link: ?case=CASE-xxx → auto-open + ack
+            try {
+                var qc = new URLSearchParams(window.location.search).get('case');
+                if (qc && !window._monitorDeepLinkHandled) {
+                    window._monitorDeepLinkHandled = true;
+                    if (typeof notifyAck === 'function') notifyAck(qc);
+                    setTimeout(function() { if (typeof monitorPreviewCase === 'function') monitorPreviewCase(qc); }, 400);
+                }
+            } catch(_){}
             monitorHideLoading();
 
             // Load FA events
@@ -821,6 +834,18 @@
                   '</div>' +
                   '<h5 class="fw-bold mt-2 mb-0" style="font-size:1.05rem;">' + esc(ptName) + '</h5>' +
                   '<div class="text-muted" style="font-size:0.8rem;">' + esc(ptAge) + ' ปี, ' + gShort + ' &bull; NR: ' + esc(nrStatus) + '</div>' +
+                  (function(){
+                      if (!rec.openedBy && !rec.openedAt) return '';
+                      var who = rec.openedBy ? esc(rec.openedBy) : '-';
+                      var when = '';
+                      if (rec.openedAt) {
+                          var od = new Date(rec.openedAt);
+                          when = od.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', hour12:false });
+                      }
+                      return '<div class="text-muted" style="font-size:0.7rem;margin-top:2px;">' +
+                             '<i class="bi bi-person-badge me-1"></i>เปิดโดย <span class="fw-semibold text-dark">' + who + '</span>' +
+                             (when ? ' เวลา ' + when : '') + '</div>';
+                  })() +
                 '</div>' +
 
                 '<div class="card-body px-3 py-2">' +
@@ -882,6 +907,7 @@
 
     function monitor_checkCritical(rec) {
         var reasons = [];
+        var alerts = []; // parallel list of { type, label } for notification triggers
         var snap = {};
         try { if (rec.rawSnapshot) snap = JSON.parse(rec.rawSnapshot); } catch(e) {}
         var vArr = [];
@@ -890,7 +916,7 @@
         // Arrest = always critical
         var hasArrest = vArr.some(function(v) { return v.type === 'arrest' && v.arrest_outcome !== 'ROSC' && v.arrest_outcome !== 'Terminate CPR' && v.arrest_outcome !== 'Dead'; });
         if (!hasArrest && (snap['circ_arrest'] || snap['arrest_pre_arrest'])) hasArrest = true;
-        if (hasArrest) reasons.push('ARREST');
+        if (hasArrest) { reasons.push('ARREST'); alerts.push({ type:'ARREST', label:'Cardiac Arrest' }); }
 
         // Latest V/S (non-arrest) — from log if present, else initial
         var vs = null;
@@ -911,28 +937,28 @@
 
         var toInt = function(s) { var n = parseInt(s, 10); return isNaN(n) ? null : n; };
         var spo2 = toInt(vs.spo2);
-        if (spo2 !== null && spo2 < 90) reasons.push('SpO2 ' + spo2);
+        if (spo2 !== null && spo2 < 90) { reasons.push('SpO2 ' + spo2); alerts.push({ type:'SPO2_LOW', label:'SpO2 ' + spo2 + '%' }); }
 
         var pr = toInt(vs.pr);
-        if (pr !== null && (pr < 50 || pr > 140)) reasons.push('HR ' + pr);
+        if (pr !== null && (pr < 50 || pr > 140)) { reasons.push('HR ' + pr); alerts.push({ type:'HR_ABNORMAL', label:'HR ' + pr }); }
 
         var rr = toInt(vs.rr);
-        if (rr !== null && (rr < 10 || rr > 30)) reasons.push('RR ' + rr);
+        if (rr !== null && (rr < 10 || rr > 30)) { reasons.push('RR ' + rr); alerts.push({ type:'RR_ABNORMAL', label:'RR ' + rr }); }
 
         if (vs.bp && /^(\d+)\s*\/\s*(\d+)$/.test(vs.bp.trim())) {
             var m = vs.bp.trim().match(/^(\d+)\s*\/\s*(\d+)$/);
             var sbp = parseInt(m[1], 10);
-            if (sbp < 90 || sbp > 200) reasons.push('BP ' + vs.bp);
+            if (sbp < 90 || sbp > 200) { reasons.push('BP ' + vs.bp); alerts.push({ type:'BP_ABNORMAL', label:'BP ' + vs.bp }); }
         }
 
         var ge = toInt(vs.gcs_e), gm = toInt(vs.gcs_m);
         var gv = vs.gcs_v === 'VT' ? 1 : toInt(vs.gcs_v);
         if (ge !== null && gv !== null && gm !== null) {
             var total = ge + gv + gm;
-            if (total < 9) reasons.push('GCS ' + total);
+            if (total < 8) { reasons.push('GCS ' + total); alerts.push({ type:'GCS_LOW', label:'GCS ' + total }); }
         }
 
-        return { critical: reasons.length > 0, reasons: reasons };
+        return { critical: reasons.length > 0, reasons: reasons, alerts: alerts };
     }
 
     function monitor_applyCriticalAlerts(cases) {
@@ -948,7 +974,7 @@
             var wrap = document.querySelector('[data-monitor-case="' + rec.id + '"]');
             if (wrap) wrap.classList.add('monitor-crit-wrap');
             if (!monitor_knownCriticals.has(rec.id)) {
-                newCritical.push({ rec: rec, reasons: r.reasons });
+                newCritical.push({ rec: rec, reasons: r.reasons, alerts: r.alerts });
             }
         });
 
@@ -966,6 +992,7 @@
         if (pill) pill.classList.toggle('active', critCount > 0);
 
         // Show toast for each newly-critical case
+        // (External notifications are fired server-side via Supabase Database Webhook → worker /notify/check)
         newCritical.forEach(function(n) { monitor_showCriticalToast(n.rec, n.reasons); });
     }
 
@@ -1294,6 +1321,7 @@
     // TRANSPORT CASE PREVIEW (Supabase, replaces google.script.run.getCaseData)
     // =============================================
     async function monitorPreviewCase(caseId) {
+        if (typeof notifyAck === 'function') notifyAck(caseId);
         monitorShowModal('Transport Case: ' + caseId);
         try {
             var res = await _supabase.from('cases').select('*').eq('case_id', caseId).single();

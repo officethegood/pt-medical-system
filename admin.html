@@ -370,6 +370,7 @@
         <div class="sidebar-group-title">Services</div>
         <a class="sidebar-item" onclick="adm_show('gps', this)"><i class="bi bi-broadcast"></i> GPS Tracking</a>
         <a class="sidebar-item" onclick="adm_show('ocr', this)"><i class="bi bi-file-text"></i> OCR</a>
+        <a class="sidebar-item" onclick="adm_show('notifications', this); loadNotifySection();"><i class="bi bi-bell"></i> Notifications</a>
         <a class="sidebar-item" onclick="adm_show('integrations', this)"><i class="bi bi-plug"></i> Integrations</a>
       </div>
       <div class="sidebar-group">
@@ -686,6 +687,109 @@
         </div>
       </div>
 
+      <!-- ===== NOTIFICATIONS ===== -->
+      <div class="admin-section" id="sec-notifications" style="display:none;">
+        <div class="page-header"><h1>Notifications</h1><p>ส่งแจ้งเตือน critical events ออก Line OA + Telegram (debounced ต่อเคส)</p></div>
+
+        <div class="settings-section">
+          <div class="section-header">
+            <h2><i class="bi bi-activity"></i> Worker Health</h2>
+            <p>ตรวจว่า Cloudflare Worker มี secrets ครบ</p>
+          </div>
+          <div class="section-body">
+            <div class="form-row">
+              <div><div class="form-row-label">Status</div></div>
+              <div class="form-row-input">
+                <button class="abtn" onclick="checkNotifyHealth()"><i class="bi bi-arrow-repeat"></i> Check</button>
+                <div id="notify-health-result" style="margin-top:10px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header"><h2><i class="bi bi-line"></i> Line Official Account</h2></div>
+          <div class="section-body">
+            <div class="form-row">
+              <div><div class="form-row-label">เปิดใช้งาน</div></div>
+              <div class="form-row-input">
+                <select class="aselect" id="notify-line-enabled" style="max-width:200px;">
+                  <option value="false">ปิด</option>
+                  <option value="true">เปิด</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div><div class="form-row-label">Target Type</div><div class="form-row-desc">broadcast = ส่งทุกคน, group = ส่ง 1 group, user_list = ส่งหลาย user IDs</div></div>
+              <div class="form-row-input">
+                <select class="aselect" id="notify-line-target-type" style="max-width:300px;">
+                  <option value="broadcast">broadcast</option>
+                  <option value="group">group</option>
+                  <option value="user_list">user_list</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div><div class="form-row-label">Targets</div><div class="form-row-desc">group ID หรือ JSON array ของ user IDs (ปล่อยว่างถ้า broadcast)</div></div>
+              <div class="form-row-input">
+                <input class="ainput" id="notify-line-targets" placeholder='C12345... หรือ ["U1","U2"]'>
+              </div>
+            </div>
+            <div class="form-row">
+              <div><div class="form-row-label">บันทึก / ทดสอบ</div></div>
+              <div class="form-row-input" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="abtn abtn-primary" onclick="saveNotifyLine()"><i class="bi bi-check-lg"></i> บันทึก</button>
+                <button class="abtn" onclick="runNotifyTest('line')"><i class="bi bi-send"></i> ส่งทดสอบ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header"><h2><i class="bi bi-telegram"></i> Telegram</h2></div>
+          <div class="section-body">
+            <div class="form-row">
+              <div><div class="form-row-label">เปิดใช้งาน</div></div>
+              <div class="form-row-input">
+                <select class="aselect" id="notify-telegram-enabled" style="max-width:200px;">
+                  <option value="false">ปิด</option>
+                  <option value="true">เปิด</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div><div class="form-row-label">Chat ID</div><div class="form-row-desc">group ID ขึ้นต้นด้วย <code>-100</code> หรือ user ID</div></div>
+              <div class="form-row-input">
+                <input class="ainput" id="notify-telegram-chat" placeholder="-1001234567890">
+              </div>
+            </div>
+            <div class="form-row">
+              <div><div class="form-row-label">บันทึก / ทดสอบ</div></div>
+              <div class="form-row-input" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="abtn abtn-primary" onclick="saveNotifyTelegram()"><i class="bi bi-check-lg"></i> บันทึก</button>
+                <button class="abtn" onclick="runNotifyTest('telegram')"><i class="bi bi-send"></i> ส่งทดสอบ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header"><h2><i class="bi bi-list-check"></i> Event Toggles</h2><p>เลือก event ที่จะส่งแจ้งเตือน — debounce ต่อเคส (ส่งครั้งเดียวจน user เปิดเคสใน Monitor)</p></div>
+          <div class="section-body" id="notify-events-body"></div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-header">
+            <h2><i class="bi bi-clock-history"></i> Recent Send Log</h2>
+            <p>50 รายการล่าสุด (auto-cleanup &gt; 30 วัน)</p>
+          </div>
+          <div class="section-body compact">
+            <div style="margin-bottom:10px;"><button class="abtn abtn-sm" onclick="loadNotifyLog()"><i class="bi bi-arrow-repeat"></i> Refresh</button></div>
+            <div id="notify-log-container" style="font-size:13px;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== INTEGRATIONS ===== -->
       <div class="admin-section" id="sec-integrations" style="display:none;">
         <div class="page-header"><h1>Integrations</h1><p>บริการภายนอกที่ระบบเชื่อมต่ออยู่</p></div>
@@ -895,6 +999,13 @@
             <div class="form-row">
               <div><div class="form-row-label">วันที่</div></div>
               <div class="form-row-input"><input type="date" class="ainput" style="max-width:300px;" id="log-filter-date" onchange="loadActivityLog(1)"></div>
+            </div>
+            <div class="form-row">
+              <div><div class="form-row-label">Case ID</div></div>
+              <div class="form-row-input" style="display:flex; gap:6px; align-items:center;">
+                <input type="text" class="ainput" style="max-width:300px;" id="log-filter-case" placeholder="เช่น CASE-12345" onchange="loadActivityLog(1)">
+                <button type="button" class="abtn abtn-sm" onclick="document.getElementById('log-filter-case').value=''; loadActivityLog(1);" title="ล้าง">×</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1139,6 +1250,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/config.js"></script>
 <script src="shared/settings.js"></script>
+<script src="shared/notify.js"></script>
 <script src="shared/auth.js"></script>
 <script src="shared/gps-providers.js"></script>
 <script>
@@ -1175,7 +1287,7 @@
   // =============================================
   var _titleMap = {
     organization:'Organization', branding:'Branding', gps:'GPS Tracking',
-    ocr:'OCR', integrations:'Integrations', sessions:'Sessions',
+    ocr:'OCR', notifications:'Notifications', integrations:'Integrations', sessions:'Sessions',
     pubshare:'Public Share',
     stats:'Statistics', activity:'Activity Log', overview:'Overview', docs:'Documentation'
   };
@@ -1276,6 +1388,14 @@
 
       // OCR
       document.getElementById('admin-ocr-proxy').value = ov('OCR_PROXY_URL');
+
+      // Notifications
+      document.getElementById('notify-line-enabled').value      = ov('NOTIFY_LINE_ENABLED') || 'false';
+      document.getElementById('notify-line-target-type').value  = ov('NOTIFY_LINE_TARGET_TYPE') || 'broadcast';
+      document.getElementById('notify-line-targets').value      = ov('NOTIFY_LINE_TARGETS') || '';
+      document.getElementById('notify-telegram-enabled').value  = ov('NOTIFY_TELEGRAM_ENABLED') || 'false';
+      document.getElementById('notify-telegram-chat').value     = ov('NOTIFY_TELEGRAM_CHAT_ID') || '';
+      renderNotifyEvents(s);
 
       // Map Provider
       var mp = s['MAP_PROVIDER'] || 'leaflet';
@@ -2302,6 +2422,7 @@
     logCurrentPage = page || 1;
     var fa = document.getElementById('log-filter-action').value;
     var fd = document.getElementById('log-filter-date').value || null;
+    var fc = (document.getElementById('log-filter-case').value || '').trim();
     if (fa === 'all') fa = null;
     document.getElementById('log-loading').classList.remove('d-none');
     document.getElementById('log-table-container').innerHTML = '';
@@ -2313,6 +2434,7 @@
       if (fa) { cq = cq.eq('action',fa); dq = dq.eq('action',fa); }
       if (fd) { cq = cq.gte('timestamp', fd+'T00:00:00').lt('timestamp', fd+'T23:59:59');
         dq = dq.gte('timestamp', fd+'T00:00:00').lt('timestamp', fd+'T23:59:59'); }
+      if (fc) { cq = cq.eq('target', fc); dq = dq.eq('target', fc); }
       var cr = await cq; var tot = cr.count || 0;
       var dr = await dq; var logs = dr.data || [];
       document.getElementById('log-loading').classList.add('d-none');
@@ -2467,6 +2589,130 @@
   // =============================================
   // BOOT
   // =============================================
+  // =============================================
+  // NOTIFICATIONS
+  // =============================================
+  var NOTIFY_EVENTS = [
+    { key:'NOTIFY_EVENTS_ARREST',      label:'Cardiac Arrest',     hint:'New arrest without ROSC/termination' },
+    { key:'NOTIFY_EVENTS_SPO2_LOW',    label:'SpO2 ต่ำ',           hint:'< 90%' },
+    { key:'NOTIFY_EVENTS_HR_ABNORMAL', label:'HR ผิดปกติ',         hint:'< 50 หรือ > 140' },
+    { key:'NOTIFY_EVENTS_RR_ABNORMAL', label:'RR ผิดปกติ',         hint:'< 10 หรือ > 30' },
+    { key:'NOTIFY_EVENTS_BP_ABNORMAL', label:'BP ผิดปกติ',         hint:'SBP < 90 หรือ > 200' },
+    { key:'NOTIFY_EVENTS_GCS_LOW',     label:'GCS ต่ำ',            hint:'< 8' }
+  ];
+
+  function renderNotifyEvents(s) {
+    var html = '';
+    NOTIFY_EVENTS.forEach(function(ev) {
+      var raw = (s && Object.prototype.hasOwnProperty.call(s, ev.key)) ? s[ev.key] : 'true';
+      var on  = (raw === 'true' || raw === '1');
+      html += '<div class="form-row">' +
+        '<div><div class="form-row-label">' + ev.label + '</div><div class="form-row-desc">' + ev.hint + '</div></div>' +
+        '<div class="form-row-input" style="display:flex;gap:8px;align-items:center;">' +
+          '<select class="aselect" id="ev-' + ev.key + '" style="max-width:140px;">' +
+            '<option value="true"' + (on?' selected':'') + '>เปิด</option>' +
+            '<option value="false"' + (!on?' selected':'') + '>ปิด</option>' +
+          '</select>' +
+          '<button class="abtn abtn-primary abtn-sm" onclick="saveNotifyEvent(\'' + ev.key + '\')"><i class="bi bi-check-lg"></i> บันทึก</button>' +
+        '</div></div>';
+    });
+    document.getElementById('notify-events-body').innerHTML = html;
+  }
+
+  async function saveNotifyEvent(key) {
+    var v = document.getElementById('ev-' + key).value;
+    await saveAdminSetting(key, v);
+  }
+
+  async function saveNotifyLine() {
+    var en = document.getElementById('notify-line-enabled').value;
+    var tt = document.getElementById('notify-line-target-type').value;
+    var tg = document.getElementById('notify-line-targets').value.trim();
+    Swal.fire({ title:'Saving...', didOpen:function(){ Swal.showLoading(); } });
+    try {
+      await _supabase.from('settings').upsert([
+        { key:'NOTIFY_LINE_ENABLED',     value:en },
+        { key:'NOTIFY_LINE_TARGET_TYPE', value:tt },
+        { key:'NOTIFY_LINE_TARGETS',     value:tg }
+      ]);
+      if (typeof settingsRefresh === 'function') await settingsRefresh(_supabase);
+      Swal.fire({ icon:'success', title:'บันทึกแล้ว', timer:1200, showConfirmButton:false });
+    } catch(e) { Swal.fire('Error', e.message || 'save failed', 'error'); }
+  }
+
+  async function saveNotifyTelegram() {
+    var en = document.getElementById('notify-telegram-enabled').value;
+    var id = document.getElementById('notify-telegram-chat').value.trim();
+    Swal.fire({ title:'Saving...', didOpen:function(){ Swal.showLoading(); } });
+    try {
+      await _supabase.from('settings').upsert([
+        { key:'NOTIFY_TELEGRAM_ENABLED', value:en },
+        { key:'NOTIFY_TELEGRAM_CHAT_ID', value:id }
+      ]);
+      if (typeof settingsRefresh === 'function') await settingsRefresh(_supabase);
+      Swal.fire({ icon:'success', title:'บันทึกแล้ว', timer:1200, showConfirmButton:false });
+    } catch(e) { Swal.fire('Error', e.message || 'save failed', 'error'); }
+  }
+
+  async function checkNotifyHealth() {
+    var box = document.getElementById('notify-health-result');
+    box.innerHTML = '<span class="text-muted">กำลังตรวจ...</span>';
+    var r = await notifyHealth();
+    if (!r || r.ok !== true) {
+      box.innerHTML = '<span style="color:var(--adanger);">❌ ' + (r && r.error ? r.error : 'unreachable') + '</span>';
+      return;
+    }
+    function dot(ok) { return ok ? '✅' : '❌'; }
+    box.innerHTML =
+      '<div>' + dot(r.hasLine)     + ' Line token</div>' +
+      '<div>' + dot(r.hasTelegram) + ' Telegram token</div>' +
+      '<div>' + dot(r.hasSupabase) + ' Supabase service key</div>';
+  }
+
+  async function runNotifyTest(channel) {
+    var msg = '🔔 Test from PT Medical Admin\n' + new Date().toLocaleString('th-TH');
+    Swal.fire({ title:'Sending...', didOpen:function(){ Swal.showLoading(); } });
+    var r = await notifyTest(channel, msg);
+    if (r && r.ok) Swal.fire({ icon:'success', title:'ส่งสำเร็จ', text:'ตรวจที่ ' + channel, timer:1800 });
+    else Swal.fire('ส่งไม่สำเร็จ', (r && r.error) || 'unknown error', 'error');
+  }
+
+  function loadNotifySection() {
+    checkNotifyHealth();
+    loadNotifyLog();
+  }
+
+  async function loadNotifyLog() {
+    var el = document.getElementById('notify-log-container');
+    el.innerHTML = '<div class="text-muted">กำลังโหลด...</div>';
+    try {
+      var r = await _supabase.from('notification_log').select('*').order('created_at',{ascending:false}).limit(50);
+      var rows = r.data || [];
+      if (rows.length === 0) { el.innerHTML = '<div style="color:var(--atext-3); text-align:center; padding:18px;">ยังไม่มีการส่ง</div>'; return; }
+      var statusColor = { sent:'#16a34a', failed:'#dc2626', skipped:'#94a3b8' };
+      el.innerHTML = '<div style="display:grid;grid-template-columns:140px 90px 90px 1fr 1fr;gap:6px 12px;font-size:12.5px;">' +
+        '<div style="font-weight:700;color:var(--atext-3);">เวลา</div>' +
+        '<div style="font-weight:700;color:var(--atext-3);">Channel</div>' +
+        '<div style="font-weight:700;color:var(--atext-3);">Status</div>' +
+        '<div style="font-weight:700;color:var(--atext-3);">Case / Alert</div>' +
+        '<div style="font-weight:700;color:var(--atext-3);">Detail</div>' +
+        rows.map(function(r) {
+          var d = new Date(r.created_at);
+          var ts = d.toLocaleDateString('th-TH',{day:'2-digit',month:'short'}) + ' ' +
+                   d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
+          var err = r.error ? escapeHtml(r.error) : (r.payload && r.payload.message ? escapeHtml(String(r.payload.message).slice(0,80)) : '');
+          return '<div>' + ts + '</div>' +
+                 '<div>' + escapeHtml(r.channel||'-') + '</div>' +
+                 '<div style="color:' + (statusColor[r.status]||'#555') + ';font-weight:600;">' + escapeHtml(r.status||'-') + '</div>' +
+                 '<div>' + escapeHtml(r.case_id||'-') + ' / ' + escapeHtml(r.alert_type||'-') + '</div>' +
+                 '<div style="color:var(--atext-3);word-break:break-word;">' + err + '</div>';
+        }).join('') +
+        '</div>';
+    } catch(e) {
+      el.innerHTML = '<div style="color:var(--adanger);">โหลดไม่ได้: ' + (e.message||e) + '</div>';
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', async function() {
     // Bootstrap settings cache first
     if (typeof settingsBootstrap === 'function') await settingsBootstrap(_supabase);
@@ -2486,6 +2732,20 @@
     // Show shell
     document.getElementById('auth-splash').style.display = 'none';
     document.getElementById('admin-shell').style.display = '';
+    // Deep-link: ?sec=<name>&case_id=<id>
+    try {
+      var qp = new URLSearchParams(window.location.search);
+      var qsec  = qp.get('sec');
+      var qcase = qp.get('case_id');
+      if (qsec) {
+        var navItem = document.querySelector('.sidebar-item[onclick*="adm_show(\'' + qsec + '\'"]');
+        adm_show(qsec, navItem);
+        if (qsec === 'activity') {
+          if (qcase) document.getElementById('log-filter-case').value = qcase;
+          loadActivityLog(1);
+        }
+      }
+    } catch(_){}
   });
 </script>
 </body>

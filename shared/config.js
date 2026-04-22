@@ -1,7 +1,7 @@
 // PT Medical System — Configuration (TheGood deployment)
 // APP_VERSION: bump on every significant update + add entry in memory/version.md
-window.APP_VERSION = '5.8.0';
-window.APP_VERSION_DATE = '2026-04-18';
+window.APP_VERSION = '5.9.0';
+window.APP_VERSION_DATE = '2026-04-22';
 
 const CONFIG = {
   // ===== REQUIRED (cannot be moved to admin — bootstrap/auth) =====
@@ -26,7 +26,21 @@ const CONFIG = {
     GPS_PROXY_GAS_ENABLED:      '1',
 
     // OCR Proxy (TheGood own Cloudflare Worker)
-    OCR_PROXY_URL: 'https://thegood-ocr-proxy.officethegood.workers.dev'
+    OCR_PROXY_URL: 'https://thegood-ocr-proxy.officethegood.workers.dev',
+
+    // Notification proxy — same TheGood worker as OCR (reuse)
+    NOTIFY_PROXY_URL: 'https://thegood-ocr-proxy.officethegood.workers.dev',
+    NOTIFY_LINE_ENABLED:        'false',
+    NOTIFY_LINE_TARGET_TYPE:    'broadcast',  // 'broadcast' | 'group' | 'user_list'
+    NOTIFY_LINE_TARGETS:        '',
+    NOTIFY_TELEGRAM_ENABLED:    'false',
+    NOTIFY_TELEGRAM_CHAT_ID:    '',
+    NOTIFY_EVENTS_ARREST:       'true',
+    NOTIFY_EVENTS_SPO2_LOW:     'true',
+    NOTIFY_EVENTS_HR_ABNORMAL:  'true',
+    NOTIFY_EVENTS_RR_ABNORMAL:  'true',
+    NOTIFY_EVENTS_BP_ABNORMAL:  'true',
+    NOTIFY_EVENTS_GCS_LOW:      'true'
   }
 };
 

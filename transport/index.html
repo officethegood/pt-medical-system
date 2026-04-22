@@ -389,6 +389,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../shared/config.js"></script>
   <script src="../shared/settings.js"></script>
+  <script src="../shared/notify.js"></script>
   <script src="../shared/auth.js"></script>
   <script src="../shared/realtime.js"></script>
   <script src="../shared/cloudinary.js"></script>
@@ -526,8 +527,11 @@
 
         <!-- ========== FORM VIEW ========== -->
         <div id="form-view" class="view-section">
-          <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-            <h5 id="display-case-id" class="text-secondary fw-bold mb-0">New Case</h5>
+          <div class="d-flex justify-content-between align-items-center mb-3 no-print gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <h5 id="display-case-id" class="text-secondary fw-bold mb-0">New Case</h5>
+              <button type="button" id="btn-case-history" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-none" onclick="openCaseHistory()" title="ดูประวัติการเปลี่ยนแปลงของเคสนี้"><i class="bi bi-clock-history me-1"></i> ประวัติเคสนี้</button>
+            </div>
             <span id="display-status" class="badge bg-success rounded-pill px-3 py-2">Active</span>
           </div>
           <div id="reopen-banner" class="alert alert-warning d-none no-print py-2 px-3 d-flex align-items-center justify-content-between rounded-3 mb-3">
@@ -1434,6 +1438,16 @@
         }, 120000);
     }
 
+    // --- Open admin Activity Log filtered by current case ---
+    function openCaseHistory() {
+        var el = document.getElementById('caseId');
+        var cid = (el && el.value) || (document.getElementById('display-case-id') || {}).innerText || '';
+        cid = (cid || '').trim();
+        if (!cid || cid === 'New Case') { Swal.fire('ไม่มีข้อมูล', 'ยังไม่มี Case ID', 'info'); return; }
+        try { sessionStorage.setItem('pt_admin_return', window.location.href); } catch(_){}
+        window.location.href = '../admin.html?sec=activity&case_id=' + encodeURIComponent(cid);
+    }
+
     // --- Activity Log helper ---
     async function logActivity(action, target, details) {
         try {
@@ -2180,6 +2194,8 @@
                 resetFormState();
                 document.getElementById('caseId').value = row.case_id;
                 document.getElementById('display-case-id').innerText = row.case_id;
+                var bch2 = document.getElementById('btn-case-history');
+                if (bch2) bch2.classList.remove('d-none');
                 document.getElementById('display-status').innerText = row.status;
                 document.getElementById('formStatus').value = row.status;
                 if (row.raw_data && row.raw_data.rawSnapshot) {
@@ -2458,10 +2474,11 @@
       var rawObj = getFormData();
       var vitalsObj = getVitalsArray();
       var ivObj = getIVArray();
+      var isNewCase = !f.caseId.value;
       var caseId = f.caseId.value || generateCaseId();
 
       try {
-          var resp = await _supabase.from('cases').upsert({
+          var payload = {
               case_id: caseId,
               status: f.status.value,
               triage_level: f.triage_level.value,
@@ -2482,15 +2499,24 @@
                   vitalsJson: JSON.stringify(vitalsObj),
                   ivJson: JSON.stringify(ivObj),
                   referDocsJson: JSON.stringify((typeof getReferDocs === 'function' ? getReferDocs() : []))
-              },
-          }, { onConflict: 'case_id' });
+              }
+          };
+          if (isNewCase) {
+              payload.opened_by = getUserName() || 'Unknown';
+              payload.opened_at = new Date().toISOString();
+          }
+          var resp = await _supabase.from('cases').upsert(payload, { onConflict: 'case_id' });
 
           isSaving = false;
           if (resp.error) throw resp.error;
 
           f.caseId.value = caseId;
           document.getElementById('display-case-id').innerText = caseId;
+          var bch = document.getElementById('btn-case-history');
+          if (bch) bch.classList.remove('d-none');
           formDirty = false;
+          if (isNewCase) logActivity('CREATE_CASE', caseId, 'สร้างเคสใหม่');
+          else if (!silent) logActivity('SAVE_CASE', caseId, 'บันทึก');
 
           if(!silent) {
              Swal.fire({icon: 'success', title: 'Saved!', timer: 1500});
@@ -2506,6 +2532,7 @@
 
     // --- OPEN CASE (Supabase) ---
     async function openCase(id) {
+       if (typeof notifyAck === 'function') notifyAck(id);
        Swal.fire({title: 'Loading Case...', didOpen: function() { Swal.showLoading(); }});
 
        try {
@@ -2537,6 +2564,8 @@
 
             document.getElementById('caseId').value = data.id;
             document.getElementById('display-case-id').innerText = data.id;
+            var bch1 = document.getElementById('btn-case-history');
+            if (bch1) bch1.classList.remove('d-none');
             document.getElementById('display-status').innerText = data.status;
             document.getElementById('formStatus').value = data.status;
             updateStatusDisplay(data.status);
@@ -2641,6 +2670,8 @@
        if (typeof resetReferDocs === 'function') resetReferDocs();
 
        document.getElementById('display-case-id').innerText = "New Case";
+       var bch3 = document.getElementById('btn-case-history');
+       if (bch3) bch3.classList.add('d-none');
        document.getElementById('display-status').innerText = "Active";
        document.getElementById('formStatus').value = "Active";
        updateStatusDisplay("Active");
