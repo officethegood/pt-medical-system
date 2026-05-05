@@ -290,6 +290,32 @@
               </div>
           </div>
 
+          <!-- Staff Tokens (admin-only, for part-time workers) -->
+          <div class="card mb-4 island-card overflow-hidden d-none" id="fa-staff-tokens-card">
+              <div class="card-header bg-info bg-opacity-10 border-0 d-flex justify-content-between align-items-center py-3 px-4">
+                  <h6 class="fw-bold text-info m-0"><i class="bi bi-people-fill me-1"></i> เจ้าหน้าที่ Part-time (Token)</h6>
+                  <button class="btn btn-info btn-sm rounded-pill px-3 fw-bold shadow-sm text-white" onclick="fa_openCreateTokenModal()"><i class="bi bi-plus-circle me-1"></i> สร้าง Token</button>
+              </div>
+              <div class="card-body py-2 px-3">
+                  <div class="table-responsive">
+                      <table class="table table-sm mb-0">
+                          <thead class="table-light">
+                              <tr>
+                                  <th>ชื่อ</th>
+                                  <th>จุดรักษา</th>
+                                  <th>Token</th>
+                                  <th>สถานะ</th>
+                                  <th class="text-center">จัดการ</th>
+                              </tr>
+                          </thead>
+                          <tbody id="fa-token-list-body">
+                              <tr><td colspan="5" class="text-center text-muted py-3 small">— ยังไม่มี —</td></tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+
           <!-- Medical Registry Stats -->
           <div class="card mb-4 island-card overflow-hidden d-none" id="fa-registry-stats">
             <div class="card-header bg-primary bg-opacity-10 border-0 py-2 px-4">
@@ -400,6 +426,40 @@
         <div class="modal-footer border-top-0 pt-0">
           <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
           <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="fa_submitEvent()">บันทึก Event</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FA: Staff Token Create Modal -->
+  <div class="modal fade" id="faStaffTokenModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header bg-light border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-person-plus text-info me-2"></i> สร้าง Token เจ้าหน้าที่</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <form id="fa-token-form" onsubmit="return false;">
+            <div class="mb-3">
+              <label class="form-label fw-bold small">ชื่อเจ้าหน้าที่ <span class="text-danger">*</span></label>
+              <input type="text" id="fa-token-worker-name" class="form-control" placeholder="เช่น คุณสมศรี (ใช้ stamp ใน recorded_by)" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold small">จุดรักษาที่รับผิดชอบ</label>
+              <select id="fa-token-location" class="form-select">
+                <option value="">— ทุกจุด (full access) —</option>
+              </select>
+              <div class="form-text small">ถ้าเลือก "ทุกจุด" → เจ้าหน้าที่เลือกจุดได้เองตอนเพิ่มคนไข้</div>
+            </div>
+            <div class="alert alert-info small mb-0">
+              <i class="bi bi-info-circle"></i> Token จะใช้ได้จนกว่า event นี้จะถูก mark <b>Complete</b>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-info rounded-pill px-4 fw-bold shadow-sm text-white" onclick="fa_submitNewToken()"><i class="bi bi-key me-1"></i> สร้าง</button>
         </div>
       </div>
     </div>
@@ -904,6 +964,13 @@
                     var status = actionType === 'close' ? 'Complete' : 'Active';
                     var { error } = await _supabase.from('fa_events').update({ status: status }).eq('event_id', eventId);
                     if (error) throw error;
+                    // Auto-revoke staff tokens when event is closed (defense-in-depth; client also checks event.status)
+                    if (actionType === 'close') {
+                        await _supabase.from('fa_event_tokens')
+                            .update({ status: 'Revoked' })
+                            .eq('event_id', eventId)
+                            .eq('status', 'Active');
+                    }
                 }
                 Swal.close();
                 fa_fetchAllEvents();
@@ -1059,6 +1126,149 @@
             Swal.fire('Error', (err.message || err), 'error');
         }
     }
+
+    // =============================================
+    // Staff Tokens (part-time worker access)
+    // =============================================
+    var fa_currentTokens = [];
+    var fa_tokenModal = null;
+
+    // 6-char token without 0/O/I/1 to avoid confusion
+    function fa_generateTokenString() {
+        var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        var s = '';
+        for (var i = 0; i < 6; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+        return s;
+    }
+
+    async function fa_loadStaffTokens() {
+        if (!fa_currentViewedEventId) return;
+        var tbody = document.getElementById('fa-token-list-body');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3 small"><div class="spinner-border spinner-border-sm me-1"></div>กำลังโหลด...</td></tr>';
+        try {
+            var { data, error } = await _supabase.from('fa_event_tokens')
+                .select('*').eq('event_id', fa_currentViewedEventId)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            fa_currentTokens = data || [];
+            fa_renderTokenList();
+        } catch(err) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3 small">โหลดไม่สำเร็จ: ' + escapeHtml(err.message || err) + '</td></tr>';
+        }
+    }
+
+    function fa_renderTokenList() {
+        var tbody = document.getElementById('fa-token-list-body');
+        if (!fa_currentTokens.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3 small">— ยังไม่มี Token —</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        fa_currentTokens.forEach(function(t) {
+            var statusBadge = t.status === 'Active'
+                ? '<span class="badge bg-success-subtle text-success">Active</span>'
+                : '<span class="badge bg-secondary-subtle text-secondary">Revoked</span>';
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td class="align-middle small fw-semibold">' + escapeHtml(t.worker_name) + '</td>' +
+                '<td class="align-middle small">' + escapeHtml(t.location_tx || 'ทุกจุด') + '</td>' +
+                '<td class="align-middle"><code class="bg-light px-2 py-1 rounded">' + escapeHtml(t.token) + '</code></td>' +
+                '<td class="align-middle">' + statusBadge + '</td>' +
+                '<td class="text-center align-middle">' +
+                  (t.status === 'Active' ?
+                    '<button class="btn btn-outline-primary btn-sm" title="คัดลอกลิงก์" onclick="fa_copyStaffLink(\'' + t.token + '\')"><i class="bi bi-link-45deg"></i></button> ' +
+                    '<button class="btn btn-outline-danger btn-sm" title="ระงับ" onclick="fa_confirmRevokeToken(\'' + t.token + '\')"><i class="bi bi-x-circle"></i></button>'
+                    : '<span class="text-muted small">—</span>') +
+                '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function fa_openCreateTokenModal() {
+        document.getElementById('fa-token-worker-name').value = '';
+        var locSel = document.getElementById('fa-token-location');
+        locSel.innerHTML = '<option value="">— ทุกจุด (full access) —</option>';
+        var locs = (fa_currentEventConfig && fa_currentEventConfig.locations) || [];
+        locs.forEach(function(l) {
+            locSel.innerHTML += '<option value="' + escapeHtml(l) + '">' + escapeHtml(l) + '</option>';
+        });
+        if (!fa_tokenModal) fa_tokenModal = new bootstrap.Modal(document.getElementById('faStaffTokenModal'));
+        fa_tokenModal.show();
+    }
+
+    async function fa_submitNewToken() {
+        var name = document.getElementById('fa-token-worker-name').value.trim();
+        var location = document.getElementById('fa-token-location').value || null;
+        if (!name) { Swal.fire({ icon:'warning', title:'กรุณากรอกชื่อ', timer:1500, showConfirmButton:false }); return; }
+        Swal.fire({ title: 'กำลังสร้าง...', didOpen: function() { Swal.showLoading(); } });
+
+        // Try up to 5 times in case of collision (1/30^6 ≈ 1.4e-9 each, should be fine)
+        var inserted = null, lastErr = null;
+        for (var i = 0; i < 5; i++) {
+            var token = fa_generateTokenString();
+            var row = {
+                token: token,
+                event_id: fa_currentViewedEventId,
+                worker_name: name,
+                location_tx: location,
+                status: 'Active',
+                created_by: getUserName() || 'Unknown'
+            };
+            var { data, error } = await _supabase.from('fa_event_tokens').insert(row).select().single();
+            if (!error) { inserted = data; break; }
+            lastErr = error;
+            // PK collision → retry. Other errors → bail
+            if (!(error.code === '23505' || (error.message || '').toLowerCase().indexOf('duplicate') > -1)) break;
+        }
+        if (!inserted) {
+            Swal.fire('Error', 'สร้าง Token ไม่สำเร็จ: ' + ((lastErr && lastErr.message) || 'unknown'), 'error');
+            return;
+        }
+        Swal.close();
+        if (fa_tokenModal) fa_tokenModal.hide();
+        await fa_loadStaffTokens();
+        // Auto-copy link for convenience
+        fa_copyStaffLink(inserted.token, true);
+    }
+
+    function fa_copyStaffLink(token, isFresh) {
+        var url = window.location.origin + (CONFIG.BASE_URL || '') + '/firstaid/staff.html?t=' + encodeURIComponent(token);
+        var done = function() {
+            Swal.fire({
+                icon: 'success',
+                title: isFresh ? 'สร้าง Token สำเร็จ' : 'คัดลอกลิงก์แล้ว',
+                html: '<div class="small text-muted mb-1">ส่งลิงก์นี้ให้เจ้าหน้าที่</div>' +
+                      '<div class="bg-light rounded p-2 small text-break" style="font-family:monospace;">' + escapeHtml(url) + '</div>',
+                confirmButtonText: 'OK'
+            });
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done, function() {
+                // fallback prompt if clipboard blocked
+                Swal.fire({ icon:'info', title:'คัดลอกลิงก์ด้วยตนเอง', input:'text', inputValue: url });
+            });
+        } else {
+            Swal.fire({ icon:'info', title:'คัดลอกลิงก์ด้วยตนเอง', input:'text', inputValue: url });
+        }
+    }
+
+    async function fa_confirmRevokeToken(token) {
+        var result = await Swal.fire({
+            title: 'ระงับ Token นี้?',
+            text: 'เจ้าหน้าที่จะใช้งานต่อไม่ได้ และไม่สามารถเปิดใช้ใหม่ได้',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'ระงับ',
+            cancelButtonText: 'ยกเลิก'
+        });
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'กำลังระงับ...', didOpen: function() { Swal.showLoading(); } });
+        var { error } = await _supabase.from('fa_event_tokens').update({ status: 'Revoked' }).eq('token', token);
+        if (error) { Swal.fire('Error', error.message, 'error'); return; }
+        Swal.close();
+        fa_loadStaffTokens();
+    }
 </script>
 
 <script>
@@ -1110,6 +1320,15 @@
             document.getElementById('fa-qPlaster').value = ev.qPlaster || 0;
             document.getElementById('fa-qSpray').value = ev.qSpray || 0;
             document.getElementById('fa-qWound').value = ev.qWound || 0;
+        }
+
+        // Staff Tokens — admin only
+        var __role = getUserRole();
+        var __isAdmin = __role && __role.toString().trim().toLowerCase() === 'admin';
+        var tokCard = document.getElementById('fa-staff-tokens-card');
+        if (tokCard) {
+            tokCard.classList.toggle('d-none', !__isAdmin);
+            if (__isAdmin) fa_loadStaffTokens();
         }
 
         // Realtime: subscribe to registry for this event

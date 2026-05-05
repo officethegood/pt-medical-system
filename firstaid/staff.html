@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>First Aid — Staff Portal</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="หน้าเจ้าหน้าที่ part-time สำหรับงานปฐมพยาบาล">
+  <meta name="theme-color" content="#198754">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    * { font-family: 'Sarabun', sans-serif; }
+    body { background:#f8fafc; min-height:100vh; }
+    .staff-header {
+      background: linear-gradient(135deg, #14532d 0%, #198754 100%);
+      color:#fff; padding:14px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.08);
+    }
+    .staff-badge {
+      background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25);
+      padding:3px 10px; border-radius:100px; font-size:0.72rem; font-weight:600;
+      display:inline-flex; align-items:center; gap:5px;
+    }
+    .island-card { background:#fff; border:0; border-radius:16px; box-shadow:0 4px 14px rgba(0,0,0,0.04); }
+    .qty-btn { width:38px; height:38px; padding:0; font-weight:700; }
+    .reg-triage-btn, .reg-gender-btn, .reg-tx-btn {
+      border:1.5px solid #cbd5e1; background:#fff; color:#475569;
+      padding:6px 14px; font-weight:600; transition:all 0.15s;
+    }
+    .reg-triage-btn.active { background:var(--tc); color:#fff; border-color:var(--tc); }
+    .reg-gender-btn.active { background:var(--gc); color:#fff; border-color:var(--gc); }
+    .reg-tx-btn.active { background:#198754; color:#fff; border-color:#198754; }
+    .reg-tx-btn { font-size:0.78rem; padding:4px 10px; border-radius:8px; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== TOKEN GATE (login screen) ==================== -->
+  <div id="gate-view" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;">
+    <div class="card island-card p-4" style="width:100%; max-width:380px;">
+      <div class="text-center mb-3">
+        <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width:64px; height:64px;">
+          <i class="bi bi-clipboard2-pulse fs-2"></i>
+        </div>
+        <h5 class="fw-bold mb-1">First Aid — เจ้าหน้าที่</h5>
+        <p class="text-muted small mb-0">กรอก Token ที่ได้รับเพื่อเริ่มลงทะเบียนคนไข้</p>
+      </div>
+      <form onsubmit="return staff_handleTokenSubmit(event)">
+        <div class="mb-3">
+          <input type="text" id="gate-token" class="form-control text-center" placeholder="TOKEN" maxlength="6"
+                 autocapitalize="characters" autocomplete="off" style="letter-spacing:0.4em; font-weight:700; font-size:1.2rem;" required>
+        </div>
+        <div class="alert alert-danger small d-none" id="gate-error"></div>
+        <button type="submit" class="btn btn-success w-100 fw-bold rounded-pill">เข้าใช้งาน</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== APP MAIN ==================== -->
+  <div id="app-view" style="display:none;">
+    <div class="staff-header">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+          <div class="small opacity-75">งานปฐมพยาบาล</div>
+          <div class="fw-bold" style="font-size:1.05rem;" id="staff-event-name">-</div>
+          <div class="mt-1 d-flex flex-wrap gap-2">
+            <span class="staff-badge"><i class="bi bi-person-badge"></i> <span id="staff-worker-name">-</span></span>
+            <span class="staff-badge"><i class="bi bi-geo-alt"></i> <span id="staff-section-name">-</span></span>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline-light rounded-pill" onclick="staff_logout()" title="ออก">
+          <i class="bi bi-box-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="container-fluid" style="max-width:760px; padding:16px;">
+
+      <!-- Quick Supplies counter -->
+      <div class="card island-card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-bag-plus me-1 text-success"></i> เวชภัณฑ์ที่ใช้ (รวมในงาน)</h6>
+          <small class="text-muted" id="supplies-status">—</small>
+        </div>
+        <div class="row g-2" id="supplies-grid">
+          <!-- generated -->
+        </div>
+      </div>
+
+      <!-- Add button -->
+      <button class="btn btn-success w-100 fw-bold rounded-pill mb-3 py-2 shadow-sm" onclick="reg_openForm()">
+        <i class="bi bi-plus-circle me-1"></i> เพิ่ม Registry คนไข้
+      </button>
+
+      <!-- My Registry list -->
+      <div class="card island-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-1 text-success"></i> รายชื่อที่ฉันบันทึก</h6>
+          <span class="badge bg-light text-dark rounded-pill">รวม <span id="my-count" class="fw-bold text-success">0</span> ราย</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-center" style="width:30px;">#</th>
+                <th>เวลา</th>
+                <th>Triage</th>
+                <th>ชื่อ</th>
+                <th class="text-center" style="width:80px;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="my-list-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== REGISTRY MODAL (copied from firstaid/index.html) ==================== -->
+  <!-- NOTE: Mirror of #faRegistryModal in firstaid/index.html. If you change one, update both.
+       Differences: location_tx may be locked; recorded_by comes from token, not getUserName() of admin. -->
+  <div class="modal fade" id="faRegistryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-header bg-light border-bottom-0 pb-0">
+          <h5 class="modal-title fw-bold" id="reg-modal-title"><i class="bi bi-clipboard2-pulse text-success me-2"></i> บันทึก Medical Registry</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <form id="reg-form">
+            <input type="hidden" id="reg-form-event-id">
+            <input type="hidden" id="reg-form-reg-id">
+            <input type="hidden" id="reg-form-existing-image">
+            <input type="hidden" id="reg-etiology-value" value="Med">
+            <input type="hidden" id="reg-result-type" value="dc">
+
+            <div class="row g-2 mb-3 border-bottom pb-3">
+              <div class="col-auto">
+                <label class="form-label fw-bold small">Triage <span class="text-danger">*</span></label>
+                <input type="hidden" id="reg-triage" value="A">
+                <div class="btn-group" role="group">
+                  <button type="button" class="btn btn-sm reg-triage-btn active" data-value="A" onclick="reg_setTriage('A')" style="--tc:#198754;">A</button>
+                  <button type="button" class="btn btn-sm reg-triage-btn" data-value="V" onclick="reg_setTriage('V')" style="--tc:#f59e0b;">V</button>
+                  <button type="button" class="btn btn-sm reg-triage-btn" data-value="P" onclick="reg_setTriage('P')" style="--tc:#e85d04;">P</button>
+                  <button type="button" class="btn btn-sm reg-triage-btn" data-value="U" onclick="reg_setTriage('U')" style="--tc:#dc3545;">U</button>
+                </div>
+              </div>
+              <div class="col-auto">
+                <label class="form-label fw-bold small">เพศ <span class="text-danger">*</span></label>
+                <input type="hidden" id="reg-gender" value="">
+                <div class="btn-group" role="group" id="reg-gender-toggle">
+                  <button type="button" class="btn btn-sm reg-gender-btn" data-value="ชาย" onclick="reg_setGender('ชาย')" style="--gc:#0d6efd;">M</button>
+                  <button type="button" class="btn btn-sm reg-gender-btn" data-value="หญิง" onclick="reg_setGender('หญิง')" style="--gc:#d63384;">F</button>
+                  <button type="button" class="btn btn-sm reg-gender-btn" data-value="ไม่ระบุ" onclick="reg_setGender('ไม่ระบุ')" style="--gc:#f59e0b;">U</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col"><label class="form-label fw-bold small">ชื่อ-สกุล</label><input type="text" id="reg-name" class="form-control form-control-sm" placeholder="ชื่อ-สกุล"></div>
+              <div class="col-3" style="max-width:80px;"><label class="form-label fw-bold small">อายุ</label><input type="number" id="reg-age" class="form-control form-control-sm" min="1" max="120"></div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6 col-md-4"><label class="form-label fw-bold small">เบอร์โทร</label><input type="tel" id="reg-phone" class="form-control form-control-sm"></div>
+              <div class="col-6 col-md-4 d-none" id="reg-category-div"><label class="form-label fw-bold small">หมวดหมู่</label><select id="reg-category" class="form-select form-select-sm"><option value="">-</option></select></div>
+              <div class="col-6 col-md-4">
+                <label class="form-label fw-bold small">จุดรักษา <span class="text-danger">*</span></label>
+                <select id="reg-location-tx" class="form-select form-select-sm" required><option value="">-- เลือก --</option></select>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3 border-bottom pb-3">
+              <div class="col-6"><label class="form-label fw-bold small">เวลารับ <span class="text-danger">*</span></label><input type="tel" id="reg-time-in" class="form-control form-control-sm" inputmode="numeric" placeholder="HH:MM" pattern="([01]?\d|2[0-3]):[0-5]\d" maxlength="5" required oninput="fa_autoFormatTime(this)"></div>
+              <div class="col-6"><label class="form-label fw-bold small">เวลาจำหน่าย</label><input type="tel" id="reg-time-out" class="form-control form-control-sm" inputmode="numeric" placeholder="HH:MM" pattern="([01]?\d|2[0-3]):[0-5]\d" maxlength="5" oninput="fa_autoFormatTime(this)"></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold small">Etiology <span class="text-danger">*</span></label>
+              <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-primary btn-sm" id="reg-etiology-med" onclick="reg_toggleEtiology('Med')"><i class="bi bi-heart-pulse me-1"></i>Medicine</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="reg-etiology-trauma" onclick="reg_toggleEtiology('Trauma')"><i class="bi bi-bandaid me-1"></i>Trauma</button>
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-12"><label class="form-label fw-bold small">Chief Complaint (CC)</label><select id="reg-cc" class="form-select form-select-sm" onchange="reg_onCCChange()"><option value="">-- เลือก CC --</option></select></div>
+              <div class="col-12 d-none" id="reg-cc-other-div"><input type="text" id="reg-cc-other" class="form-control form-control-sm" placeholder="ระบุ CC อื่นๆ..."></div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-12"><label class="form-label fw-bold small">Problem / Diagnosis</label><select id="reg-problem" class="form-select form-select-sm" onchange="reg_onProblemChange()"><option value="">-- เลือก Problem --</option></select></div>
+              <div class="col-12 d-none" id="reg-problem-other-div"><input type="text" id="reg-problem-other" class="form-control form-control-sm" placeholder="ระบุ Problem อื่นๆ..."></div>
+            </div>
+
+            <div class="card p-3 mb-3 bg-light border-0">
+              <label class="form-label fw-bold small mb-2">Treatment (เลือกได้หลายข้อ)</label>
+              <div class="d-flex flex-wrap gap-1" id="reg-treatment-grid"></div>
+              <div class="d-flex flex-wrap gap-1 mt-2 pt-2 border-top">
+                <button type="button" class="btn btn-sm reg-tx-btn" data-value="จ่ายยา" onclick="this.classList.toggle('active'); reg_toggleMedDetail()">💊 จ่ายยา</button>
+                <input type="text" id="reg-treatment-med-detail" class="form-control form-control-sm d-none" style="max-width:200px;" placeholder="ระบุชื่อยา...">
+                <input type="text" id="reg-treatment-other-text" class="form-control form-control-sm" style="max-width:200px;" placeholder="อื่นๆ ระบุ...">
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-4"><label class="form-label fw-bold small text-danger">แพ้ยา</label><select id="reg-allergy" class="form-select form-select-sm" onchange="reg_toggleAllergy()"><option value="ไม่มี">ไม่มี</option><option value="มี">มี</option></select></div>
+              <div class="col-8 d-none" id="reg-allergy-detail-div"><label class="form-label fw-bold small text-danger">ระบุ</label><input type="text" id="reg-allergy-detail" class="form-control form-control-sm"></div>
+            </div>
+
+            <div class="card mb-3 border-0">
+              <div class="card-header bg-info bg-opacity-10 border-0 py-2 px-3" style="cursor:pointer;" onclick="reg_toggleVitals()">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold small"><i class="bi bi-activity me-1"></i>Vital Signs (ไม่บังคับ)</span>
+                  <i class="bi bi-chevron-down" id="reg-vitals-toggle-icon"></i>
+                </div>
+              </div>
+              <div class="card-body p-3 d-none" id="reg-vitals-body">
+                <div class="row g-2">
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">BP</label><input type="text" id="reg-v-bp" class="form-control form-control-sm" placeholder="120/80"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">HR</label><input type="number" id="reg-v-hr" class="form-control form-control-sm" placeholder="bpm"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">RR</label><input type="number" id="reg-v-rr" class="form-control form-control-sm" placeholder="/min"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">SpO2</label><input type="number" id="reg-v-spo2" class="form-control form-control-sm" placeholder="%"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Temp</label><input type="text" id="reg-v-temp" class="form-control form-control-sm" placeholder="&deg;C"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">GCS</label><input type="number" id="reg-v-gcs" class="form-control form-control-sm" min="3" max="15"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Glucose</label><input type="number" id="reg-v-glucose" class="form-control form-control-sm"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Pain</label><input type="number" id="reg-v-pain" class="form-control form-control-sm" min="0" max="10"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold small">Result</label>
+              <div class="btn-group w-100 mb-2" role="group">
+                <button type="button" class="btn btn-success btn-sm" id="reg-result-dc" onclick="reg_toggleResult('dc')"><i class="bi bi-check-circle me-1"></i>D/C</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" id="reg-result-transfer" onclick="reg_toggleResult('transfer')"><i class="bi bi-ambulance me-1"></i>Transfer</button>
+              </div>
+              <div id="reg-result-dc-sub">
+                <select id="reg-dc-sub" class="form-select form-select-sm">
+                  <option value="finished">D/C จำหน่าย</option>
+                  <option value="rtp">Return to Play</option>
+                  <option value="dnf">DNF</option>
+                </select>
+              </div>
+              <div id="reg-result-transfer-sub" class="d-none">
+                <div class="row g-2">
+                  <div class="col-5"><select id="reg-transfer-method" class="form-select form-select-sm"><option value="team">ทีมไปส่ง</option><option value="self">ไปเอง</option></select></div>
+                  <div class="col-7"><input type="text" id="reg-transfer-hospital" class="form-control form-control-sm" placeholder="ชื่อ รพ."></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-2"><label class="form-label fw-bold small">หมายเหตุ</label><input type="text" id="reg-note" class="form-control form-control-sm"></div>
+            <div class="mb-2"><label class="form-label fw-bold small"><i class="bi bi-image me-1"></i>แนบรูป</label><input type="file" id="reg-image" accept="image/*" class="form-control form-control-sm"></div>
+            <div class="card p-2 bg-light border-0">
+              <div class="input-group input-group-sm">
+                <button type="button" class="btn btn-warning btn-sm" onclick="reg_getLocation()"><i class="bi bi-pin-map-fill"></i> GPS</button>
+                <input type="text" id="reg-gps" class="form-control" readonly placeholder="คลิกปุ่มเพื่อดึงพิกัด">
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="reg_submitForm()"><i class="bi bi-save me-1"></i> บันทึก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/config.js"></script>
+  <script src="../shared/cloudinary.js"></script>
+  <script>
+    // ============================================================
+    // Staff Portal — token-gated firstaid registry
+    // Soft-security model: ANON_KEY filtering done client-side.
+    // Anyone with the token gets full insert/update on fa_registry +
+    // counter updates on fa_events (per RLS anon policies).
+    // ============================================================
+
+    var _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+    // ---- Staff session state (persisted in sessionStorage) ----
+    var staff_token = null;        // token string
+    var staff_eventId = null;
+    var staff_workerName = '';
+    var staff_section = null;      // null = all sections (token has no location_tx)
+    var staff_eventName = '';
+
+    // ---- Shadow vars used by reg_* functions copied from firstaid/index.html ----
+    var fa_currentEventConfig = null;
+    var fa_currentEventType = 'general';
+    var fa_currentViewedEventId = null;
+    var fa_currentRegistryRecords = [];
+    var fa_registryModal = null;
+
+    var fa_triageInfo = {
+      'A': { label: 'A - Alert', badgeClass: 'bg-success-subtle text-success border-success-subtle' },
+      'V': { label: 'V - Verbal', badgeClass: 'bg-warning-subtle text-warning border-warning-subtle' },
+      'P': { label: 'P - Pain', badgeClass: 'bg-danger-subtle text-danger border-danger-subtle' },
+      'U': { label: 'U - Unresponsive', badgeClass: 'bg-danger text-white border-danger' }
+    };
+
+    // Override identity helpers used by copied reg_ code.
+    function getUserName() { return staff_workerName || 'Staff'; }
+    function getUserRole() { return 'Staff'; }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(String(s)));
+      return d.innerHTML;
+    }
+
+    function fa_autoFormatTime(el) {
+      var v = el.value.replace(/[^\d]/g, '');
+      if (v.length >= 3) { v = v.substring(0, 4); el.value = v.substring(0, 2) + ':' + v.substring(2); }
+      else { el.value = v; }
+    }
+
+    // ============================================================
+    // TOKEN GATE
+    // ============================================================
+    async function staff_handleTokenSubmit(ev) {
+      ev.preventDefault();
+      var raw = (document.getElementById('gate-token').value || '').trim().toUpperCase();
+      var errEl = document.getElementById('gate-error');
+      errEl.classList.add('d-none');
+      if (!raw) return false;
+      try {
+        await staff_loginWithToken(raw);
+      } catch(e) {
+        errEl.textContent = e.message || 'เข้าใช้งานไม่สำเร็จ';
+        errEl.classList.remove('d-none');
+      }
+      return false;
+    }
+
+    async function staff_loginWithToken(token) {
+      // 1) lookup token
+      var tRes = await _supabase.from('fa_event_tokens').select('*').eq('token', token).maybeSingle();
+      if (tRes.error || !tRes.data) throw new Error('ไม่พบ Token นี้ในระบบ');
+      var t = tRes.data;
+      if (t.status !== 'Active') throw new Error('Token ถูกระงับแล้ว');
+
+      // 2) load event
+      var eRes = await _supabase.from('fa_events').select('*').eq('event_id', t.event_id).maybeSingle();
+      if (eRes.error || !eRes.data) throw new Error('ไม่พบ Event ของ Token นี้');
+      var ev = eRes.data;
+      if (ev.status !== 'Active') throw new Error('Event นี้ถูกปิดแล้ว');
+
+      // 3) parse event_config
+      var cfg = {};
+      if (ev.event_config) {
+        if (typeof ev.event_config === 'string') { try { cfg = JSON.parse(ev.event_config); } catch(e){} }
+        else cfg = ev.event_config;
+      }
+
+      // 4) save session
+      staff_token = token;
+      staff_eventId = ev.event_id;
+      staff_workerName = t.worker_name;
+      staff_section = t.location_tx || null;
+      staff_eventName = ev.event_name;
+      fa_currentEventConfig = cfg;
+      fa_currentEventType = ev.event_type || 'general';
+      fa_currentViewedEventId = ev.event_id;
+
+      sessionStorage.setItem('fa_staff_session', JSON.stringify({
+        token: token, eventId: ev.event_id, workerName: t.worker_name,
+        section: staff_section, eventName: ev.event_name
+      }));
+
+      staff_renderApp(ev);
+    }
+
+    function staff_logout() {
+      sessionStorage.removeItem('fa_staff_session');
+      window.location.href = window.location.pathname;  // strip ?t=
+    }
+
+    // ============================================================
+    // RENDER APP SHELL
+    // ============================================================
+    function staff_renderApp(eventRow) {
+      document.getElementById('gate-view').style.display = 'none';
+      document.getElementById('app-view').style.display = 'block';
+      document.getElementById('staff-event-name').textContent = staff_eventName;
+      document.getElementById('staff-worker-name').textContent = staff_workerName;
+      document.getElementById('staff-section-name').textContent = staff_section || 'ทุกจุด';
+      staff_renderSupplies(eventRow);
+      staff_refreshList();
+    }
+
+    // ============================================================
+    // QUICK SUPPLIES (±1 on fa_events.q_*)
+    // ============================================================
+    var SUPPLY_FIELDS = [
+      { key: 'q_ammonia', label: 'แอมโมเนีย', icon: 'bi-droplet-half' },
+      { key: 'q_plaster', label: 'พลาสเตอร์', icon: 'bi-bandaid' },
+      { key: 'q_spray',   label: 'สเปรย์/ยานวด', icon: 'bi-spray-can' },
+      { key: 'q_wound',   label: 'แผล',       icon: 'bi-heart-pulse' },
+      { key: 'q_meds',    label: 'ยา',         icon: 'bi-capsule' }
+    ];
+
+    function staff_renderSupplies(ev) {
+      var grid = document.getElementById('supplies-grid');
+      grid.innerHTML = '';
+      SUPPLY_FIELDS.forEach(function(f) {
+        var col = document.createElement('div');
+        col.className = 'col-12';
+        col.innerHTML =
+          '<div class="d-flex align-items-center justify-content-between border rounded p-2">' +
+            '<div class="small fw-semibold"><i class="bi ' + f.icon + ' me-1 text-success"></i> ' + f.label + '</div>' +
+            '<div class="d-flex align-items-center gap-2">' +
+              '<button class="btn btn-outline-danger btn-sm qty-btn" onclick="staff_bumpSupply(\'' + f.key + '\', -1)">−</button>' +
+              '<span class="fw-bold" style="min-width:32px; text-align:center;" id="sup-' + f.key + '">' + (ev[f.key] || 0) + '</span>' +
+              '<button class="btn btn-outline-success btn-sm qty-btn" onclick="staff_bumpSupply(\'' + f.key + '\', +1)">+</button>' +
+            '</div>' +
+          '</div>';
+        grid.appendChild(col);
+      });
+    }
+
+    async function staff_bumpSupply(key, delta) {
+      var span = document.getElementById('sup-' + key);
+      var cur = parseInt(span.textContent || '0', 10);
+      var next = Math.max(0, cur + delta);
+      if (next === cur) return;
+      span.textContent = next;  // optimistic
+      var update = {}; update[key] = next;
+      var statusEl = document.getElementById('supplies-status');
+      statusEl.textContent = 'กำลังบันทึก...';
+      var { error } = await _supabase.from('fa_events').update(update).eq('event_id', staff_eventId);
+      if (error) {
+        span.textContent = cur;  // rollback
+        statusEl.textContent = 'บันทึกไม่สำเร็จ';
+        Swal.fire('Error', error.message || 'อัพเดทไม่สำเร็จ', 'error');
+      } else {
+        statusEl.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+      }
+    }
+
+    // ============================================================
+    // MY REGISTRY LIST (filtered to recorded_by + section)
+    // ============================================================
+    async function staff_refreshList() {
+      var tbody = document.getElementById('my-list-body');
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</td></tr>';
+
+      var q = _supabase.from('fa_registry').select('*').eq('event_id', staff_eventId).eq('recorded_by', staff_workerName);
+      if (staff_section) q = q.eq('location_tx', staff_section);
+      var { data: rows, error } = await q;
+      if (error) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">โหลดไม่สำเร็จ: ' + escapeHtml(error.message) + '</td></tr>';
+        return;
+      }
+
+      fa_currentRegistryRecords = (rows || []).map(function(r) {
+        var v = {};
+        if (r.vitals_json) {
+          if (typeof r.vitals_json === 'string') { try { v = JSON.parse(r.vitals_json); } catch(e){} } else v = r.vitals_json;
+        }
+        return {
+          id: r.reg_id, triage: r.triage || 'A', gender: r.gender || '', age: r.age || '',
+          name: r.name || '', phone: String(r.phone || ''), category: r.category || '',
+          locationTx: r.location_tx || '', timeIn: (r.time_in || '').replace(/^'/, ''),
+          timeOut: (r.time_out || '').replace(/^'/, ''), etiology: r.etiology || '',
+          cc: r.cc || '', ccOther: r.cc_other || '', problem: r.problem || '',
+          problemOther: r.problem_other || '', treatment: r.treatment || '',
+          allergy: r.allergy || '', vitals: v, result: r.result || '',
+          note: r.note || '', image: r.image_url || '', gps: r.gps || '',
+          recordedBy: r.recorded_by || '-'
+        };
+      });
+      fa_currentRegistryRecords.sort(function(a,b) { return (a.timeIn||'').localeCompare(b.timeIn||''); });
+
+      document.getElementById('my-count').textContent = fa_currentRegistryRecords.length;
+      tbody.innerHTML = '';
+      if (fa_currentRegistryRecords.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-clipboard2-x fs-2 d-block opacity-25 mb-1"></i>ยังไม่มีรายการ</td></tr>';
+        return;
+      }
+      fa_currentRegistryRecords.forEach(function(r, i) {
+        var t = fa_triageInfo[r.triage] || fa_triageInfo['A'];
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td class="text-center small">' + (i + 1) + '</td>' +
+          '<td class="small"><div class="text-success fw-medium">' + escapeHtml(r.timeIn || '-') + '</div>' + (r.timeOut ? '<div class="text-muted small">' + escapeHtml(r.timeOut) + '</div>' : '') + '</td>' +
+          '<td class="text-center"><span class="badge border rounded-pill ' + t.badgeClass + '">' + r.triage + '</span></td>' +
+          '<td><div class="fw-bold small">' + escapeHtml(r.name || '-') + '</div><div class="text-muted small">' + escapeHtml((r.gender || '-') + ', ' + (r.age || '-')) + '</div></td>' +
+          '<td class="text-center"><button class="btn btn-outline-warning btn-sm" onclick="reg_openForm(\'' + staff_eventId + '\',\'' + r.id + '\')"><i class="bi bi-pencil"></i></button></td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Replacement for fa_refreshPatientList referenced inside reg_submitForm
+    function fa_refreshPatientList() { staff_refreshList(); }
+
+    // ============================================================
+    // REGISTRY FORM (functions copied from firstaid/index.html)
+    // Section locking: if staff_section is set, force the dropdown.
+    // ============================================================
+
+    var REG_CC_MED = [
+      'Muscle cramp/ตะคริว','Musculoskeletal (lower limb)/ปวดขาส่วนล่าง','Musculoskeletal (upper limb)/ปวดแขนส่วนบน',
+      'Skin (blister/chafing)/ตุ่มน้ำ เสียดสี','Skin (laceration/abrasion)/แผลฉีก ถลอก',
+      'Collapse (pre-finish)/หมดสติก่อนเข้าเส้นชัย','Collapse (post-finish)/หมดสติหลังเข้าเส้นชัย',
+      'Chest pain/เจ็บหน้าอก','Dyspnea/หายใจลำบาก','Nausea & Vomiting/คลื่นไส้ อาเจียน',
+      'Headache/ปวดศีรษะ','Dizziness & Syncope/เวียนศีรษะ หน้ามืด','Abdominal pain/ปวดท้อง',
+      'Heat-related/อาการจากความร้อน','Hypothermia/อาการจากความเย็น','Allergic reaction/อาการแพ้',
+      'Eye problem/ปัญหาทางตา','Insect bite & sting/แมลงกัดต่อย','Dehydration/ขาดน้ำ',
+      'Seizure/ชัก','Cardiac arrest/หัวใจหยุดเต้น','Anxiety & Panic attack/วิตกกังวล แพนิค','Other (ระบุ)'
+    ];
+    var REG_CC_TRAUMA = [
+      'Fall/ล้ม สะดุด','Collision/ชนกัน','Abrasion & Road rash/ถลอก','Laceration/แผลฉีก',
+      'Contusion/ฟกช้ำ','Sprain & Strain/เคล็ด กล้ามเนื้อตึง','Dislocation/ข้อเคลื่อน',
+      'Suspected fracture/สงสัยกระดูกหัก','Head injury/บาดเจ็บศีรษะ','Burn and Scalds/แผลไฟไหม้น้ำร้อนลวก','Other (ระบุ)'
+    ];
+    var REG_PROBLEMS = [
+      'EAMC — ตะคริวจากออกกำลังกาย','EAC — หมดแรง/ล้มขณะวิ่ง','EAH — ภาวะโซเดียมต่ำ',
+      'Exertional Heat Stroke — ลมแดด/ฮีทสโตรก','Heat Exhaustion — เพลียแดด','Hypothermia — อุณหภูมิร่างกายต่ำ',
+      'Trauma/Musculoskeletal — บาดเจ็บกล้ามเนื้อ/กระดูก','Skin/Soft tissue — ผิวหนัง/เนื้อเยื่ออ่อน',
+      'Respiratory Distress — หายใจลำบาก','Emergency Cardiac Care — หัวใจฉุกเฉิน','Cardiac Arrest — หัวใจหยุดเต้น',
+      'Allergy/Anaphylaxis — แพ้/แอนาฟิแล็กซิส','Hydration Guidance — แนะนำการดื่มน้ำ','GI Distress — ระบบทางเดินอาหาร',
+      'Neurological — ระบบประสาท','Syncope/Collapse — หมดสติ/เป็นลม','Intoxication — มึนเมา/สารเสพติด',
+      'Anxiety/Panic Attack — วิตกกังวล/แพนิค','Crowd Crush Injury — บาดเจ็บจากฝูงชนเบียด','Seizure — ชัก',
+      'Assault Injury — บาดเจ็บจากทำร้ายร่างกาย','Wound/Laceration — แผล/ฉีกขาด',
+      'Hypo/Hyperglycemia — น้ำตาลในเลือดผิดปกติ','Fever/Infection — ไข้/ติดเชื้อ','Other (ระบุ)'
+    ];
+    var REG_TREATMENTS = [
+      { group: 'ทั่วไป', color: '#198754', items: ['แอมโมเนีย', 'พลาสเตอร์ยา', 'ยานวด/สเปรย์', 'Cold pack'] },
+      { group: 'Trauma/แผล', color: '#dc3545', items: ['ทำแผล/Wound dressing', 'ห้ามเลือด/Pressure', 'Splint/ดาม', 'Eye wash', 'Stretching/ยืดกล้ามเนื้อ'] },
+      { group: 'Medical', color: '#0d6efd', items: ['Oxygen/O2', 'Nebulization', 'IV Fluid', 'CPR/AED'] },
+      { group: 'Environment', color: '#f59e0b', items: ['Hot pack', 'Cool down', 'Keep warm'] }
+    ];
+
+    function reg_buildTreatmentGrid() {
+      var grid = document.getElementById('reg-treatment-grid'); if (!grid) return;
+      grid.innerHTML = '';
+      REG_TREATMENTS.forEach(function(g) {
+        var label = document.createElement('div');
+        label.className = 'w-100 mt-1 mb-1';
+        label.innerHTML = '<span class="badge rounded-pill" style="background:' + g.color + '; font-size:0.65rem; font-weight:600;">' + g.group + '</span>';
+        grid.appendChild(label);
+        g.items.forEach(function(t) {
+          var btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'btn btn-sm reg-tx-btn'; btn.setAttribute('data-value', t); btn.textContent = t;
+          btn.onclick = function() { this.classList.toggle('active'); };
+          grid.appendChild(btn);
+        });
+      });
+    }
+
+    function reg_setTriage(val) {
+      document.getElementById('reg-triage').value = val;
+      document.querySelectorAll('.reg-triage-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-value') === val); });
+    }
+    function reg_setGender(val) {
+      document.getElementById('reg-gender').value = val;
+      document.querySelectorAll('.reg-gender-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-value') === val); });
+    }
+    function reg_toggleEtiology(type) {
+      var btnMed = document.getElementById('reg-etiology-med');
+      var btnTrauma = document.getElementById('reg-etiology-trauma');
+      if (type === 'Med') {
+        btnMed.classList.add('btn-primary'); btnMed.classList.remove('btn-outline-primary');
+        btnTrauma.classList.add('btn-outline-danger'); btnTrauma.classList.remove('btn-danger');
+      } else {
+        btnTrauma.classList.add('btn-danger'); btnTrauma.classList.remove('btn-outline-danger');
+        btnMed.classList.add('btn-outline-primary'); btnMed.classList.remove('btn-primary');
+      }
+      document.getElementById('reg-etiology-value').value = type;
+      var ccSelect = document.getElementById('reg-cc');
+      var ccList = type === 'Med' ? REG_CC_MED : REG_CC_TRAUMA;
+      ccSelect.innerHTML = '<option value="">-- เลือก CC --</option>';
+      ccList.forEach(function(item) { ccSelect.innerHTML += '<option value="' + item + '">' + item + '</option>'; });
+      document.getElementById('reg-cc-other-div').classList.add('d-none');
+      document.getElementById('reg-cc-other').value = '';
+    }
+    function reg_onCCChange() {
+      var val = document.getElementById('reg-cc').value;
+      if (val && val.indexOf('Other') > -1) document.getElementById('reg-cc-other-div').classList.remove('d-none');
+      else { document.getElementById('reg-cc-other-div').classList.add('d-none'); document.getElementById('reg-cc-other').value = ''; }
+    }
+    function reg_onProblemChange() {
+      var val = document.getElementById('reg-problem').value;
+      if (val && val.indexOf('Other') > -1) document.getElementById('reg-problem-other-div').classList.remove('d-none');
+      else { document.getElementById('reg-problem-other-div').classList.add('d-none'); document.getElementById('reg-problem-other').value = ''; }
+    }
+    function reg_populateProblemList() {
+      var sel = document.getElementById('reg-problem');
+      sel.innerHTML = '<option value="">-- เลือก Problem --</option>';
+      REG_PROBLEMS.forEach(function(item) { sel.innerHTML += '<option value="' + item + '">' + item + '</option>'; });
+    }
+    function reg_populateEventConfigDropdowns() {
+      var cfg = fa_currentEventConfig || {};
+      var catDiv = document.getElementById('reg-category-div');
+      var catSel = document.getElementById('reg-category');
+      if (cfg.categories && cfg.categories.length > 0) {
+        catDiv.classList.remove('d-none');
+        catSel.innerHTML = '<option value="">-- เลือก --</option>';
+        cfg.categories.forEach(function(c) { catSel.innerHTML += '<option value="' + c + '">' + c + '</option>'; });
+      } else { catDiv.classList.add('d-none'); }
+
+      var locSel = document.getElementById('reg-location-tx');
+      locSel.innerHTML = '<option value="">-- เลือก --</option>';
+      var locs = (cfg.locations && cfg.locations.length) ? cfg.locations : [];
+      locs.forEach(function(l) { locSel.innerHTML += '<option value="' + l + '">' + l + '</option>'; });
+
+      // Section lock: if token assigned a specific จุดรักษา, force + disable
+      if (staff_section) {
+        // ensure option exists even if event_config.locations doesn't list it
+        var found = locs.indexOf(staff_section) >= 0;
+        if (!found) locSel.innerHTML += '<option value="' + staff_section + '">' + staff_section + '</option>';
+        locSel.value = staff_section;
+        locSel.disabled = true;
+      } else {
+        locSel.disabled = false;
+      }
+
+      var nameInput = document.getElementById('reg-name');
+      nameInput.placeholder = cfg.idLabel ? ('ชื่อ-สกุล (' + cfg.idLabel + ')') : 'ชื่อ-สกุล';
+    }
+    function reg_toggleResult(type) {
+      var btnDC = document.getElementById('reg-result-dc');
+      var btnTransfer = document.getElementById('reg-result-transfer');
+      var divDC = document.getElementById('reg-result-dc-sub');
+      var divTransfer = document.getElementById('reg-result-transfer-sub');
+      if (type === 'dc') {
+        btnDC.classList.add('btn-success'); btnDC.classList.remove('btn-outline-success');
+        btnTransfer.classList.add('btn-outline-warning'); btnTransfer.classList.remove('btn-warning');
+        divDC.classList.remove('d-none'); divTransfer.classList.add('d-none');
+      } else {
+        btnTransfer.classList.add('btn-warning'); btnTransfer.classList.remove('btn-outline-warning');
+        btnDC.classList.add('btn-outline-success'); btnDC.classList.remove('btn-success');
+        divTransfer.classList.remove('d-none'); divDC.classList.add('d-none');
+      }
+      document.getElementById('reg-result-type').value = type;
+    }
+    function reg_toggleAllergy() {
+      var sel = document.getElementById('reg-allergy');
+      var div = document.getElementById('reg-allergy-detail-div');
+      if (sel.value === 'มี') div.classList.remove('d-none');
+      else { div.classList.add('d-none'); document.getElementById('reg-allergy-detail').value = ''; }
+    }
+    function reg_toggleVitals() {
+      var section = document.getElementById('reg-vitals-body');
+      var icon = document.getElementById('reg-vitals-toggle-icon');
+      if (section.classList.contains('d-none')) { section.classList.remove('d-none'); icon.className = 'bi bi-chevron-up'; }
+      else { section.classList.add('d-none'); icon.className = 'bi bi-chevron-down'; }
+    }
+    function reg_toggleMedDetail() {
+      var btn = document.querySelector('.reg-tx-btn[data-value="จ่ายยา"]');
+      var inp = document.getElementById('reg-treatment-med-detail');
+      if (btn && btn.classList.contains('active')) inp.classList.remove('d-none');
+      else { inp.classList.add('d-none'); inp.value = ''; }
+    }
+    function reg_getLocation() {
+      if (!navigator.geolocation) { Swal.fire('GPS ไม่พร้อม', 'เบราว์เซอร์ไม่รองรับ', 'warning'); return; }
+      document.getElementById('reg-gps').value = 'กำลังค้นหาพิกัด...';
+      navigator.geolocation.getCurrentPosition(
+        function(pos) { document.getElementById('reg-gps').value = pos.coords.latitude + ', ' + pos.coords.longitude; },
+        function() { document.getElementById('reg-gps').value = ''; Swal.fire('GPS Error', 'ดึงพิกัดไม่ได้', 'warning'); },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
+    function reg_openForm(eventId, regId) {
+      var form = document.getElementById('reg-form'); form.reset();
+      document.getElementById('reg-form-event-id').value = eventId || staff_eventId;
+      document.getElementById('reg-form-reg-id').value = '';
+      document.getElementById('reg-form-existing-image').value = '';
+
+      reg_toggleEtiology('Med');
+      reg_populateProblemList();
+      reg_populateEventConfigDropdowns();
+      reg_toggleResult('dc');
+      document.getElementById('reg-allergy').value = 'ไม่มี';
+      reg_toggleAllergy();
+      document.getElementById('reg-vitals-body').classList.add('d-none');
+      document.getElementById('reg-vitals-toggle-icon').className = 'bi bi-chevron-down';
+      document.getElementById('reg-cc-other-div').classList.add('d-none');
+      document.getElementById('reg-problem-other-div').classList.add('d-none');
+      reg_setTriage('A'); reg_setGender('');
+
+      var now = new Date();
+      document.getElementById('reg-time-in').value = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+      reg_buildTreatmentGrid();
+      document.querySelectorAll('.reg-tx-btn[data-value="จ่ายยา"]').forEach(function(b) { b.classList.remove('active'); });
+      document.getElementById('reg-treatment-med-detail').value = '';
+      document.getElementById('reg-treatment-med-detail').classList.add('d-none');
+      document.getElementById('reg-treatment-other-text').value = '';
+
+      if (regId) {
+        // Edit mode: ensure record belongs to this worker
+        var rec = (fa_currentRegistryRecords || []).find(function(x) { return x.id === regId; });
+        if (!rec) { Swal.fire('Error', 'ไม่พบรายการ', 'error'); return; }
+        if (rec.recordedBy !== staff_workerName) { Swal.fire('ไม่อนุญาต', 'แก้ไขได้เฉพาะรายการของตนเอง', 'warning'); return; }
+        document.getElementById('reg-form-reg-id').value = regId;
+        document.getElementById('reg-modal-title').innerHTML = '<i class="bi bi-pencil-square text-warning me-2"></i> แก้ไข Registry';
+        reg_setTriage(rec.triage || 'A'); reg_setGender(rec.gender || '');
+        document.getElementById('reg-age').value = rec.age || '';
+        document.getElementById('reg-name').value = rec.name || '';
+        document.getElementById('reg-phone').value = rec.phone ? rec.phone.replace(/^'/, '') : '';
+        document.getElementById('reg-category').value = rec.category || '';
+        document.getElementById('reg-location-tx').value = rec.locationTx || (staff_section || '');
+        document.getElementById('reg-time-in').value = rec.timeIn || '';
+        document.getElementById('reg-time-out').value = rec.timeOut || '';
+        document.getElementById('reg-form-existing-image').value = rec.image || '';
+        if (rec.etiology) reg_toggleEtiology(rec.etiology);
+        if (rec.cc) {
+          document.getElementById('reg-cc').value = rec.cc; reg_onCCChange();
+          if (rec.ccOther) document.getElementById('reg-cc-other').value = rec.ccOther;
+        }
+        if (rec.problem) {
+          document.getElementById('reg-problem').value = rec.problem; reg_onProblemChange();
+          if (rec.problemOther) document.getElementById('reg-problem-other').value = rec.problemOther;
+        }
+        var treatments = rec.treatment ? rec.treatment.split(', ') : [];
+        treatments.forEach(function(t) {
+          if (t.indexOf('จ่ายยา') > -1) {
+            var medBtn = document.querySelector('.reg-tx-btn[data-value="จ่ายยา"]');
+            if (medBtn) medBtn.classList.add('active');
+            var match = t.match(/\((.*?)\)/);
+            if (match) {
+              document.getElementById('reg-treatment-med-detail').value = match[1];
+              document.getElementById('reg-treatment-med-detail').classList.remove('d-none');
+            }
+          } else {
+            var btn = document.querySelector('#reg-treatment-grid .reg-tx-btn[data-value="' + t + '"]');
+            if (btn) btn.classList.add('active');
+            else if (t) {
+              var ot = document.getElementById('reg-treatment-other-text');
+              ot.value = (ot.value ? ot.value + ', ' : '') + t;
+            }
+          }
+        });
+        if (rec.allergy && rec.allergy.indexOf('มี') > -1) {
+          document.getElementById('reg-allergy').value = 'มี';
+          document.getElementById('reg-allergy-detail').value = rec.allergy.replace('มี','').replace(/[()]/g,'').trim();
+        }
+        reg_toggleAllergy();
+        if (rec.vitals && Object.keys(rec.vitals).length > 0) {
+          var v = rec.vitals;
+          if (v.bp || v.hr || v.rr || v.spo2 || v.temp || v.gcs || v.glucose || v.pain) {
+            document.getElementById('reg-vitals-body').classList.remove('d-none');
+            document.getElementById('reg-vitals-toggle-icon').className = 'bi bi-chevron-up';
+          }
+          ['bp','hr','rr','spo2','temp','gcs','glucose','pain'].forEach(function(k) {
+            document.getElementById('reg-v-' + k).value = v[k] || '';
+          });
+        }
+        if (rec.result) {
+          if (rec.result.indexOf('transfer') === 0) {
+            reg_toggleResult('transfer');
+            var parts = rec.result.split(':');
+            document.getElementById('reg-transfer-method').value = parts[1] === 'self' ? 'self' : 'team';
+            document.getElementById('reg-transfer-hospital').value = parts.slice(2).join(':') || '';
+          } else {
+            reg_toggleResult('dc');
+            var dcParts = rec.result.split(':');
+            document.getElementById('reg-dc-sub').value = dcParts[1] || 'finished';
+          }
+        }
+        document.getElementById('reg-note').value = rec.note || '';
+        document.getElementById('reg-gps').value = rec.gps || '';
+      } else {
+        document.getElementById('reg-modal-title').innerHTML = '<i class="bi bi-clipboard2-pulse text-success me-2"></i> บันทึก Medical Registry';
+      }
+
+      if (!fa_registryModal) fa_registryModal = new bootstrap.Modal(document.getElementById('faRegistryModal'));
+      fa_registryModal.show();
+    }
+
+    async function reg_submitForm() {
+      var form = document.getElementById('reg-form');
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+
+      var genderVal = (document.getElementById('reg-gender').value || '').trim();
+      if (!genderVal) {
+        Swal.fire({ icon:'warning', title:'กรุณาเลือกเพศ', timer:1500, showConfirmButton:false });
+        return;
+      }
+
+      // Section enforcement: if locked, must match
+      var locVal = document.getElementById('reg-location-tx').value;
+      if (staff_section && locVal !== staff_section) {
+        Swal.fire({ icon:'error', title:'จุดรักษาไม่ถูกต้อง', text:'Token นี้บันทึกได้เฉพาะ ' + staff_section });
+        return;
+      }
+
+      Swal.fire({ title: 'กำลังบันทึก...', didOpen: function() { Swal.showLoading(); } });
+
+      var treatments = [];
+      document.querySelectorAll('#reg-treatment-grid .reg-tx-btn.active').forEach(function(btn) { treatments.push(btn.getAttribute('data-value')); });
+      var medBtn = document.querySelector('.reg-tx-btn[data-value="จ่ายยา"]');
+      if (medBtn && medBtn.classList.contains('active')) {
+        var detail = document.getElementById('reg-treatment-med-detail').value.trim();
+        treatments.push(detail ? 'จ่ายยา (' + detail + ')' : 'จ่ายยา');
+      }
+      var otherTrt = document.getElementById('reg-treatment-other-text').value.trim();
+      if (otherTrt) treatments.push(otherTrt);
+
+      var phoneVal = document.getElementById('reg-phone').value;
+      if (phoneVal && phoneVal.charAt(0) !== "'") phoneVal = "'" + phoneVal;
+
+      var allergy = document.getElementById('reg-allergy').value;
+      if (allergy === 'มี') {
+        var d = document.getElementById('reg-allergy-detail').value.trim();
+        allergy = d ? 'มี (' + d + ')' : 'มี';
+      }
+
+      var vitals = {
+        bp: document.getElementById('reg-v-bp').value.trim(),
+        hr: document.getElementById('reg-v-hr').value.trim(),
+        rr: document.getElementById('reg-v-rr').value.trim(),
+        spo2: document.getElementById('reg-v-spo2').value.trim(),
+        temp: document.getElementById('reg-v-temp').value.trim(),
+        gcs: document.getElementById('reg-v-gcs').value.trim(),
+        glucose: document.getElementById('reg-v-glucose').value.trim(),
+        pain: document.getElementById('reg-v-pain').value.trim()
+      };
+
+      var resultType = document.getElementById('reg-result-type').value;
+      var resultStr = '';
+      if (resultType === 'dc') {
+        resultStr = 'dc:' + (document.getElementById('reg-dc-sub').value || 'finished');
+      } else {
+        var method = document.getElementById('reg-transfer-method').value || 'team';
+        var hospital = document.getElementById('reg-transfer-hospital').value.trim() || '';
+        resultStr = 'transfer:' + method + ':' + hospital;
+      }
+
+      var imageFile = document.getElementById('reg-image').files[0];
+      try {
+        var imageUrl = document.getElementById('reg-form-existing-image').value || '';
+        if (imageFile) imageUrl = await uploadToCloudinary(imageFile, 'firstaid-registry');
+
+        var regId = document.getElementById('reg-form-reg-id').value;
+        var recordData = {
+          event_id: staff_eventId,
+          triage: document.getElementById('reg-triage').value,
+          gender: document.getElementById('reg-gender').value,
+          age: document.getElementById('reg-age').value ? parseInt(document.getElementById('reg-age').value) : null,
+          name: document.getElementById('reg-name').value,
+          phone: phoneVal,
+          category: document.getElementById('reg-category').value,
+          location_tx: locVal,
+          time_in: document.getElementById('reg-time-in').value,
+          time_out: document.getElementById('reg-time-out').value,
+          etiology: document.getElementById('reg-etiology-value').value,
+          cc: document.getElementById('reg-cc').value,
+          cc_other: document.getElementById('reg-cc-other').value,
+          problem: document.getElementById('reg-problem').value,
+          problem_other: document.getElementById('reg-problem-other').value,
+          treatment: treatments.join(', '),
+          allergy: allergy,
+          vitals_json: vitals,
+          result: resultStr,
+          note: document.getElementById('reg-note').value,
+          image_url: imageUrl,
+          gps: document.getElementById('reg-gps').value,
+          recorded_by: staff_workerName
+        };
+
+        if (regId) {
+          var { error } = await _supabase.from('fa_registry').update(recordData).eq('reg_id', regId);
+          if (error) throw error;
+        } else {
+          recordData.reg_id = 'R-' + new Date().getTime();
+          var { error } = await _supabase.from('fa_registry').insert(recordData);
+          if (error) throw error;
+        }
+
+        Swal.close();
+        if (fa_registryModal) fa_registryModal.hide();
+        staff_refreshList();
+      } catch(err) {
+        Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + (err.message || err), 'error');
+      }
+    }
+
+    // ============================================================
+    // BOOT
+    // ============================================================
+    (async function init() {
+      // Try URL param first, then sessionStorage
+      var urlToken = (new URLSearchParams(window.location.search).get('t') || '').trim().toUpperCase();
+      var saved = null;
+      try { saved = JSON.parse(sessionStorage.getItem('fa_staff_session') || 'null'); } catch(e) {}
+
+      if (urlToken) {
+        try { await staff_loginWithToken(urlToken); }
+        catch(err) {
+          var errEl = document.getElementById('gate-error');
+          errEl.textContent = err.message; errEl.classList.remove('d-none');
+          document.getElementById('gate-token').value = urlToken;
+        }
+      } else if (saved && saved.token) {
+        try { await staff_loginWithToken(saved.token); }
+        catch(err) {
+          sessionStorage.removeItem('fa_staff_session');
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
