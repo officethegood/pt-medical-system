@@ -242,7 +242,7 @@
           <div class="card mb-4 island-card overflow-hidden">
               <div class="card-header bg-success bg-opacity-10 border-0 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 py-3 px-4">
                   <h6 class="fw-bold text-success m-0"><i class="bi bi-lightning-charge-fill me-1"></i> บันทึกการแจกจ่ายด่วน</h6>
-                  <button class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-sm" onclick="fa_saveQuickDispense()"><i class="bi bi-save me-1"></i> บันทึกยอด</button>
+                  <small class="text-muted" id="fa-qty-status">+/- = บันทึกอัตโนมัติ (atomic)</small>
               </div>
               <div class="card-body">
                   <div class="row g-3">
@@ -251,7 +251,7 @@
                               <div class="small fw-bold text-secondary mb-2">แอมโมเนีย</div>
                               <div class="d-flex align-items-center justify-content-center gap-2">
                                   <button class="btn btn-outline-secondary btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qAmmonia',-1)">-</button>
-                                  <input type="number" id="fa-qAmmonia" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0">
+                                  <input type="number" id="fa-qAmmonia" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0" readonly>
                                   <button class="btn btn-outline-success btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qAmmonia',1)">+</button>
                               </div>
                           </div>
@@ -261,7 +261,7 @@
                               <div class="small fw-bold text-secondary mb-2">พลาสเตอร์ยา</div>
                               <div class="d-flex align-items-center justify-content-center gap-2">
                                   <button class="btn btn-outline-secondary btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qPlaster',-1)">-</button>
-                                  <input type="number" id="fa-qPlaster" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0">
+                                  <input type="number" id="fa-qPlaster" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0" readonly>
                                   <button class="btn btn-outline-success btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qPlaster',1)">+</button>
                               </div>
                           </div>
@@ -271,7 +271,7 @@
                               <div class="small fw-bold text-secondary mb-2">ยานวด/สเปรย์</div>
                               <div class="d-flex align-items-center justify-content-center gap-2">
                                   <button class="btn btn-outline-secondary btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qSpray',-1)">-</button>
-                                  <input type="number" id="fa-qSpray" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0">
+                                  <input type="number" id="fa-qSpray" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0" readonly>
                                   <button class="btn btn-outline-success btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qSpray',1)">+</button>
                               </div>
                           </div>
@@ -281,7 +281,7 @@
                               <div class="small fw-bold text-secondary mb-2">ประคบเย็น</div>
                               <div class="d-flex align-items-center justify-content-center gap-2">
                                   <button class="btn btn-outline-secondary btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qWound',-1)">-</button>
-                                  <input type="number" id="fa-qWound" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0">
+                                  <input type="number" id="fa-qWound" class="form-control form-control-sm text-center fw-bold fa-qty-input" value="0" min="0" readonly>
                                   <button class="btn btn-outline-success btn-sm rounded-circle fa-qty-btn" onclick="fa_adjustCount('fa-qWound',1)">+</button>
                               </div>
                           </div>
@@ -1346,31 +1346,59 @@
         fa_showDashboard();
     }
 
-    function fa_adjustCount(id, delta) {
+    // Atomic +/- via Postgres RPC. The id-to-field map mirrors the ID naming used
+    // in the Quick Dispense card (fa-qAmmonia → q_ammonia, etc.).
+    var FA_QTY_FIELD_MAP = {
+        'fa-qAmmonia': 'q_ammonia',
+        'fa-qPlaster': 'q_plaster',
+        'fa-qSpray':   'q_spray',
+        'fa-qWound':   'q_wound',
+        'fa-qMeds':    'q_meds'
+    };
+
+    async function fa_adjustCount(id, delta) {
+        var field = FA_QTY_FIELD_MAP[id];
+        if (!field || !fa_currentViewedEventId) return;
         var input = document.getElementById(id);
-        var val = parseInt(input.value) || 0;
-        val += delta;
-        if (val < 0) val = 0;
-        input.value = val;
+        var prev = parseInt(input.value) || 0;
+        // Optimistic UI; replaced with server's authoritative value on success
+        input.value = Math.max(0, prev + delta);
+        var statusEl = document.getElementById('fa-qty-status');
+        if (statusEl) statusEl.textContent = 'กำลังบันทึก...';
+        var { data, error } = await _supabase.rpc('fa_bump_supply', {
+            p_event_id: fa_currentViewedEventId, p_field: field, p_delta: delta
+        });
+        if (error) {
+            input.value = prev;  // rollback
+            if (statusEl) statusEl.textContent = 'บันทึกไม่สำเร็จ';
+            Swal.fire('Error', error.message || 'อัพเดทไม่สำเร็จ', 'error');
+            return;
+        }
+        if (data != null) {
+            input.value = data;
+            // Sync local cache so reopening the event detail shows the latest value
+            var ev = fa_allEvents.find(function(e) { return e.id === fa_currentViewedEventId; });
+            if (ev) {
+                if (field === 'q_ammonia') ev.qAmmonia = data;
+                else if (field === 'q_plaster') ev.qPlaster = data;
+                else if (field === 'q_spray') ev.qSpray = data;
+                else if (field === 'q_wound') ev.qWound = data;
+                else if (field === 'q_meds') ev.qMeds = data;
+            }
+        }
+        if (statusEl) statusEl.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
     }
 
-    async function fa_saveQuickDispense() {
-        Swal.fire({ title: 'กำลังบันทึกยอด...', didOpen: function() { Swal.showLoading(); } });
-        var counts = {
-            q_ammonia: parseInt(document.getElementById('fa-qAmmonia').value) || 0,
-            q_plaster: parseInt(document.getElementById('fa-qPlaster').value) || 0,
-            q_spray: parseInt(document.getElementById('fa-qSpray').value) || 0,
-            q_wound: parseInt(document.getElementById('fa-qWound').value) || 0
-        };
-        try {
-            var { error } = await _supabase.from('fa_events').update(counts).eq('event_id', fa_currentViewedEventId);
-            if (error) throw error;
-            var ev = fa_allEvents.find(function(e) { return e.id === fa_currentViewedEventId; });
-            if (ev) { ev.qAmmonia = counts.q_ammonia; ev.qPlaster = counts.q_plaster; ev.qSpray = counts.q_spray; ev.qWound = counts.q_wound; }
-            Swal.fire({ icon: 'success', title: 'บันทึกยอดเรียบร้อย', timer: 1500, showConfirmButton: false });
-        } catch(err) {
-            Swal.fire('Error', (err.message || err), 'error');
-        }
+    // Refresh quick-dispense inputs from latest fa_events row.
+    // Called by realtime subscription (in fa_refreshPatientList) so admins see
+    // staff bumps live.
+    function fa_refreshQuickDispenseInputs(evRow) {
+        if (!evRow) return;
+        var map = { 'fa-qAmmonia': 'q_ammonia', 'fa-qPlaster': 'q_plaster', 'fa-qSpray': 'q_spray', 'fa-qWound': 'q_wound' };
+        Object.keys(map).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && document.activeElement !== el) el.value = evRow[map[id]] || 0;
+        });
     }
 
     async function fa_refreshPatientList() {
@@ -1398,6 +1426,8 @@
                     fa_currentEventConfig = eventConfig;
                     fa_currentEventType = evArr.event_type || 'general';
                 }
+                // Live-sync the quick dispense inputs from authoritative DB values
+                fa_refreshQuickDispenseInputs(evArr);
             }
 
             fa_currentEventPatients = (patients || []).map(function(p) {

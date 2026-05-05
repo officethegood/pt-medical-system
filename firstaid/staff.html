@@ -396,7 +396,34 @@
       document.getElementById('staff-section-name').textContent = staff_section || 'ทุกจุด';
       staff_renderSupplies(eventRow);
       staff_refreshList();
+      staff_subscribeRealtime();
     }
+
+    // Subscribe to fa_events + fa_registry changes for this event so supplies
+    // and the personal list reflect concurrent updates from admin or other staff.
+    var staff_rtChannel = null;
+    var staff_rtDebounce = null;
+    function staff_subscribeRealtime() {
+      try {
+        if (staff_rtChannel) { _supabase.removeChannel(staff_rtChannel); staff_rtChannel = null; }
+        if (_supabase.realtime && typeof _supabase.realtime.setAuth === 'function') {
+          _supabase.realtime.setAuth(CONFIG.SUPABASE_ANON_KEY);
+        }
+        staff_rtChannel = _supabase.channel('fa-staff-' + staff_eventId)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'fa_events', filter: 'event_id=eq.' + staff_eventId }, function() {
+            if (staff_rtDebounce) clearTimeout(staff_rtDebounce);
+            staff_rtDebounce = setTimeout(staff_refreshSupplies, 400);
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'fa_registry', filter: 'event_id=eq.' + staff_eventId }, function() {
+            if (staff_rtDebounce) clearTimeout(staff_rtDebounce);
+            staff_rtDebounce = setTimeout(staff_refreshList, 400);
+          })
+          .subscribe(function(status) { try { console.log('[staff RT]', status); } catch(_){} });
+      } catch(e) { console.warn('[staff RT] setup failed:', e.message || e); }
+    }
+    window.addEventListener('beforeunload', function() {
+      if (staff_rtChannel) { try { _supabase.removeChannel(staff_rtChannel); } catch(_){} }
+    });
 
     // ============================================================
     // QUICK SUPPLIES (±1 on fa_events.q_*)
@@ -431,20 +458,31 @@
     async function staff_bumpSupply(key, delta) {
       var span = document.getElementById('sup-' + key);
       var cur = parseInt(span.textContent || '0', 10);
-      var next = Math.max(0, cur + delta);
-      if (next === cur) return;
-      span.textContent = next;  // optimistic
-      var update = {}; update[key] = next;
+      // Optimistic UI; server returns the authoritative new value
+      span.textContent = Math.max(0, cur + delta);
       var statusEl = document.getElementById('supplies-status');
       statusEl.textContent = 'กำลังบันทึก...';
-      var { error } = await _supabase.from('fa_events').update(update).eq('event_id', staff_eventId);
+      var { data, error } = await _supabase.rpc('fa_bump_supply', {
+        p_event_id: staff_eventId, p_field: key, p_delta: delta
+      });
       if (error) {
         span.textContent = cur;  // rollback
         statusEl.textContent = 'บันทึกไม่สำเร็จ';
         Swal.fire('Error', error.message || 'อัพเดทไม่สำเร็จ', 'error');
-      } else {
-        statusEl.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+        return;
       }
+      if (data != null) span.textContent = data;
+      statusEl.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    // Refresh all supply spans from latest fa_events row (used by realtime callback)
+    async function staff_refreshSupplies() {
+      var { data: ev, error } = await _supabase.from('fa_events').select('q_ammonia,q_plaster,q_spray,q_wound,q_meds').eq('event_id', staff_eventId).maybeSingle();
+      if (error || !ev) return;
+      SUPPLY_FIELDS.forEach(function(f) {
+        var span = document.getElementById('sup-' + f.key);
+        if (span) span.textContent = ev[f.key] || 0;
+      });
     }
 
     // ============================================================
