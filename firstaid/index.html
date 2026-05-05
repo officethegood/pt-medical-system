@@ -1331,10 +1331,13 @@
             if (__isAdmin) fa_loadStaffTokens();
         }
 
-        // Realtime: subscribe to registry for this event
+        // Realtime: subscribe to registry, event row, and staff tokens for this event
         RT.unsubscribe('fa-events');
-        RT.subscribeMulti('fa-registry', ['fa_registry', 'fa_events'], function() {
+        RT.subscribeMulti('fa-registry', ['fa_registry', 'fa_events', 'fa_event_tokens'], function() {
             fa_refreshPatientList();
+            // Token list is admin-only and only relevant when the card is visible
+            var tokCard = document.getElementById('fa-staff-tokens-card');
+            if (tokCard && !tokCard.classList.contains('d-none')) fa_loadStaffTokens();
         });
 
         fa_refreshPatientList();
