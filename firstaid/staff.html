@@ -428,12 +428,12 @@
     // ============================================================
     // QUICK SUPPLIES (±1 on fa_events.q_*)
     // ============================================================
+    // Mirror admin's Quick Dispense card (firstaid/index.html). Keep in sync.
     var SUPPLY_FIELDS = [
-      { key: 'q_ammonia', label: 'แอมโมเนีย', icon: 'bi-droplet-half' },
-      { key: 'q_plaster', label: 'พลาสเตอร์', icon: 'bi-bandaid' },
-      { key: 'q_spray',   label: 'สเปรย์/ยานวด', icon: 'bi-spray-can' },
-      { key: 'q_wound',   label: 'แผล',       icon: 'bi-heart-pulse' },
-      { key: 'q_meds',    label: 'ยา',         icon: 'bi-capsule' }
+      { key: 'q_ammonia', label: 'แอมโมเนีย',  icon: 'bi-droplet-half' },
+      { key: 'q_plaster', label: 'พลาสเตอร์ยา', icon: 'bi-bandaid' },
+      { key: 'q_spray',   label: 'ยานวด/สเปรย์', icon: 'bi-spray-can' },
+      { key: 'q_wound',   label: 'ประคบเย็น',   icon: 'bi-snow' }
     ];
 
     function staff_renderSupplies(ev) {
