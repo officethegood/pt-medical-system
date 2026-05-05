@@ -50,7 +50,13 @@ CREATE INDEX fa_event_tokens_status_idx ON fa_event_tokens(status);
 
 ALTER TABLE fa_event_tokens ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "auth_all_fa_event_tokens" ON fa_event_tokens FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- IMPORTANT: this app authenticates admins via external GAS HR API, NOT Supabase Auth.
+-- All traffic (including admin token CRUD) hits Supabase as `anon`. Without these
+-- anon write policies, admin token creation fails with RLS violation.
 CREATE POLICY "anon_read_fa_event_tokens" ON fa_event_tokens FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_insert_fa_event_tokens" ON fa_event_tokens FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon_update_fa_event_tokens" ON fa_event_tokens FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete_fa_event_tokens" ON fa_event_tokens FOR DELETE TO anon USING (true);
 
 -- Allow anon (part-time via staff.html) to add/edit registry + bump supply counters.
 CREATE POLICY "anon_insert_fa_registry" ON fa_registry FOR INSERT TO anon WITH CHECK (true);

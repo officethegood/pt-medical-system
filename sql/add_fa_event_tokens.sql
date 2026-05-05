@@ -24,11 +24,24 @@ DROP POLICY IF EXISTS "auth_all_fa_event_tokens" ON fa_event_tokens;
 CREATE POLICY "auth_all_fa_event_tokens" ON fa_event_tokens
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- Anonymous (part-time staff using token link): read-only on tokens.
--- Soft security: filtering done client-side in staff.html. ANON_KEY is public.
+-- Anonymous policies. Note: this app uses ANON_KEY for ALL traffic (admin auth is
+-- via external GAS HR, not Supabase Auth). So admin token CRUD also goes via anon.
+-- Soft security: filtering done client-side. ANON_KEY is public.
 DROP POLICY IF EXISTS "anon_read_fa_event_tokens" ON fa_event_tokens;
 CREATE POLICY "anon_read_fa_event_tokens" ON fa_event_tokens
   FOR SELECT TO anon USING (true);
+
+DROP POLICY IF EXISTS "anon_insert_fa_event_tokens" ON fa_event_tokens;
+CREATE POLICY "anon_insert_fa_event_tokens" ON fa_event_tokens
+  FOR INSERT TO anon WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_update_fa_event_tokens" ON fa_event_tokens;
+CREATE POLICY "anon_update_fa_event_tokens" ON fa_event_tokens
+  FOR UPDATE TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_delete_fa_event_tokens" ON fa_event_tokens;
+CREATE POLICY "anon_delete_fa_event_tokens" ON fa_event_tokens
+  FOR DELETE TO anon USING (true);
 
 -- Allow anon (part-time via staff.html) to add/edit registry + bump supply counters.
 -- Anyone with ANON_KEY can do this. Acceptable per threat model A (casual access prevention only).
