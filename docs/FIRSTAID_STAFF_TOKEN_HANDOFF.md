@@ -1,8 +1,10 @@
 # Handoff: First-Aid Staff Token Feature → Port to Supwilai V2
 
-**Source:** TheGood (this repo) — shipped 2026-05-05 in v5.10.0
+**Source:** TheGood (this repo) — shipped 2026-05-05, current version v5.10.1
 **Target:** Supwilai V2 — path/version to be confirmed by porter
 **Reason for handoff:** TheGood and Supwilai are **separate orgs with separate data**. Only code is mirrored, not data. Supwilai V2 may have diverged in schema or UI structure — adapt, don't blind-copy.
+
+> **Read the "Pitfalls / bug history" section near the bottom before coding.** TheGood hit four real bugs after the initial ship — your port will likely hit them too unless you bake the lessons in from the start.
 
 ---
 
@@ -34,12 +36,16 @@ Token auto-revokes when the admin marks the event `Complete`. Manual revoke from
 
 | File | Type | Purpose |
 |---|---|---|
-| `sql/add_fa_event_tokens.sql` | NEW | Idempotent migration. Run on Supabase SQL Editor. |
-| `sql/add_fa_event_tokens_fix_anon.sql` | NEW | Standalone patch — needed only if you ran an earlier version of the migration that omitted anon write policies. The current `add_fa_event_tokens.sql` already includes them. |
+| `sql/add_fa_event_tokens.sql` | NEW | Core migration: table + RLS policies (incl. anon writes). Idempotent. |
+| `sql/add_fa_event_tokens_fix_anon.sql` | NEW | Standalone patch — only needed if you ran an earlier version of the migration that omitted anon writes. The current `add_fa_event_tokens.sql` already includes them. |
+| `sql/add_fa_bump_supply_rpc.sql` | NEW | Atomic +/- supply counter via Postgres function. Required to fix the lost-update race (see pitfall #2). |
+| `sql/add_fa_event_tokens_realtime.sql` | NEW | Adds `fa_event_tokens` to the `supabase_realtime` publication so admins see each other's token changes live (see pitfall #3). |
 | `migration/schema.sql` | MODIFIED | Canonical schema updated (gitignored locally — reference only). |
 | `firstaid/staff.html` | NEW | Standalone part-time worker page. ~600 lines. |
-| `firstaid/index.html` | MODIFIED | Admin UI: token-mgmt card, create-token modal, auto-revoke hook. |
-| `shared/config.js` | MODIFIED | Version bump only (5.9.0 → 5.10.0). Do NOT copy this file between repos — endpoints differ (DO-NOT-SYNC rule). |
+| `firstaid/index.html` | MODIFIED | Admin UI: token-mgmt card, create-token modal, atomic +/- supply, auto-revoke hook, realtime subs. |
+| `shared/config.js` | MODIFIED | Version bumps (5.9.0 → 5.10.1). Do NOT copy this file between repos — endpoints differ (DO-NOT-SYNC rule). |
+
+**Run order on a fresh install:** `add_fa_event_tokens.sql` → `add_fa_bump_supply_rpc.sql` → `add_fa_event_tokens_realtime.sql`. All idempotent and safe to re-run.
 
 ---
 
@@ -168,6 +174,47 @@ The registry form modal HTML (~150 lines) and `reg_*` JS functions plus `REG_*` 
 
 ---
 
+## Pitfalls / bug history — read before coding
+
+These four bugs all shipped on TheGood and required follow-up commits. Each one has a generalisable lesson.
+
+### Pitfall 1 — RLS policy on the wrong role
+**Commit:** `5b16c5a` (fix), original was in `45029dd`
+**Symptom:** Admin clicks "+ สร้าง Token" → `Error: new row violates row-level security policy for table "fa_event_tokens"`.
+**Root cause:** I added `auth_all_fa_event_tokens` for the `authenticated` role, assuming admin login was Supabase Auth. It is not — admin auth is external (GAS HR). Every Supabase request is `anon`.
+**Fix:** Add `anon_insert / anon_update / anon_delete` policies on the table.
+**Generalisation:** In this codebase **every** RLS policy you need at runtime must target `anon`. Treat `authenticated` policies as documentation only. Same applies to RPC `GRANT EXECUTE` — must include `anon`.
+
+### Pitfall 2 — Lost-update race on supply counters
+**Commit:** `0ab7c1e` (fix), v5.10.1
+**Symptom:** Staff bumps `q_ammonia` from 5 to 6 via staff.html. Admin's quick-dispense page (loaded before the bump) still shows 5 in the input. Admin clicks "บันทึกยอด" → DB written back to 5. Staff's +1 silently lost. Worse: admin's bulk-save sent **all 4 fields** in one UPDATE, so editing one would clobber any concurrent change to the other three.
+**Root cause:** Both pages did read-modify-write on locally cached values. Classic lost-update.
+**Fix:**
+- Created Postgres RPC `fa_bump_supply(p_event_id, p_field, p_delta)` doing atomic `UPDATE SET q_x = GREATEST(0, COALESCE(q_x,0) + delta) RETURNING q_x`. Field name whitelisted; `SECURITY DEFINER`; `GRANT EXECUTE TO anon, authenticated`.
+- Both pages call the RPC for every +/-. Optimistic UI is replaced by the server's authoritative return value.
+- Admin's "บันทึกยอด" button + bulk save function deleted entirely. Inputs marked `readonly`. All changes flow through +/- buttons → RPC.
+**Generalisation:** Any UI counter that multiple users can mutate concurrently needs an atomic-increment path on the server. Never trust `currentValue + delta` on the client. If V2 has more counters of this shape, give them the same treatment.
+
+### Pitfall 3 — New table missing from realtime publication + missing client subscription
+**Commit:** `bf63245` (fix)
+**Symptom:** Admin A creates a token → Admin B looking at the same event detail page does not see the new row until a manual reload.
+**Root cause:** Two independent omissions.
+1. `fa_event_tokens` was never added to the `supabase_realtime` publication. Without that, Postgres doesn't push change events at all, so any subscription is silent.
+2. The admin page's existing `RT.subscribeMulti('fa-registry', ['fa_registry', 'fa_events'], cb)` didn't include the new table, and the callback only refreshed the patient list.
+**Fix:**
+- New SQL `add_fa_event_tokens_realtime.sql` does `ALTER PUBLICATION supabase_realtime ADD TABLE public.fa_event_tokens`, idempotent guard.
+- Extend the admin subscription's table list and callback to also call `fa_loadStaffTokens()` (skipped when the admin card is hidden).
+**Generalisation:** Any new table that needs realtime must be added to the publication AND to a client subscription AND have its callback wired. Easy to forget any one of three.
+
+### Pitfall 4 — Staff supplies UI didn't match admin's
+**Commit:** `cc7f602` (fix)
+**Symptom:** staff.html showed 5 supply tiles (extra "ยา"); admin's Quick Dispense card only has 4. Labels also mismatched ("พลาสเตอร์" vs "พลาสเตอร์ยา", "แผล" vs "ประคบเย็น").
+**Root cause:** I built the staff `SUPPLY_FIELDS` list from memory of the schema (which has `q_meds`) instead of mirroring the admin's actual UI.
+**Fix:** Trim list to 4 items and copy admin labels verbatim. Added a comment "Mirror admin's Quick Dispense card. Keep in sync."
+**Generalisation:** When reproducing a UI element on a second page, source-of-truth-copy from the existing page, don't rebuild from the schema. The schema may have unused or admin-only columns.
+
+---
+
 ## Test checklist for the porter
 
 1. Run the SQL block above on V2's Supabase
@@ -185,11 +232,27 @@ The registry form modal HTML (~150 lines) and `reg_*` JS functions plus `REG_*` 
 
 ## Reference commits in TheGood
 
-- `45029dd` — initial feature (had the RLS bug)
-- `5b16c5a` — anon-write RLS fix
+All on `main` of `https://github.com/officethegood/pt-medical-system`:
 
-Both on `main` of `https://github.com/officethegood/pt-medical-system`.
+- `45029dd` — initial feature (had pitfall #1)
+- `5b16c5a` — anon-write RLS fix (pitfall #1)
+- `9316fc0` — handoff doc rewrite with anon caveat upfront
+- `0ab7c1e` — atomic RPC + realtime supply sync (pitfall #2), v5.10.1
+- `bf63245` — fa_event_tokens realtime sync across admins (pitfall #3)
+- `cc7f602` — staff supplies UI matches admin (pitfall #4)
 
 ---
 
-**TheGood version at port time:** 5.10.0. Confirm Supwilai V2 version separately before deciding whether to bump V2's version after porting.
+## Test checklist for race conditions and realtime
+
+In addition to the basic checklist above, run these to catch the regressions TheGood hit:
+
+1. **Atomic supply +/-** — open the same event as admin in window A and as staff in window B. Mash + on both windows simultaneously a few times. Final number on each side after settle must equal `(admin clicks) + (staff clicks)`. If it's lower, the RPC isn't being called or isn't atomic.
+2. **Cross-admin token visibility** — open the same event as admin in two different browsers (or one admin + one incognito). Admin A creates a token. Admin B should see it appear within ~2s without reloading. If not, either `fa_event_tokens` isn't in the realtime publication, or the client subscription doesn't include it.
+3. **Token revoke broadcast** — Admin A revokes a token while Admin B has the page open. Admin B's row should switch to "Revoked" within ~2s.
+4. **Staff supply realtime** — staff bumps `q_ammonia` → admin's Quick Dispense input updates within ~2s without staff reloading.
+5. **Admin supply realtime** — admin bumps `q_ammonia` → staff's supply tile updates within ~2s.
+
+---
+
+**TheGood version at port time:** 5.10.1. Confirm Supwilai V2 version separately before deciding whether to bump V2's version after porting.
