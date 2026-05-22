@@ -1263,8 +1263,10 @@
           '</div>' +
           '<div class="v-address" title="' + esc(addr) + '" data-vkey="' + esc(key) + '"><i class="bi bi-geo-alt"></i><span>' + esc(addr) + '</span></div>' +
           '<div class="v-actions">' +
-            '<button class="v-action action-cam" onclick="event.stopPropagation(); openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" title="เปิดกล้อง"><i class="bi bi-camera-video-fill"></i><span>กล้อง</span></button>' +
-            '<button class="v-action" onclick="event.stopPropagation(); openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" title="HLS stream"><i class="bi bi-play-circle-fill"></i><span>Stream</span></button>' +
+            (vehicleHasCamera(v)
+              ? '<button class="v-action action-cam" onclick="event.stopPropagation(); openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" title="เปิดกล้อง"><i class="bi bi-camera-video-fill"></i><span>กล้อง</span></button>' +
+                '<button class="v-action" onclick="event.stopPropagation(); openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" title="HLS stream"><i class="bi bi-play-circle-fill"></i><span>Stream</span></button>'
+              : '') +
             (_isAdmin ? '<button class="v-action action-share" onclick="event.stopPropagation(); showShareModal(\'' + v.provider + '\',\'' + v.device_id + '\',\'' + esc(displayName) + '\')" title="สร้างลิงก์แชร์"><i class="bi bi-share-fill"></i><span>แชร์</span></button>' : '') +
           '</div>' +
         '</div>';
@@ -1319,10 +1321,12 @@
               '<i class="bi bi-geo-alt" style="color:#94a3b8;"></i> ' + esc(s.address || '—') +
             '</div>' +
             '<div style="font-size:0.65rem; color:#94a3b8; margin-top:4px;">GPS: ' + esc(s.gpsTime || '--') + '</div>' +
-            '<div style="display:flex; gap:6px; margin-top:10px;">' +
-              '<button onclick="openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" style="flex:1; padding:6px 0; border:none; background:#dc2626; color:#fff; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="bi bi-camera-video-fill"></i> กล้อง</button>' +
-              '<button onclick="openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" style="flex:1; padding:6px 0; border:none; background:#1e3a5f; color:#fff; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="bi bi-play-circle-fill"></i> Stream</button>' +
-            '</div>' +
+            (vehicleHasCamera(v)
+              ? '<div style="display:flex; gap:6px; margin-top:10px;">' +
+                  '<button onclick="openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" style="flex:1; padding:6px 0; border:none; background:#dc2626; color:#fff; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="bi bi-camera-video-fill"></i> กล้อง</button>' +
+                  '<button onclick="openHLS(\'' + v.provider + '\',\'' + v.device_id + '\')" style="flex:1; padding:6px 0; border:none; background:#1e3a5f; color:#fff; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="bi bi-play-circle-fill"></i> Stream</button>' +
+                '</div>'
+              : '') +
           '</div>' +
         '</div>';
 
@@ -1438,6 +1442,14 @@
       var v = _vehicles.find(function(x) { return x.provider === providerId; });
       if (v && v.gps_providers) return v.gps_providers;
       return _providers.find(function(p) { return p.id === providerId; });
+    }
+
+    // Whether a vehicle's GPS provider supports onboard camera.
+    // Cartrack adapter sets hasCamera:false → camera/stream buttons are hidden.
+    function vehicleHasCamera(v) {
+      var sw = v && v.gps_providers && v.gps_providers.software;
+      var a = (typeof getGpsAdapter === 'function') ? getGpsAdapter(sw) : null;
+      return !!(a && a.hasCamera);
     }
 
     function openCamera(providerId, deviceId) {

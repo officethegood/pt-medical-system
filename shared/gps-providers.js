@@ -141,6 +141,8 @@ const GPS_ADAPTERS = {
 
   // ============ CMSV6 ============
   cmsv6: {
+    hasCamera: true,   // 808gps devices have onboard cameras (MDVR)
+
     async login(provider) {
       var url = provider.base_url.replace(/\/$/, '') +
         '/StandardApiAction_login.action?account=' +
@@ -211,13 +213,76 @@ const GPS_ADAPTERS = {
     }
   },
 
-  // ============ อนาคต: เพิ่ม adapter ใหม่ ============
-  // gpsone: {
-  //   async login(provider) { ... },
-  //   async getVehicles(provider, session) { ... },
-  //   async getStatus(provider, session, deviceId) { ... },
-  //   getCameraUrl(provider, deviceId) { ... },
-  // },
+  // ============ CARTRACK (Fleet API) ============
+  // REST + HTTP Basic Auth. HTTPS only — Cartrack sends permissive CORS
+  // headers (access-control-allow-origin: *, allows Authorization header),
+  // verified 2026-05-22, so we call it directly WITHOUT the gpsFetch proxy
+  // chain. There is no login endpoint: Basic Auth is sent on every request.
+  // No camera — hasCamera:false (Fleet API has no MDVR video stream).
+  // Docs: https://developer.cartrack.com/docs/fleet-api-general/overview
+  cartrack: {
+    hasCamera: false,
+
+    // The "session" is just the base64 Basic-Auth credential string.
+    async login(provider) {
+      return btoa(provider.account + ':' + provider.password);
+    },
+
+    // Authenticated direct fetch. base_url example:
+    //   https://fleetapi-th.cartrack.com/rest
+    async _get(provider, session, path) {
+      var base = provider.base_url.replace(/\/+$/, '');
+      var res = await fetch(base + path, {
+        headers: { 'Authorization': 'Basic ' + session },
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error('Cartrack HTTP ' + res.status);
+      return res.json();
+    },
+
+    async getVehicles(provider, session) {
+      var data = await this._get(provider, session, '/vehicles');
+      return (data.data || []).map(function(v) {
+        return {
+          deviceId: String(v.registration || v.vehicle_id || ''),
+          deviceName: v.vehicle_name || v.registration || 'Unknown',
+          sim: v.terminal_serial || ''
+        };
+      });
+    },
+
+    async getStatus(provider, session, deviceId) {
+      // /vehicles/status returns latest status for ALL vehicles in one call.
+      // odometer_in_km=true → odometer already in km (matches cmsv6 mileage unit).
+      var data = await this._get(provider, session, '/vehicles/status?odometer_in_km=true');
+      var all = data.data || [];
+      if (deviceId) {
+        all = all.filter(function(v) { return String(v.registration) === String(deviceId); });
+      }
+      var now = Date.now();
+      return all.map(function(v) {
+        var loc = v.location || {};
+        var ts = v.event_ts || loc.updated || '';
+        // Cartrack has no explicit "online" flag — derive from event recency.
+        // ts format: "2026-05-22 14:05:17+07" → normalise to ISO for Date.parse.
+        var iso = ts ? ts.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00') : '';
+        var tsMs = iso ? Date.parse(iso) : 0;
+        var online = tsMs > 0 && (now - tsMs) < 15 * 60 * 1000;
+        return {
+          deviceId: String(v.registration || v.vehicle_id || ''),
+          lat: loc.latitude || 0,
+          lng: loc.longitude || 0,
+          speed: v.speed || 0,
+          online: online,
+          address: loc.position_description || '',
+          gpsTime: ts,
+          satellites: loc.gps_fix_type || 0,   // 0-3 GPS fix quality (no real sat count)
+          mileage: v.odometer || 0             // km (odometer_in_km=true)
+        };
+      });
+    }
+    // no getCameraUrl / getHlsUrl — Cartrack Fleet API has no camera
+  },
 
 };
 
@@ -238,8 +303,8 @@ function getGpsAdapter(software) {
  */
 function getGpsSoftwareList() {
   return [
-    { id: 'cmsv6', name: 'CMSV6 (Shenzhen Hua Bao)' },
-    // { id: 'gpsone', name: 'GPSOne' },
+    { id: 'cmsv6', name: 'CMSV6 / 808gps (มีกล้อง)' },
+    { id: 'cartrack', name: 'Cartrack Fleet API (ไม่มีกล้อง)' },
     // { id: 'teltonika', name: 'Teltonika' },
     // { id: 'concox', name: 'Concox / Jimi IoT' },
   ];
