@@ -259,21 +259,25 @@ const GPS_ADAPTERS = {
       if (deviceId) {
         all = all.filter(function(v) { return String(v.registration) === String(deviceId); });
       }
-      var now = Date.now();
       return all.map(function(v) {
         var loc = v.location || {};
         var ts = v.event_ts || loc.updated || '';
-        // Cartrack has no explicit "online" flag — derive from event recency.
-        // ts format: "2026-05-22 14:05:17+07" → normalise to ISO for Date.parse.
-        var iso = ts ? ts.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00') : '';
-        var tsMs = iso ? Date.parse(iso) : 0;
-        var online = tsMs > 0 && (now - tsMs) < 15 * 60 * 1000;
+        var spd = v.speed || 0;
+        // Cartrack /vehicles/status has NO online/connected flag (verified against
+        // the API + OpenAPI spec). A parked vehicle still has a live tracker but
+        // a stale event_ts, so recency is a bad "online" proxy. Instead expose a
+        // motion state derived from ignition + speed; gps/index.html vStatus()
+        // turns it into Thai labels (วิ่ง / จอดติดเครื่อง / จอด).
+        //   moving = ignition on & moving, idle = ignition on & stopped,
+        //   parked = ignition off.
+        var motion = v.ignition ? (spd > 0 ? 'moving' : 'idle') : 'parked';
         return {
           deviceId: String(v.registration || v.vehicle_id || ''),
           lat: loc.latitude || 0,
           lng: loc.longitude || 0,
-          speed: v.speed || 0,
-          online: online,
+          speed: spd,
+          online: !!v.ignition,   // ignition on ≈ "active" — used by filter + marker icon
+          motion: motion,         // Cartrack-only field — drives the motion labels
           address: loc.position_description || '',
           gpsTime: ts,
           satellites: loc.gps_fix_type || 0,   // 0-3 GPS fix quality (no real sat count)

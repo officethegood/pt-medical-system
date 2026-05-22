@@ -950,6 +950,43 @@
     var _lastUpdateTicker = null;
     var OVERSPEED_THRESHOLD = 120; // km/h — flag vehicle as overspeed at/above
 
+    // Resolve a vehicle's display status into { cls, label, labelCls, color }.
+    // Two modes — selected by whether the adapter set s.motion:
+    //   - Cartrack adapter sets s.motion ('moving'|'idle'|'parked') → Thai
+    //     motion labels (วิ่ง/จอดติดเครื่อง/จอด).
+    //   - 808gps/cmsv6 leaves s.motion undefined → ORIGINAL online/idle/
+    //     overspeed/offline logic, byte-for-byte unchanged.
+    function vStatus(s, speedNum) {
+      if (!s) return { cls:'offline', label:'OFFLINE', labelCls:'off', color:'#94a3b8' };
+      if (s.motion) {
+        if (s.motion === 'moving') return { cls:'online',  label:'วิ่ง',          labelCls:'on',   color:'#16a34a' };
+        if (s.motion === 'idle')   return { cls:'idle',    label:'จอดติดเครื่อง', labelCls:'idle', color:'#f59e0b' };
+        return                            { cls:'offline', label:'จอด',           labelCls:'off',  color:'#94a3b8' };
+      }
+      // --- 808gps / default path (unchanged behaviour) ---
+      var online = s.online;
+      if (!online)                                       return { cls:'offline',   label:'OFFLINE',   labelCls:'off',  color:'#94a3b8' };
+      if (speedNum >= OVERSPEED_THRESHOLD)               return { cls:'overspeed', label:'OVERSPEED', labelCls:'over', color:'#dc2626' };
+      if (speedNum < 1)                                  return { cls:'idle',      label:'IDLE',      labelCls:'idle', color:'#f59e0b' };
+      return                                                    { cls:'online',    label:'LIVE',      labelCls:'on',   color:'#16a34a' };
+    }
+
+    // Relative "x ago" in Thai. Accepts Cartrack ts "2026-05-22 18:19:45+07".
+    function timeAgo(ts) {
+      if (!ts) return '';
+      var iso = String(ts).replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00');
+      var ms = Date.parse(iso);
+      if (isNaN(ms)) return '';
+      var diff = Date.now() - ms;
+      if (diff < 0) diff = 0;
+      var m = Math.floor(diff / 60000);
+      if (m < 1)  return 'เมื่อสักครู่';
+      if (m < 60) return m + ' นาทีที่แล้ว';
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + ' ชม.ที่แล้ว';
+      return Math.floor(h / 24) + ' วันที่แล้ว';
+    }
+
     // =============================================
     // MAP INIT
     // =============================================
@@ -1240,10 +1277,11 @@
         var addr = s ? (s.address || '—') : '—';
         var displayName = v.nickname || v.device_name || v.device_id;
 
-        // Priority: offline > overspeed > idle > online
-        var statusClass = !s ? 'offline' : (online ? (isOverspeed ? 'overspeed' : (isIdle ? 'idle' : 'online')) : 'offline');
-        var statusLabel = !s ? 'OFFLINE' : (online ? (isOverspeed ? 'OVERSPEED' : (isIdle ? 'IDLE' : 'LIVE')) : 'OFFLINE');
-        var statusLabelClass = !s ? 'off' : (online ? (isOverspeed ? 'over' : (isIdle ? 'idle' : 'on')) : 'off');
+        // Display status — vStatus() keeps 808gps behaviour, adds Cartrack motion labels
+        var vs = vStatus(s, speedNum);
+        var statusClass = vs.cls;
+        var statusLabel = vs.label;
+        var statusLabelClass = vs.labelCls;
 
         // Prefer cached reverse-geocoded Thai admin names if available
         var geoLabel = getCachedGeoLabel(s && s.lat, s && s.lng);
@@ -1262,6 +1300,8 @@
             '</div>' +
           '</div>' +
           '<div class="v-address" title="' + esc(addr) + '" data-vkey="' + esc(key) + '"><i class="bi bi-geo-alt"></i><span>' + esc(addr) + '</span></div>' +
+          // "อัปเดต x ago" — only for adapters that report motion state (Cartrack)
+          ((s && s.motion) ? '<div style="font-size:0.68rem; color:#94a3b8; padding:2px 0 0;"><i class="bi bi-clock-history"></i> อัปเดต ' + esc(timeAgo(s.gpsTime)) + '</div>' : '') +
           '<div class="v-actions">' +
             (vehicleHasCamera(v)
               ? '<button class="v-action action-cam" onclick="event.stopPropagation(); openCamera(\'' + v.provider + '\',\'' + v.device_id + '\')" title="เปิดกล้อง"><i class="bi bi-camera-video-fill"></i><span>กล้อง</span></button>' +
@@ -1295,10 +1335,10 @@
         var online = s.online;
         var speed = s.speed;
 
-        var isIdlePop = online && speed < 1;
-        var isOverspeedPop = online && speed >= OVERSPEED_THRESHOLD;
-        var statusColorPop = !online ? '#94a3b8' : (isOverspeedPop ? '#dc2626' : (isIdlePop ? '#f59e0b' : '#16a34a'));
-        var statusTextPop = !online ? 'OFFLINE' : (isOverspeedPop ? 'OVERSPEED' : (isIdlePop ? 'IDLE' : 'LIVE'));
+        // Same vStatus() resolver as the list — 808gps unchanged, Cartrack gets motion labels
+        var vsPop = vStatus(s, speed);
+        var statusColorPop = vsPop.color;
+        var statusTextPop = vsPop.label;
 
         var popupHtml = '<div style="min-width:230px; font-family:Sarabun,sans-serif;">' +
           '<div style="padding:12px 14px; background:linear-gradient(135deg,#1e3a5f 0%,#0f2847 100%); color:#fff; border-radius:8px 8px 0 0; margin:-10px -10px 0;">' +
