@@ -1,5 +1,5 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v14';
+var CACHE_NAME = 'pt-medical-v15';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
@@ -47,10 +47,15 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
 
-  // Network-first for Supabase API, Cloudinary, GPS API, GAS proxy
+  // Network-first for Supabase API, Cloudinary, GPS APIs, GAS proxy.
+  // GPS providers MUST be here — otherwise the cache-first fallback below
+  // serves stale telematics forever (a real bug we hit in v15: Cartrack
+  // status frozen because cache-first kept returning the first response).
   if (url.indexOf('supabase.co') > -1 || url.indexOf('cloudinary') > -1 ||
       url.indexOf('googleapis.com') > -1 || url.indexOf('script.google.com') > -1 ||
-      url.indexOf('203.170.193') > -1) {
+      url.indexOf('203.170.193') > -1 ||              // supwilai 808gps server
+      url.indexOf('cartrack.com') > -1 ||             // Cartrack Fleet API (any region)
+      url.indexOf('karooooo.com') > -1) {             // Cartrack alt host (KE, SA regions)
     event.respondWith(
       fetch(event.request).catch(function() {
         return caches.match(event.request);
