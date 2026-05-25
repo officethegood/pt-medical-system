@@ -315,8 +315,21 @@ async function handleNotifySend(request, env) {
   if (settings.NOTIFY_LINE_ENABLED === 'true' && env.LINE_ACCESS_TOKEN) {
     results.push({ channel: 'line', ...(await sendLine(env, settings, fullText)) });
   }
-  if (settings.NOTIFY_TELEGRAM_ENABLED === 'true' && env.TELEGRAM_BOT_TOKEN && settings.NOTIFY_TELEGRAM_CHAT_ID) {
-    results.push({ channel: 'telegram', ...(await sendTelegram(env, settings.NOTIFY_TELEGRAM_CHAT_ID, fullText)) });
+  // Telegram destination:
+  //  1) If the caller pinned chat_id in the request body (e.g. Thegood Stock's
+  //     tg-notify forwarding its own NOTIFY_TELEGRAM_CHAT_ID), send to that
+  //     chat — the caller has already gated on its own enable flag, only the
+  //     bot token is required here.
+  //  2) Else (caller did not pin one — e.g. older clients that rely on the
+  //     worker's settings), use the worker's own Supabase settings as before.
+  //     Backward-compatible.
+  if (env.TELEGRAM_BOT_TOKEN) {
+    const overrideChatId = String(body.chat_id || '').trim();
+    if (overrideChatId) {
+      results.push({ channel: 'telegram', ...(await sendTelegram(env, overrideChatId, fullText)) });
+    } else if (settings.NOTIFY_TELEGRAM_ENABLED === 'true' && settings.NOTIFY_TELEGRAM_CHAT_ID) {
+      results.push({ channel: 'telegram', ...(await sendTelegram(env, settings.NOTIFY_TELEGRAM_CHAT_ID, fullText)) });
+    }
   }
   if (results.length > 0) {
     await sbInsert(env, 'notification_log', results.map(r => ({
