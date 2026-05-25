@@ -829,7 +829,16 @@
             <input type="text" id="share-reason" class="form-control" placeholder="เช่น แชร์ให้ญาติผู้ป่วยติดตาม" style="border-radius:8px;">
           </div>
 
-          <label class="camera-toggle-card" for="share-allow-camera">
+          <label class="camera-toggle-card" for="share-show-speed" style="margin-bottom:10px;">
+            <input type="checkbox" id="share-show-speed" checked>
+            <div class="toggle-content">
+              <div class="toggle-label"><i class="bi bi-speedometer2"></i>แสดงความเร็ว (km/h)</div>
+              <div class="toggle-desc">ปิดเพื่อซ่อนตัวเลขความเร็วจากผู้รับลิงก์ (สถานะ ONLINE/IDLE/OFFLINE ยังคงแสดง)</div>
+            </div>
+          </label>
+
+          <!-- Camera toggle — hidden by showShareModal() when the vehicle's adapter has no camera (e.g. Cartrack). -->
+          <label class="camera-toggle-card" for="share-allow-camera" id="share-camera-toggle-card">
             <input type="checkbox" id="share-allow-camera">
             <div class="toggle-content">
               <div class="toggle-label"><i class="bi bi-camera-video-fill"></i>อนุญาตให้เปิดกล้อง</div>
@@ -1520,8 +1529,17 @@
       if (nameDisplay) nameDisplay.textContent = vehicleName;
       document.getElementById('share-result').style.display = 'none';
       document.getElementById('share-reason').value = '';
+      document.getElementById('share-show-speed').checked = true;
       document.getElementById('share-allow-camera').checked = false;
       document.getElementById('share-hours').value = '6';
+
+      // Hide the camera toggle entirely when the provider's adapter has no camera
+      // (e.g. Cartrack). Avoids offering a non-functional option.
+      var provObj = getProviderObj(providerId);
+      var adapter = (provObj && typeof getGpsAdapter === 'function') ? getGpsAdapter(provObj.software) : null;
+      var hasCam = !!(adapter && adapter.hasCamera);
+      var camCard = document.getElementById('share-camera-toggle-card');
+      if (camCard) camCard.style.display = hasCam ? '' : 'none';
       // Reset segmented buttons
       document.querySelectorAll('#share-hours-group .segmented-btn').forEach(function(b) {
         b.classList.toggle('active', b.dataset.h === '6');
@@ -1557,11 +1575,13 @@
         var token = 'TK-' + crypto.randomUUID().substring(0, 8).toUpperCase();
         var expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
         var allowCamera = document.getElementById('share-allow-camera').checked;
+        var showSpeed = document.getElementById('share-show-speed').checked;
 
         await _supabase.from('gps_shared_tokens').insert({
           token: token, device_id: deviceId, provider: providerId,
           expires_at: expiresAt, created_by: getUserName(), reason: reason,
-          allow_camera: allowCamera
+          allow_camera: allowCamera,
+          show_speed: showSpeed
         });
 
         var shareUrl = window.location.origin + CONFIG.BASE_URL + '/gps/share.html?token=' + token;

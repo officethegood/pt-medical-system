@@ -378,6 +378,15 @@
           document.getElementById('btnCamera').style.display = '';
         }
 
+        // show_speed defaults true when the column/value is absent (back-compat with tokens
+        // created before the migration). Only hide when explicitly false.
+        if (_tokenData.show_speed === false) {
+          var sd = document.querySelector('.speed-display');
+          if (sd) sd.style.display = 'none';
+          var ml = document.querySelector('.metric-box .metric-label');
+          if (ml) ml.style.display = 'none';
+        }
+
         document.getElementById('headerReason').textContent = _tokenData.reason
           ? '\u00A0' + _tokenData.reason
           : '';
