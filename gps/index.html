@@ -1828,6 +1828,11 @@
       var badNameRe = /ห้องพัก|หอพัก|รีสอร์ท|รีสอร์ต|โรงแรม|hotel|hostel|resort|apartment|อพาร์ท|คอนโด|condo|B&B|guest.?house|pet|สัตว์|สัตวแพทย์|vet|นวด|massage|salon|สปา|spa|แว่น|optic|eyewear|眼镜|镜|พระเครื่อง|โชคดี.?ห้อง/i;
       // For hospital UI — also exclude names that start with "คลินิก" / "Clinic"
       var hospitalNameRe = /^\s*(คลินิก|clinic)/i;
+      // For hospital UI — POSITIVE filter: name MUST contain a hospital marker.
+      // Google tags many sub-buildings of a hospital complex (ICU wards, training
+      // centres, lifts, cadaver facilities) with primaryType=hospital, so a name
+      // check is the only way to keep the list to actual destinations.
+      var hospitalAllowRe = /โรงพยาบาล|รพ\.|ร\s*\.\s*พ\.?|ศูนย์(?:การ)?แพทย์|hospital|medical\s+cent|infirmary/i;
 
       return places.filter(function(p){
         var types = p.types || [];
@@ -1837,7 +1842,10 @@
         }
         if (p.name) {
           if (badNameRe.test(p.name)) return false;
-          if (uiType === 'hospital' && hospitalNameRe.test(p.name)) return false;
+          if (uiType === 'hospital') {
+            if (hospitalNameRe.test(p.name)) return false;       // starts with คลินิก/Clinic
+            if (!hospitalAllowRe.test(p.name)) return false;     // must contain โรงพยาบาล/รพ./ศูนย์การแพทย์/hospital/...
+          }
         }
         return true;
       });
