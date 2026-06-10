@@ -843,7 +843,7 @@
             <input type="hidden" id="share-dest-label">
             <!-- Destination picker — revealed only when mode = "route" -->
             <div id="share-dest-picker" style="display:none; margin-top:10px;">
-              <input type="text" id="share-dest-search" class="form-control" placeholder="พิมพ์ชื่อ หรือ วางลิงก์ Google Maps..." style="border-radius:8px;" autocomplete="off">
+              <input type="text" id="share-dest-search" class="form-control" placeholder="ชื่อสถานที่ / ลิงก์ Google Maps / พิกัด lat,lng" style="border-radius:8px;" autocomplete="off">
               <div id="share-dest-results" style="margin-top:4px;"></div>
               <div id="share-dest-selected" style="display:none; margin-top:6px; padding:8px 12px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; font-size:0.82rem; color:#065f46;">
                 <i class="bi bi-geo-alt-fill"></i> <span id="share-dest-selected-label"></span>
@@ -1692,6 +1692,16 @@
       box.innerHTML = '<div style="padding:6px 10px; color:#dc2626; font-size:0.8rem;">ขยายลิงก์ย่อไม่สำเร็จ — เปิดลิงก์ใน Google Maps แล้วคัดลอก URL แบบเต็มมาวาง</div>';
     }
 
+    // Parse raw "lat, lng" text (e.g. "13.7596, 100.4857"). Requires a decimal
+    // point and valid ranges to avoid matching plain address numbers.
+    function gpsParseLatLng(s) {
+      var m = String(s).trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+      if (!m || s.indexOf('.') < 0) return null;
+      var lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+      if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat: lat, lng: lng };
+      return null;
+    }
+
     var _shareDestTimer = null;
     (function bindShareDestSearch() {
       var input = document.getElementById('share-dest-search');
@@ -1703,6 +1713,12 @@
         // Pasted a Google Maps link? Resolve coords instead of text search.
         if (/^https?:\/\//i.test(q)) {
           _shareDestTimer = setTimeout(function() { resolveShareDestLink(q); }, 200);
+          return;
+        }
+        // Raw "lat, lng" coordinates?
+        var ll = gpsParseLatLng(q);
+        if (ll) {
+          selectShareDest(ll.lat.toFixed(6), ll.lng.toFixed(6), 'พิกัด ' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5));
           return;
         }
         if (q.length < 3) { box.innerHTML = ''; return; }
