@@ -829,6 +829,21 @@
             <input type="text" id="share-reason" class="form-control" placeholder="เช่น แชร์ให้ญาติผู้ป่วยติดตาม" style="border-radius:8px;">
           </div>
 
+          <!-- Destination (optional) — if set, the share page shows route + live ETA.
+               Requires Google Maps key (MapConfig.useGoogle()); hidden otherwise. -->
+          <div class="mb-3" id="share-dest-wrap" style="display:none;">
+            <label class="field-label">จุดหมายปลายทาง <span style="color:var(--slate-400); font-weight:400;">(ไม่บังคับ — ใส่เพื่อแสดงเส้นทาง + ETA)</span></label>
+            <input type="hidden" id="share-dest-lat">
+            <input type="hidden" id="share-dest-lng">
+            <input type="hidden" id="share-dest-label">
+            <input type="text" id="share-dest-search" class="form-control" placeholder="พิมพ์ชื่อสถานที่ (≥3 ตัว)..." style="border-radius:8px;" autocomplete="off">
+            <div id="share-dest-results" style="margin-top:4px;"></div>
+            <div id="share-dest-selected" style="display:none; margin-top:6px; padding:8px 12px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; font-size:0.82rem; color:#065f46;">
+              <i class="bi bi-geo-alt-fill"></i> <span id="share-dest-selected-label"></span>
+              <button type="button" onclick="clearShareDest()" style="float:right; border:none; background:none; color:#dc2626; cursor:pointer; font-weight:700;">&times;</button>
+            </div>
+          </div>
+
           <label class="camera-toggle-card" for="share-show-speed" style="margin-bottom:10px;">
             <input type="checkbox" id="share-show-speed" checked>
             <div class="toggle-content">
@@ -1540,6 +1555,15 @@
       var hasCam = !!(adapter && adapter.hasCamera);
       var camCard = document.getElementById('share-camera-toggle-card');
       if (camCard) camCard.style.display = hasCam ? '' : 'none';
+
+      // Destination picker — only when Google Maps key is configured (ETA needs Directions)
+      clearShareDest();
+      document.getElementById('share-dest-search').value = '';
+      document.getElementById('share-dest-results').innerHTML = '';
+      var destWrap = document.getElementById('share-dest-wrap');
+      var canEta = !!(window.MapConfig && MapConfig.useGoogle && MapConfig.useGoogle() && MapConfig.getConfig().apiKey);
+      if (destWrap) destWrap.style.display = canEta ? '' : 'none';
+
       // Reset segmented buttons
       document.querySelectorAll('#share-hours-group .segmented-btn').forEach(function(b) {
         b.classList.toggle('active', b.dataset.h === '6');
@@ -1561,6 +1585,62 @@
       });
     })();
 
+    // ---- Destination picker (Places text search, debounced) ----
+    function clearShareDest() {
+      document.getElementById('share-dest-lat').value = '';
+      document.getElementById('share-dest-lng').value = '';
+      document.getElementById('share-dest-label').value = '';
+      document.getElementById('share-dest-selected').style.display = 'none';
+      document.getElementById('share-dest-results').innerHTML = '';
+      document.getElementById('share-dest-search').value = '';
+    }
+
+    function selectShareDest(lat, lng, label) {
+      document.getElementById('share-dest-lat').value = lat;
+      document.getElementById('share-dest-lng').value = lng;
+      document.getElementById('share-dest-label').value = label;
+      document.getElementById('share-dest-selected-label').textContent = label;
+      document.getElementById('share-dest-selected').style.display = '';
+      document.getElementById('share-dest-results').innerHTML = '';
+      document.getElementById('share-dest-search').value = '';
+    }
+
+    var _shareDestTimer = null;
+    (function bindShareDestSearch() {
+      var input = document.getElementById('share-dest-search');
+      if (!input) return;
+      input.addEventListener('input', function() {
+        clearTimeout(_shareDestTimer);
+        var q = this.value.trim();
+        var box = document.getElementById('share-dest-results');
+        if (q.length < 3) { box.innerHTML = ''; return; }
+        _shareDestTimer = setTimeout(async function() {
+          if (!window.PlacesAPI) return;
+          box.innerHTML = '<div style="padding:6px 10px; color:#94a3b8; font-size:0.8rem;">กำลังค้นหา...</div>';
+          try {
+            // Bias to the selected vehicle's current position if available
+            var origin = (typeof _hospitalOrigin === 'object' && _hospitalOrigin) ? _hospitalOrigin : null;
+            var places = await PlacesAPI.searchText({ query: q, lat: origin ? origin.lat : null, lng: origin ? origin.lng : null, radius: 50000, maxResults: 6 });
+            if (!places || !places.length) { box.innerHTML = '<div style="padding:6px 10px; color:#94a3b8; font-size:0.8rem;">ไม่พบสถานที่</div>'; return; }
+            box.innerHTML = places.map(function(p) {
+              return '<button type="button" class="share-dest-item" data-lat="' + p.lat + '" data-lng="' + p.lng + '" data-label="' + esc(p.name) + '" style="display:block; width:100%; text-align:left; padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:4px; background:#fff; cursor:pointer;">' +
+                '<div style="font-weight:600; font-size:0.85rem; color:#1e293b;">' + esc(p.name) + '</div>' +
+                '<div style="font-size:0.72rem; color:#64748b;">' + esc(p.address || '') + '</div>' +
+                '</button>';
+            }).join('');
+          } catch (e) {
+            box.innerHTML = '<div style="padding:6px 10px; color:#dc2626; font-size:0.8rem;">ค้นหาไม่สำเร็จ: ' + esc(e.message || e) + '</div>';
+          }
+        }, 300);
+      });
+      // Result click (delegated)
+      document.getElementById('share-dest-results').addEventListener('click', function(e) {
+        var btn = e.target.closest('.share-dest-item');
+        if (!btn) return;
+        selectShareDest(parseFloat(btn.dataset.lat), parseFloat(btn.dataset.lng), btn.dataset.label);
+      });
+    })();
+
     async function createShareToken() {
       var deviceId = document.getElementById('share-device-id').value;
       var providerId = document.getElementById('share-provider-id').value;
@@ -1577,12 +1657,23 @@
         var allowCamera = document.getElementById('share-allow-camera').checked;
         var showSpeed = document.getElementById('share-show-speed').checked;
 
-        await _supabase.from('gps_shared_tokens').insert({
+        var row = {
           token: token, device_id: deviceId, provider: providerId,
           expires_at: expiresAt, created_by: getUserName(), reason: reason,
           allow_camera: allowCamera,
           show_speed: showSpeed
-        });
+        };
+        // Optional destination → share page shows route + ETA
+        var dLat = document.getElementById('share-dest-lat').value;
+        var dLng = document.getElementById('share-dest-lng').value;
+        if (dLat && dLng) {
+          row.dest_lat = parseFloat(dLat);
+          row.dest_lng = parseFloat(dLng);
+          row.dest_label = document.getElementById('share-dest-label').value || null;
+          row.dest_locked_at = new Date().toISOString();
+        }
+
+        await _supabase.from('gps_shared_tokens').insert(row);
 
         var shareUrl = window.location.origin + CONFIG.BASE_URL + '/gps/share.html?token=' + token;
         document.getElementById('share-url').value = shareUrl;

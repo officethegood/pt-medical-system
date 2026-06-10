@@ -304,6 +304,12 @@
             <span class="status-badge off" id="statusBadge"><span class="dot"></span>OFFLINE</span>
           </div>
         </div>
+        <!-- ETA box — shown only when the token has a destination -->
+        <div class="metric-box" id="etaBox" style="display:none;">
+          <div class="metric-label"><i class="bi bi-signpost-2"></i> ถึงใน</div>
+          <div class="speed-display"><span id="etaDisplay">--</span></div>
+          <div style="margin-top:4px; font-size:0.7rem; color:var(--slate-500, #64748b);" id="etaDistance">--</div>
+        </div>
       </div>
     </div>
 
@@ -335,6 +341,15 @@
     var _marker = null;
     var _map = null;
     var _refreshInterval = null;
+    // Destination / ETA state (only used when token has dest_lat)
+    var _lastVehiclePos = null;
+    var _destMarker = null;
+    var _routeLine = null;
+    var _etaSeconds = null;   // last server-reported ETA
+    var _etaAt = null;        // Date.now() when _etaSeconds was set
+    var _gmapsReady = false;
+    var _etaPollTimer = null;
+    var _etaTickTimer = null;
 
     async function init() {
       _supabase = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
@@ -405,6 +420,11 @@
         updateExpireCountdown();
         setInterval(updateExpireCountdown, 1000);
 
+        // Destination route + ETA (only if the token carries a destination)
+        if (_tokenData.dest_lat != null && _tokenData.dest_lng != null) {
+          startEtaTracking();
+        }
+
       } catch(e) {
         console.error(e);
         showError('เกิดข้อผิดพลาด', e.message);
@@ -468,12 +488,15 @@
             iconSize: [40, 40], iconAnchor: [20, 20]
           });
 
+          _lastVehiclePos = { lat: s.lat, lng: s.lng };
           if (_marker) {
             _marker.setLatLng([s.lat, s.lng]);
             _marker.setIcon(icon);
           } else {
             _marker = L.marker([s.lat, s.lng], { icon: icon }).addTo(_map);
-            _map.setView([s.lat, s.lng], 15);
+            // Only auto-center on the vehicle when there's no destination route
+            // (with a route we fit both points instead — see refreshRoute)
+            if (!(_tokenData && _tokenData.dest_lat)) _map.setView([s.lat, s.lng], 15);
           }
         }
 
@@ -498,6 +521,8 @@
       if (diff <= 0) {
         document.getElementById('expireText').textContent = 'ลิงก์หมดอายุแล้ว';
         if (_refreshInterval) { clearInterval(_refreshInterval); _refreshInterval = null; }
+        if (_etaPollTimer) { clearInterval(_etaPollTimer); _etaPollTimer = null; }
+        if (_etaTickTimer) { clearInterval(_etaTickTimer); _etaTickTimer = null; }
         return;
       }
 
@@ -535,6 +560,95 @@
       document.getElementById('errorPage').style.display = '';
       document.getElementById('errorTitle').textContent = title;
       document.getElementById('errorMsg').textContent = msg;
+    }
+
+    // =============================================
+    // DESTINATION ROUTE + ETA (client-side DirectionsService)
+    // Single Google Maps key (referrer-restricted to officethegood.github.io,
+    // which serves this page). No Cloudflare Worker, no server key.
+    // =============================================
+    async function ensureGoogleMaps() {
+      if (window.google && window.google.maps && google.maps.DirectionsService) { _gmapsReady = true; return true; }
+      var key = '';
+      try {
+        var r = await _supabase.from('settings').select('value').eq('key', 'GOOGLE_MAPS_API_KEY').maybeSingle();
+        key = (r.data && r.data.value) || '';
+      } catch (e) {}
+      if (!key || key.length < 20) return false;  // no real key → ETA disabled gracefully
+      try {
+        await new Promise(function(resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key);
+          s.onload = resolve; s.onerror = function() { reject(new Error('maps sdk load failed')); };
+          document.head.appendChild(s);
+        });
+        await new Promise(function(r) { setTimeout(r, 800); });
+      } catch (e) { return false; }
+      _gmapsReady = !!(window.google && window.google.maps && google.maps.DirectionsService);
+      return _gmapsReady;
+    }
+
+    async function startEtaTracking() {
+      document.getElementById('etaBox').style.display = '';
+      var dlat = Number(_tokenData.dest_lat), dlng = Number(_tokenData.dest_lng);
+
+      var destIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:34px;height:34px;background:#dc2626;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;"><i class="bi bi-flag-fill" style="transform:rotate(45deg);color:#fff;font-size:13px;"></i></div>',
+        iconSize: [34, 34], iconAnchor: [17, 34]
+      });
+      _destMarker = L.marker([dlat, dlng], { icon: destIcon }).addTo(_map);
+      if (_tokenData.dest_label) _destMarker.bindPopup(_tokenData.dest_label);
+
+      var ok = await ensureGoogleMaps();
+      if (!ok) {
+        document.getElementById('etaDisplay').textContent = '—';
+        document.getElementById('etaDistance').textContent = 'ไม่พร้อมคำนวณ';
+        return;
+      }
+      await refreshRoute();
+      _etaPollTimer = setInterval(refreshRoute, 30000);  // recompute route every 30s
+      _etaTickTimer = setInterval(tickEta, 1000);        // local countdown every 1s
+    }
+
+    function refreshRoute() {
+      if (!_gmapsReady || !_lastVehiclePos) return;
+      var ds = new google.maps.DirectionsService();
+      var dlat = Number(_tokenData.dest_lat), dlng = Number(_tokenData.dest_lng);
+      ds.route({
+        origin: { lat: _lastVehiclePos.lat, lng: _lastVehiclePos.lng },
+        destination: { lat: dlat, lng: dlng },
+        travelMode: google.maps.TravelMode.DRIVING
+      }, function(res, status) {
+        if (status !== 'OK' || !res || !res.routes || !res.routes[0]) {
+          document.getElementById('etaDistance').textContent = 'หาเส้นทางไม่ได้';
+          return;
+        }
+        var leg = res.routes[0].legs[0];
+        _etaSeconds = leg.duration_in_traffic ? leg.duration_in_traffic.value : leg.duration.value;
+        _etaAt = Date.now();
+        document.getElementById('etaDistance').textContent = leg.distance.text;
+        // DirectionsResult gives lat/lng objects directly — no polyline decoding needed
+        var pts = res.routes[0].overview_path.map(function(p) { return [p.lat(), p.lng()]; });
+        if (_routeLine) { _routeLine.setLatLngs(pts); }
+        else { _routeLine = L.polyline(pts, { color: '#1e3a5f', weight: 5, opacity: 0.75 }).addTo(_map); }
+        try { _map.fitBounds(_routeLine.getBounds().pad(0.15)); } catch (e) {}
+        tickEta();
+      });
+    }
+
+    function tickEta() {
+      if (_etaSeconds == null) return;
+      var elapsed = (Date.now() - _etaAt) / 1000;
+      var eta = Math.max(0, _etaSeconds - elapsed);
+      document.getElementById('etaDisplay').textContent = formatEta(eta);
+    }
+
+    function formatEta(sec) {
+      var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+      if (m >= 60) { var h = Math.floor(m / 60); return h + ' ชม. ' + (m % 60) + ' น.'; }
+      if (m >= 1) return m + ' น. ' + (s < 10 ? '0' : '') + s + ' วิ.';
+      return s + ' วินาที';
     }
 
     // Load Supabase UMD, then init
