@@ -829,18 +829,26 @@
             <input type="text" id="share-reason" class="form-control" placeholder="เช่น แชร์ให้ญาติผู้ป่วยติดตาม" style="border-radius:8px;">
           </div>
 
-          <!-- Destination (optional) — if set, the share page shows route + live ETA.
-               Requires Google Maps key (MapConfig.useGoogle()); hidden otherwise. -->
+          <!-- Share mode — explicit choice between live-only and route+ETA.
+               Whole block requires a Google Maps key; hidden otherwise (live-only
+               is then the implicit behaviour). -->
           <div class="mb-3" id="share-dest-wrap" style="display:none;">
-            <label class="field-label">จุดหมายปลายทาง <span style="color:var(--slate-400); font-weight:400;">(ไม่บังคับ — ใส่เพื่อแสดงเส้นทาง + ETA)</span></label>
+            <label class="field-label">โหมดการแชร์</label>
+            <div class="segmented-group" id="share-dest-mode-group">
+              <button type="button" class="segmented-btn active" data-mode="live"><i class="bi bi-broadcast"></i> ติดตามอย่างเดียว</button>
+              <button type="button" class="segmented-btn" data-mode="route"><i class="bi bi-signpost-2"></i> มีปลายทาง + ETA</button>
+            </div>
             <input type="hidden" id="share-dest-lat">
             <input type="hidden" id="share-dest-lng">
             <input type="hidden" id="share-dest-label">
-            <input type="text" id="share-dest-search" class="form-control" placeholder="พิมพ์ชื่อสถานที่ (≥3 ตัว)..." style="border-radius:8px;" autocomplete="off">
-            <div id="share-dest-results" style="margin-top:4px;"></div>
-            <div id="share-dest-selected" style="display:none; margin-top:6px; padding:8px 12px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; font-size:0.82rem; color:#065f46;">
-              <i class="bi bi-geo-alt-fill"></i> <span id="share-dest-selected-label"></span>
-              <button type="button" onclick="clearShareDest()" style="float:right; border:none; background:none; color:#dc2626; cursor:pointer; font-weight:700;">&times;</button>
+            <!-- Destination picker — revealed only when mode = "route" -->
+            <div id="share-dest-picker" style="display:none; margin-top:10px;">
+              <input type="text" id="share-dest-search" class="form-control" placeholder="พิมพ์ชื่อปลายทาง (≥3 ตัว)..." style="border-radius:8px;" autocomplete="off">
+              <div id="share-dest-results" style="margin-top:4px;"></div>
+              <div id="share-dest-selected" style="display:none; margin-top:6px; padding:8px 12px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; font-size:0.82rem; color:#065f46;">
+                <i class="bi bi-geo-alt-fill"></i> <span id="share-dest-selected-label"></span>
+                <button type="button" onclick="clearShareDest()" style="float:right; border:none; background:none; color:#dc2626; cursor:pointer; font-weight:700;">&times;</button>
+              </div>
             </div>
           </div>
 
@@ -1556,10 +1564,10 @@
       var camCard = document.getElementById('share-camera-toggle-card');
       if (camCard) camCard.style.display = hasCam ? '' : 'none';
 
-      // Destination picker — only when Google Maps key is configured (ETA needs Directions)
+      // Share mode — only offered when a Google Maps key is configured (ETA needs Directions).
+      // Default to "live" (no destination); admin can switch to "route" to add ETA.
       clearShareDest();
-      document.getElementById('share-dest-search').value = '';
-      document.getElementById('share-dest-results').innerHTML = '';
+      setShareMode('live');
       var destWrap = document.getElementById('share-dest-wrap');
       var canEta = !!(window.MapConfig && MapConfig.useGoogle && MapConfig.useGoogle() && MapConfig.getConfig().apiKey);
       if (destWrap) destWrap.style.display = canEta ? '' : 'none';
@@ -1582,6 +1590,29 @@
         });
         btn.classList.add('active');
         document.getElementById('share-hours').value = btn.dataset.h;
+      });
+    })();
+
+    // ---- Share mode toggle: live-only vs route+ETA ----
+    function setShareMode(mode) {
+      document.querySelectorAll('#share-dest-mode-group .segmented-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+      var picker = document.getElementById('share-dest-picker');
+      if (mode === 'route') {
+        picker.style.display = '';
+      } else {
+        picker.style.display = 'none';
+        clearShareDest();   // live-only → no destination
+      }
+    }
+    (function bindShareModeButtons() {
+      var grp = document.getElementById('share-dest-mode-group');
+      if (!grp) return;
+      grp.addEventListener('click', function(e) {
+        var btn = e.target.closest('.segmented-btn');
+        if (!btn) return;
+        setShareMode(btn.dataset.mode);
       });
     })();
 
