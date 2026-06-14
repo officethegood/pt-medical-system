@@ -930,7 +930,7 @@
                    <label class="fw-bold fs-7 text-secondary mb-2">อุปกรณ์ออกซิเจน (Oxygen Device)</label>
                    <select class="form-select bg-light border-0 shadow-none mb-3 w-50" id="sel-o2-device" name="o2_device" onchange="updateO2Detail()"></select>
                    <div id="o2-detail-panel" class="row g-3 d-none bg-light p-3 rounded-3 border">
-                      <div class="col-md-4" id="grp-o2-flow"><label class="fs-8 fw-bold text-secondary">Flow/Rate (LPM)</label><input type="text" name="o2_flow" class="form-control"></div>
+                      <div class="col-md-4" id="grp-o2-flow"><label class="fs-8 fw-bold text-secondary">Flow/Rate (LPM)</label><input type="text" name="o2_flow" class="form-control" oninput="generatePhysicalSummary()"></div>
                       <div class="col-md-4" id="grp-o2-fio2"><label class="fs-8 fw-bold text-secondary">FiO2 / Conc.</label><input type="text" name="o2_conc" class="form-control"></div>
                       <div class="col-md-4" id="grp-o2-temp"><label class="fs-8 fw-bold text-secondary">Temp</label><input type="text" name="o2_temp" class="form-control"></div>
                    </div>
@@ -3746,7 +3746,10 @@
        if(document.getElementById('chk-ventilator').checked) {
          breathing = "On Vent (" + document.querySelector('input[name="vent_mode"]:checked').value + ")";
        } else {
-         breathing = document.getElementById('sel-o2-device').value;
+         var oDev = document.getElementById('sel-o2-device').value;
+         var oFlowEl = document.querySelector('[name="o2_flow"]');
+         var oFlow = oFlowEl ? (oFlowEl.value || '').trim() : '';
+         breathing = oDev + (oFlow ? ' ' + oFlow + (/lpm/i.test(oFlow) ? '' : ' Lpm') : '');
        }
        document.getElementById('summ-airway').innerHTML = '<i class="bi bi-lungs me-1"></i> ' + airway;
        document.getElementById('summ-vent').innerHTML = '<i class="bi bi-wind me-1"></i> ' + breathing;
@@ -4375,7 +4378,10 @@
 
         d.airway = getVal('airway_type');
         var isVent = document.getElementById('chk-ventilator').checked;
-        d.breathing = isVent ? 'Ventilator (' + getVal('vent_mode') + ')' : 'Spontaneous (' + getVal('o2_device') + ')';
+        var o2Dev = getVal('o2_device');
+        var o2Flow = (getVal('o2_flow') || '').trim();
+        var o2Str = o2Dev + (o2Flow ? ' ' + o2Flow + (/lpm/i.test(o2Flow) ? '' : ' Lpm') : '');
+        d.breathing = isVent ? 'Ventilator (' + getVal('vent_mode') + ')' : 'Spontaneous (' + o2Str + ')';
         d.circStatus = getVal('circ_status');
         d.ekg = getVal('circ_ekg');
         d.centralLine = getChk('has_central_line') ? ('Yes - ' + (getVal('central_line_pos') || 'N/A')) : 'No';
