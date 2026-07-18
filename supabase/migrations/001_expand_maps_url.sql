@@ -1,4 +1,7 @@
 -- ============================================================
+-- ⚠️ DEPRECATED (2026-07-18): เวอร์ชันนี้มีบั๊กพิกัดมั่วกับลิงก์แชร์รุ่นใหม่
+-- ห้ามรันไฟล์นี้ซ้ำ — ใช้ sql/fix_expand_maps_url_v3_new_share_links.sql แทน
+-- ============================================================
 -- Supabase Database Function: expand_maps_url
 -- ทำหน้าที่เหมือน GAS loc_expandGoogleMapsLink()
 -- ใช้ unshorten.me API เพื่อขยายลิงก์ย่อ แล้ว parse พิกัด

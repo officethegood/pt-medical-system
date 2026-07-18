@@ -790,8 +790,27 @@
       }
     }
 
+    // Parse DMS coordinates เช่น 13°40'36.7"N 100°37'44.0"E (keep in sync กับ
+    // gpsParseDMS ใน gps/index.html)
+    function loc_parseDMS(s) {
+      var m = String(s || '').match(/(\d{1,2})\s*[°º]\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*["″]\s*([NSns])[\s,]+(\d{1,3})\s*[°º]\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*["″]\s*([EWew])/);
+      if (!m) return null;
+      var lat = (+m[1]) + (+m[2]) / 60 + (+m[3]) / 3600;
+      if (/s/i.test(m[4])) lat = -lat;
+      var lng = (+m[5]) + (+m[6]) / 60 + (+m[7]) / 3600;
+      if (/w/i.test(m[8])) lng = -lng;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+      return { lat: lat, lng: lng };
+    }
+
     // Parse various Google Maps URL formats to extract lat/lng
     function loc_parseGoogleMapsUrl(url) {
+      // DMS ก่อน — ทั้งวางพิกัด DMS ตรงๆ และ URL ที่ฝัง DMS แบบ encoded
+      // (เช่น /place/13%C2%B040'36.7%22N+100%C2%B037'44.0%22E/...)
+      try {
+        var dms = loc_parseDMS(decodeURIComponent(String(url).replace(/\+/g, ' ')));
+        if (dms) return { lat: dms.lat.toFixed(6), lng: dms.lng.toFixed(6) };
+      } catch (e) {}
       var patterns = [
         // !3d(lat)!4d(lng) — pin/place data in Maps URL
         /!3d([-]?[0-9]+\.[0-9]+)!4d([-]?[0-9]+\.[0-9]+)/,
@@ -850,8 +869,15 @@
           setCoords({ lat: rpcData.lat, lng: rpcData.lng });
           return;
         }
-        // RPC returned resolved URL but couldn't parse coords — try our local parser
-        if (rpcData && rpcData.resolved_url) {
+        // ลิงก์แชร์รุ่นใหม่จากแอปไม่มีพิกัด — RPC (v3) คืนชื่อ/ที่อยู่มา geocode ต่อ
+        if (rpcData && rpcData.query_text) {
+          loc_geocodeQueryText(rpcData.query_text, st, setCoords);
+          return;
+        }
+        // resolved_url ใช้ได้เฉพาะเมื่อเป็น URL จริง — RPC รุ่นเก่าเคยคืน HTML
+        // ทั้งหน้า ซึ่ง regex แล้วได้พิกัดมั่ว (จุดกลางแผนที่ตาม IP server)
+        if (rpcData && typeof rpcData.resolved_url === 'string' &&
+            rpcData.resolved_url.length < 2048 && rpcData.resolved_url.indexOf('<') < 0) {
           var coords = loc_parseGoogleMapsUrl(rpcData.resolved_url);
           if (coords) { setCoords(coords); return; }
         }
@@ -874,12 +900,44 @@
         if (edgeData.resolvedUrl) {
           var coords = loc_parseGoogleMapsUrl(edgeData.resolvedUrl);
           if (coords) { setCoords(coords); return; }
+          // URL ปลายทางไม่มีพิกัด แต่มี ?q=<ชื่อ/ที่อยู่> (ลิงก์แชร์รุ่นใหม่)
+          var qm = String(edgeData.resolvedUrl).match(/[?&]q=([^&]+)/);
+          if (qm) {
+            try {
+              var qText = decodeURIComponent(qm[1].replace(/\+/g, ' ')).trim();
+              if (qText) { loc_geocodeQueryText(qText, st, setCoords); return; }
+            } catch (e2) {}
+          }
         }
       } catch (e) { console.warn('Edge Function failed:', e); }
 
       // All strategies failed
       st.innerHTML = '[ไม่สำเร็จ] ไม่สามารถขยายลิงก์ย่อได้ — <b>วิธีแก้:</b> เปิดลิงก์ใน Google Maps → คัดลอก URL แบบเต็มมาวาง';
       st.className = 'small fw-medium text-danger mt-1 mb-0';
+    }
+
+    // ลิงก์แชร์รุ่นใหม่ให้มาแค่ชื่อ/ที่อยู่ — geocode เป็นพิกัดด้วย Google Geocoder
+    // (ใช้ Maps JS SDK ผ่าน MapConfig — key แบบ referrer-restricted ใช้ได้)
+    async function loc_geocodeQueryText(text, st, setCoords) {
+      st.textContent = '[กำลังค้นหาที่อยู่จากลิงก์...]';
+      st.className = 'small fw-medium text-info mt-1 mb-0';
+      try {
+        await MapConfig.loadGoogleSDK();
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: text, region: 'TH', language: 'th' }, function(results, status) {
+          if (status === 'OK' && results && results[0] && results[0].geometry) {
+            var l = results[0].geometry.location;
+            setCoords({ lat: l.lat().toFixed(6), lng: l.lng().toFixed(6) });
+            st.textContent = '[สำเร็จ] ได้พิกัดจากที่อยู่ในลิงก์: ' + text;
+            return;
+          }
+          st.textContent = '[ไม่สำเร็จ] ลิงก์นี้ไม่มีพิกัด มีแต่ที่อยู่ "' + text + '" และค้นหาที่อยู่ไม่สำเร็จ (' + status + ')';
+          st.className = 'small fw-medium text-danger mt-1 mb-0';
+        });
+      } catch (e) {
+        st.textContent = '[ไม่สำเร็จ] geocode ที่อยู่จากลิงก์ไม่ได้: ' + (e.message || e);
+        st.className = 'small fw-medium text-danger mt-1 mb-0';
+      }
     }
 
     // --- SAVE (Supabase + Cloudinary) ---

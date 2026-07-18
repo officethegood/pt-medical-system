@@ -1639,6 +1639,12 @@
     // Parse a full Google Maps URL → {lat,lng}. Mirrors loc_parseGoogleMapsUrl in
     // location/index.html (keep in sync). Returns null if no coords found.
     function gpsParseMapsUrl(url) {
+      // DMS ใน URL ก่อน (เช่น /place/13%C2%B040'36.7%22N+100%C2%B037'44.0%22E/...)
+      // — พิกัดหมุดจริงที่ user แชร์ แม่นกว่า @lat,lng ที่เป็น viewport
+      try {
+        var dms = gpsParseDMS(decodeURIComponent(String(url).replace(/\+/g, ' ')));
+        if (dms) return dms;
+      } catch (e) {}
       var patterns = [
         /!3d([-]?[0-9]+\.[0-9]+)!4d([-]?[0-9]+\.[0-9]+)/,                 // place pin
         /@([-]?[0-9]+\.[0-9]+),([-]?[0-9]+\.[0-9]+)/,                     // @lat,lng viewport
@@ -1676,6 +1682,9 @@
       if (!isShort) {
         var c = gpsParseMapsUrl(url);
         if (c) { selectShareDest(c.lat.toFixed(6), c.lng.toFixed(6), gpsLabelFromMapsUrl(url)); return; }
+        // URL แบบใหม่จากแอป: ?q=<ข้อความที่อยู่>&ftid=... ไม่มีพิกัด — geocode ต่อ
+        var qt = gpsQueryTextFromUrl(url);
+        if (qt) { shareDestFromQueryText(qt); return; }
         box.innerHTML = '<div style="padding:6px 10px; color:#dc2626; font-size:0.8rem;">ไม่พบพิกัดในลิงก์ — ลองวางลิงก์แบบเต็มจาก Google Maps</div>';
         return;
       }
@@ -1684,9 +1693,15 @@
         var res = await _supabase.rpc('expand_maps_url', { short_url: url });
         var d = res.data;
         if (!res.error && d && d.success) { selectShareDest(Number(d.lat).toFixed(6), Number(d.lng).toFixed(6), 'ปลายทางที่ปักหมุด'); return; }
-        if (d && d.resolved_url) {
+        // ลิงก์แชร์รุ่นใหม่ไม่มีพิกัด — RPC (v3) คืนข้อความที่อยู่มาให้ geocode แทน
+        if (d && d.query_text) { shareDestFromQueryText(d.query_text); return; }
+        // resolved_url ใช้ได้เฉพาะเมื่อเป็น URL จริง — RPC รุ่นเก่าเคยคืน HTML
+        // ทั้งหน้า ซึ่ง regex แล้วได้พิกัดมั่ว (จุดกลางแผนที่ตาม IP server)
+        if (d && typeof d.resolved_url === 'string' && d.resolved_url.length < 2048 && d.resolved_url.indexOf('<') < 0) {
           var c2 = gpsParseMapsUrl(d.resolved_url);
           if (c2) { selectShareDest(c2.lat.toFixed(6), c2.lng.toFixed(6), gpsLabelFromMapsUrl(d.resolved_url)); return; }
+          var qt2 = gpsQueryTextFromUrl(d.resolved_url);
+          if (qt2) { shareDestFromQueryText(qt2); return; }
         }
       } catch (e) {}
       box.innerHTML = '<div style="padding:6px 10px; color:#dc2626; font-size:0.8rem;">ขยายลิงก์ย่อไม่สำเร็จ — เปิดลิงก์ใน Google Maps แล้วคัดลอก URL แบบเต็มมาวาง</div>';
@@ -1702,6 +1717,77 @@
       return null;
     }
 
+    // Parse DMS coordinates ที่ copy จาก Google Maps เช่น 13°40'36.7"N 100°37'44.0"E
+    // รองรับ ′ ″ ตัวพิมพ์เล็ก และคั่นด้วย space/comma (keep in sync กับ
+    // loc_parseDMS ใน location/index.html)
+    function gpsParseDMS(s) {
+      var m = String(s || '').match(/(\d{1,2})\s*[°º]\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*["″]\s*([NSns])[\s,]+(\d{1,3})\s*[°º]\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*["″]\s*([EWew])/);
+      if (!m) return null;
+      var lat = (+m[1]) + (+m[2]) / 60 + (+m[3]) / 3600;
+      if (/s/i.test(m[4])) lat = -lat;
+      var lng = (+m[5]) + (+m[6]) / 60 + (+m[7]) / 3600;
+      if (/w/i.test(m[8])) lng = -lng;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+      return { lat: lat, lng: lng };
+    }
+
+    // ดึงข้อความค้นหาจาก URL แบบ ?q=<ชื่อ/ที่อยู่> (ลิงก์แชร์รุ่นใหม่ไม่มีพิกัด)
+    // คืน null ถ้า q เป็นพิกัดอยู่แล้ว (กรณีนั้น parser ตัวอื่นจัดการไปแล้ว)
+    function gpsQueryTextFromUrl(url) {
+      var m = String(url).match(/[?&]q=([^&]+)/);
+      if (!m) return null;
+      var text;
+      try { text = decodeURIComponent(m[1].replace(/\+/g, ' ')).trim(); } catch (e) { return null; }
+      if (!text || gpsParseLatLng(text) || gpsParseDMS(text)) return null;
+      return text;
+    }
+
+    // ลิงก์แชร์รุ่นใหม่ให้มาแค่ "ที่อยู่/ชื่อสถานที่" — geocode เป็นพิกัดก่อน
+    // (Geocoder แม่นกับที่อยู่ไทยเต็มรูป ระดับ ROOFTOP; Places searchText
+    // หาที่อยู่ไทยไม่เจอหรือเจอผิดที่ — ทดสอบแล้ว) ถ้า geocode ไม่ได้ค่อยตก
+    // ไป Places search ให้เลือกเอง
+    async function shareDestFromQueryText(text) {
+      var box = document.getElementById('share-dest-results');
+      box.innerHTML = '<div style="padding:6px 10px; color:#0ea5e9; font-size:0.8rem;">กำลังหาพิกัดจากที่อยู่ในลิงก์...</div>';
+      try {
+        await MapConfig.loadGoogleSDK();
+        var geocoder = new google.maps.Geocoder();
+        var ok = await new Promise(function(resolve) {
+          geocoder.geocode({ address: text, region: 'TH', language: 'th' }, function(results, status) {
+            if (status === 'OK' && results && results[0] && results[0].geometry) {
+              var l = results[0].geometry.location;
+              selectShareDest(l.lat().toFixed(6), l.lng().toFixed(6), text.length > 80 ? text.slice(0, 80) + '…' : text);
+              resolve(true);
+            } else resolve(false);
+          });
+        });
+        if (ok) return;
+      } catch (e) {}
+      shareDestPlacesSearch(text);
+    }
+
+    // ค้น Places ด้วยข้อความ + แสดงรายการให้เลือก (ใช้ทั้งจากช่องค้นหา
+    // และจากลิงก์แชร์ที่ resolve ได้แค่ชื่อ/ที่อยู่)
+    async function shareDestPlacesSearch(q) {
+      var box = document.getElementById('share-dest-results');
+      if (!window.PlacesAPI) return;
+      box.innerHTML = '<div style="padding:6px 10px; color:#94a3b8; font-size:0.8rem;">กำลังค้นหา...</div>';
+      try {
+        // Bias to the selected vehicle's current position if available
+        var origin = (typeof _hospitalOrigin === 'object' && _hospitalOrigin) ? _hospitalOrigin : null;
+        var places = await PlacesAPI.searchText({ query: q, lat: origin ? origin.lat : null, lng: origin ? origin.lng : null, radius: 50000, maxResults: 6 });
+        if (!places || !places.length) { box.innerHTML = '<div style="padding:6px 10px; color:#94a3b8; font-size:0.8rem;">ไม่พบสถานที่</div>'; return; }
+        box.innerHTML = places.map(function(p) {
+          return '<button type="button" class="share-dest-item" data-lat="' + p.lat + '" data-lng="' + p.lng + '" data-label="' + esc(p.name) + '" style="display:block; width:100%; text-align:left; padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:4px; background:#fff; cursor:pointer;">' +
+            '<div style="font-weight:600; font-size:0.85rem; color:#1e293b;">' + esc(p.name) + '</div>' +
+            '<div style="font-size:0.72rem; color:#64748b;">' + esc(p.address || '') + '</div>' +
+            '</button>';
+        }).join('');
+      } catch (e) {
+        box.innerHTML = '<div style="padding:6px 10px; color:#dc2626; font-size:0.8rem;">ค้นหาไม่สำเร็จ: ' + esc(e.message || e) + '</div>';
+      }
+    }
+
     var _shareDestTimer = null;
     (function bindShareDestSearch() {
       var input = document.getElementById('share-dest-search');
@@ -1715,6 +1801,12 @@
           _shareDestTimer = setTimeout(function() { resolveShareDestLink(q); }, 200);
           return;
         }
+        // DMS coordinates? (e.g. 13°40'36.7"N 100°37'44.0"E copy จาก Google Maps)
+        var dms = gpsParseDMS(q);
+        if (dms) {
+          selectShareDest(dms.lat.toFixed(6), dms.lng.toFixed(6), 'พิกัด ' + dms.lat.toFixed(5) + ', ' + dms.lng.toFixed(5));
+          return;
+        }
         // Raw "lat, lng" coordinates?
         var ll = gpsParseLatLng(q);
         if (ll) {
@@ -1722,24 +1814,10 @@
           return;
         }
         if (q.length < 3) { box.innerHTML = ''; return; }
-        _shareDestTimer = setTimeout(async function() {
-          if (!window.PlacesAPI) return;
-          box.innerHTML = '<div style="padding:6px 10px; color:#94a3b8; font-size:0.8rem;">กำลังค้นหา...</div>';
-          try {
-            // Bias to the selected vehicle's current position if available
-            var origin = (typeof _hospitalOrigin === 'object' && _hospitalOrigin) ? _hospitalOrigin : null;
-            var places = await PlacesAPI.searchText({ query: q, lat: origin ? origin.lat : null, lng: origin ? origin.lng : null, radius: 50000, maxResults: 6 });
-            if (!places || !places.length) { box.innerHTML = '<div style="padding:6px 10px; color:#94a3b8; font-size:0.8rem;">ไม่พบสถานที่</div>'; return; }
-            box.innerHTML = places.map(function(p) {
-              return '<button type="button" class="share-dest-item" data-lat="' + p.lat + '" data-lng="' + p.lng + '" data-label="' + esc(p.name) + '" style="display:block; width:100%; text-align:left; padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:4px; background:#fff; cursor:pointer;">' +
-                '<div style="font-weight:600; font-size:0.85rem; color:#1e293b;">' + esc(p.name) + '</div>' +
-                '<div style="font-size:0.72rem; color:#64748b;">' + esc(p.address || '') + '</div>' +
-                '</button>';
-            }).join('');
-          } catch (e) {
-            box.innerHTML = '<div style="padding:6px 10px; color:#dc2626; font-size:0.8rem;">ค้นหาไม่สำเร็จ: ' + esc(e.message || e) + '</div>';
-          }
-        }, 300);
+        // หน้าตาเป็นพิกัด (ตัวเลข/สัญลักษณ์องศาล้วน) แต่ยังพิมพ์/วางไม่ครบ —
+        // อย่าส่งไป Places (Google ตอบ 400 "Coordinates are not a valid input")
+        if (/^[-\d.,°º'′"″\sNSEWnsew]+$/.test(q)) { box.innerHTML = ''; return; }
+        _shareDestTimer = setTimeout(function() { shareDestPlacesSearch(q); }, 300);
       });
       // Result click (delegated)
       document.getElementById('share-dest-results').addEventListener('click', function(e) {
