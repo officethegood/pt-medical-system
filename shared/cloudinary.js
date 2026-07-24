@@ -1,10 +1,24 @@
 // PT Medical System — Cloudinary Image Upload
 // Requires: config.js loaded before this
 
+// Resolve preset explicitly: runtime CONFIG ก่อน → DEFAULTS สำรอง
+// เคยมีเครื่องผู้ใช้ส่ง preset ว่างจนเจอ "Upload preset must be specified"
+// (2026-07-24) — ถ้าว่างให้ throw บอกเวอร์ชันเครื่องนั้น จะได้รู้ว่ารันโค้ดรุ่นไหน
+function _cloudinaryPreset() {
+  var p = (window.CONFIG && (CONFIG.CLOUDINARY_UPLOAD_PRESET ||
+          (CONFIG.DEFAULTS && CONFIG.DEFAULTS.CLOUDINARY_UPLOAD_PRESET))) || '';
+  if (!p) {
+    throw new Error('ค่า Cloudinary preset หายไป (แอปเวอร์ชัน v' +
+      (window.APP_VERSION || 'ไม่ทราบ') + ') — กรุณาปิดแอป/แท็บนี้แล้วเปิดใหม่ ' +
+      'ถ้ายังไม่หายให้ล้างข้อมูลเว็บไซต์ officethegood.github.io ใน Safari');
+  }
+  return p;
+}
+
 async function uploadToCloudinary(file, folder) {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', CONFIG.CLOUDINARY_UPLOAD_PRESET);
+  formData.append('upload_preset', _cloudinaryPreset());
   if (folder) formData.append('folder', 'pt-medical/' + folder);
 
   const res = await fetch('https://api.cloudinary.com/v1_1/' + CONFIG.CLOUDINARY_CLOUD_NAME + '/image/upload', {
@@ -20,7 +34,7 @@ async function uploadToCloudinary(file, folder) {
 async function uploadBase64ToCloudinary(base64DataUrl, folder) {
   const formData = new FormData();
   formData.append('file', base64DataUrl);
-  formData.append('upload_preset', CONFIG.CLOUDINARY_UPLOAD_PRESET);
+  formData.append('upload_preset', _cloudinaryPreset());
   if (folder) formData.append('folder', 'pt-medical/' + folder);
 
   const res = await fetch('https://api.cloudinary.com/v1_1/' + CONFIG.CLOUDINARY_CLOUD_NAME + '/image/upload', {
@@ -37,7 +51,7 @@ async function uploadBase64ToCloudinary(base64DataUrl, folder) {
 async function uploadAutoToCloudinary(file, folder) {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', CONFIG.CLOUDINARY_UPLOAD_PRESET);
+  formData.append('upload_preset', _cloudinaryPreset());
   if (folder) formData.append('folder', 'pt-medical/' + folder);
 
   const res = await fetch('https://api.cloudinary.com/v1_1/' + CONFIG.CLOUDINARY_CLOUD_NAME + '/auto/upload', {
