@@ -1,5 +1,5 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v17';
+var CACHE_NAME = 'pt-medical-v18';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
@@ -30,7 +30,11 @@ self.addEventListener('install', function(event) {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: clean old caches, then force-reload every open tab ONCE.
+// เหตุผล: เครื่องภาคสนามหลายเครื่องติด SW รุ่นเก่า (cache-first) ที่เสิร์ฟโค้ดเก่า
+// ค้างไว้ไม่ยอมปล่อย (อาการ: upload preset ว่าง 2026-07-24/25) — ผู้ใช้ทั่วไป
+// ไม่รู้ว่าต้อง reload ซ้ำ จึงให้ SW ใหม่รีโหลดหน้าให้เองทันทีที่เข้าควบคุม
+// (navigate ยิงครั้งเดียวตอน SW เวอร์ชันใหม่ activate — ไม่เกิด reload วนลูป)
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys().then(function(names) {
@@ -38,9 +42,16 @@ self.addEventListener('activate', function(event) {
         names.filter(function(name) { return name !== CACHE_NAME; })
              .map(function(name) { return caches.delete(name); })
       );
+    }).then(function() {
+      return self.clients.claim();
+    }).then(function() {
+      return self.clients.matchAll({ type: 'window' });
+    }).then(function(clients) {
+      clients.forEach(function(c) {
+        if (c.navigate) c.navigate(c.url).catch(function() {});
+      });
     })
   );
-  self.clients.claim();
 });
 
 // Fetch: network-first for HTML + JS + API, cache-fallback for images/CSS
