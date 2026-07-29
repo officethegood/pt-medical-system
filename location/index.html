@@ -755,14 +755,57 @@
     }
 
     // --- GPS ---
+    // ใช้ watchPosition เก็บ fix ที่แม่นสุด แทน getCurrentPosition ครั้งเดียว:
+    // fix แรกบน Android มักมาจาก WiFi/เสาสัญญาณ (เพี้ยนได้ 50-500 ม. และเพี้ยน
+    // "ซ้ำที่เดิม") — เคสจริงภาคสนาม 2026-07-25: พิกัดลูกค้าตกซอยฝั่งตรงข้าม
+    // รอจนความแม่นยำ ≤15 ม. หรือครบ 12 วิ แล้วใช้ค่าที่ดีที่สุด + โชว์ ±ม. ให้เห็น
     function loc_getGPS() {
       var st = document.getElementById('loc-form-gps-status');
-      st.textContent = 'กำลังร้องขอพิกัด GPS...'; st.className = 'small fw-medium text-primary mt-1 mb-0';
       if (!navigator.geolocation) { st.textContent = 'อุปกรณ์ไม่รองรับ GPS'; st.className = 'small fw-medium text-danger mt-1 mb-0'; return; }
-      navigator.geolocation.getCurrentPosition(
-        pos => { document.getElementById('loc-form-lat').value = pos.coords.latitude.toFixed(6); document.getElementById('loc-form-lng').value = pos.coords.longitude.toFixed(6); st.textContent = '[สำเร็จ] อัปเดตพิกัดเรียบร้อย'; st.className = 'small fw-medium text-success mt-1 mb-0'; loc_reGeocode(); },
-        err => { st.textContent = '[ผิดพลาด] ' + err.message; st.className = 'small fw-medium text-danger mt-1 mb-0'; },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      st.textContent = 'กำลังรอสัญญาณ GPS ให้แม่น...'; st.className = 'small fw-medium text-primary mt-1 mb-0';
+      var best = null, watchId = null, timer = null, finished = false;
+      var GOOD_ACC = 15;    // เมตร — แม่นพอ หยุดรอได้เลย
+      var MAX_WAIT = 12000; // ms
+
+      function finish() {
+        if (finished) return; finished = true;
+        clearTimeout(timer);
+        if (watchId != null) navigator.geolocation.clearWatch(watchId);
+        if (!best) {
+          st.textContent = '[ผิดพลาด] ไม่ได้รับสัญญาณ GPS — ลองใหม่ในที่โล่ง หรือวางลิงก์ Google Maps แทน';
+          st.className = 'small fw-medium text-danger mt-1 mb-0';
+          return;
+        }
+        document.getElementById('loc-form-lat').value = best.latitude.toFixed(6);
+        document.getElementById('loc-form-lng').value = best.longitude.toFixed(6);
+        var acc = Math.round(best.accuracy || 0);
+        if (acc > 40) {
+          st.textContent = '[คำเตือน] ได้พิกัดแต่ยังหยาบ ±' + acc + ' ม. — อย่าเพิ่งบันทึก: ออกที่โล่งแล้วกดดึงใหม่ หรือวางลิงก์ Google Maps ของจุดจริงแทน';
+          st.className = 'small fw-medium text-warning mt-1 mb-0';
+        } else {
+          st.textContent = '[สำเร็จ] อัปเดตพิกัดเรียบร้อย (แม่นยำ ±' + acc + ' ม.)';
+          st.className = 'small fw-medium text-success mt-1 mb-0';
+        }
+        loc_reGeocode();
+      }
+
+      timer = setTimeout(finish, MAX_WAIT);
+      watchId = navigator.geolocation.watchPosition(
+        function(pos) {
+          var c = pos.coords;
+          if (!best || (c.accuracy != null && c.accuracy < best.accuracy)) best = c;
+          if (!finished) st.textContent = 'กำลังรอสัญญาณ GPS ให้แม่น... (ตอนนี้ ±' + Math.round(c.accuracy || 0) + ' ม.)';
+          if (c.accuracy != null && c.accuracy <= GOOD_ACC) finish();
+        },
+        function(err) {
+          if (best) { finish(); return; }
+          finished = true;
+          clearTimeout(timer);
+          if (watchId != null) navigator.geolocation.clearWatch(watchId);
+          st.textContent = '[ผิดพลาด] ' + err.message;
+          st.className = 'small fw-medium text-danger mt-1 mb-0';
+        },
+        { enableHighAccuracy: true, timeout: MAX_WAIT, maximumAge: 0 }
       );
     }
 
