@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "thegood",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npx", "http-server", ".", "-p", "8081", "-c-1", "--cors"],
+      "port": 8081
+    },
+    {
+      "name": "pt-medical",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npx", "http-server", "F:/@Coding", "-p", "8082", "-c-1", "--cors"],
+      "port": 8082
+    }
+  ]
+}
