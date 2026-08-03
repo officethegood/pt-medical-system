@@ -2,6 +2,10 @@
 > กติกา: bump `APP_VERSION` ใน `shared/config.js` ทุกอัปเดตสำคัญ + จดสรุปที่นี่ 1 entry
 > (รูปแบบ: เวอร์ชัน · วันที่ · commit · สรุปสั้น ๆ ว่าแก้อะไร/เพราะอะไร)
 
+## 5.13.0 · 2026-08-03
+- First Aid: **V/S บันทึกได้หลายรอบ** (Registry หน้าหลัก + หน้า staff) — แต่ละรอบมีเวลา + ชุดเดิม 8 ช่อง, ปุ่มเพิ่ม/ลบรอบ, หน้ารายละเอียดแสดงเป็นตาราง · เก็บใน `vitals_json.rounds` (JSONB เดิม ไม่ต้องรัน SQL) ข้อมูลเก่ารอบเดียวอ่านต่อได้
+- First Aid: **ใบปฏิเสธการรักษา/นำส่ง 2 ภาษา (TH/EN)** — ตารางใหม่ `fa_refusals` (`sql/create_fa_refusals.sql` ต้องรันใน Dashboard), เซ็นบนจอ (ผู้ปฏิเสธ + พยาน), เก็บทุกฉบับไม่ทับ, badge แดงบนรายการ, ดู/พิมพ์ย้อนหลังได้ · spec: `docs/SPEC_firstaid_vitals_rounds_refusal_2026-08-03.md` (cache v21)
+
 ## 5.12.9 · 2026-07-26
 - Transport/Monitor: GCS ในตาราง vitals แสดง `E4VVTM6` เมื่อ verbal = on tube — gcs_v เก็บค่า `'VT'` มาพร้อมตัว V แล้ว โค้ด print/monitor เติม `V` ซ้ำ (จุด GCS หลักเขียนถูกอยู่แล้ว) — แก้ 2 จุด: transport print vitals, monitor vitals table
 - First Aid (ทั้ง 4 จุดอัปรูป: event/patient/registry/staff): รูปอัปโหลดไม่สำเร็จ**ไม่ทำให้งานทั้งใบพังอีกต่อไป** — บันทึกข้อมูลต่อ แล้วเตือน "เข้ามาแก้ไขเพิ่มรูปภายหลังได้" (ข้อเสนอภาคสนาม: เดิมต้องคีย์ใหม่ทั้งหมด) — เพิ่ม `uploadToCloudinarySafe()` ใน shared/cloudinary.js (cache v20)

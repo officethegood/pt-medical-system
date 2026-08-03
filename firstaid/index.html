@@ -596,16 +596,9 @@
                 </div>
               </div>
               <div class="card-body p-3 d-none" id="reg-vitals-body">
-                <div class="row g-2">
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">BP</label><input type="text" id="reg-v-bp" class="form-control form-control-sm" placeholder="120/80"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">HR</label><input type="number" id="reg-v-hr" class="form-control form-control-sm" placeholder="bpm"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">RR</label><input type="number" id="reg-v-rr" class="form-control form-control-sm" placeholder="/min"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">SpO2</label><input type="number" id="reg-v-spo2" class="form-control form-control-sm" placeholder="%"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Temp</label><input type="text" id="reg-v-temp" class="form-control form-control-sm" placeholder="&deg;C"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">GCS</label><input type="number" id="reg-v-gcs" class="form-control form-control-sm" min="3" max="15" placeholder="3-15"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Glucose</label><input type="number" id="reg-v-glucose" class="form-control form-control-sm" placeholder="mg/dL"></div>
-                  <div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Pain</label><input type="number" id="reg-v-pain" class="form-control form-control-sm" min="0" max="10" placeholder="0-10"></div>
-                </div>
+                <!-- บันทึกได้หลายรอบ (แต่ละรอบมีเวลา) — ดู reg_addVitalsRound() -->
+                <div id="reg-vitals-rounds"></div>
+                <button type="button" class="btn btn-outline-info btn-sm w-100" onclick="reg_addVitalsRound()"><i class="bi bi-plus-lg me-1"></i>เพิ่มรอบ V/S</button>
               </div>
             </div>
 
@@ -668,6 +661,71 @@
         <div class="modal-body pt-3" id="reg-vp-content"></div>
         <div class="modal-footer border-top-0 pt-0">
           <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== REFUSAL MODAL (ใบปฏิเสธการรักษา/นำส่ง — 2 ภาษา) ==================== -->
+  <div class="modal fade" id="faRefusalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-danger bg-opacity-10">
+          <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-x text-danger me-2"></i>ใบปฏิเสธการรักษา/นำส่ง · Refusal of Treatment/Transfer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="rf-reg-id">
+          <div class="card bg-light border-0 p-2 mb-3 small" id="rf-patient-info"></div>
+          <div class="border rounded p-2 mb-3 small text-secondary" id="rf-statement"></div>
+          <label class="form-label fw-bold small">ปฏิเสธ (เลือกได้หลายข้อ) · Refusing:</label>
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="rf-refuse-transfer"><label class="form-check-label small" for="rf-refuse-transfer">การนำส่งโรงพยาบาล · Hospital transfer</label></div>
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="rf-refuse-procedure"><label class="form-check-label small" for="rf-refuse-procedure">หัตถการ/การรักษาที่แนะนำ · Recommended procedure/treatment</label></div>
+          <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="rf-refuse-other"><label class="form-check-label small" for="rf-refuse-other">อื่นๆ · Other</label></div>
+          <div class="mb-3"><label class="form-label small fw-bold">รายละเอียด · Details</label><input type="text" id="rf-detail" class="form-control form-control-sm" placeholder="ระบุหัตถการ/รายละเอียดเพิ่มเติม · specify"></div>
+          <div class="row g-2 mb-2">
+            <div class="col-7"><label class="form-label small fw-bold">ชื่อผู้เซ็น · Signer name *</label><input type="text" id="rf-signed-by" class="form-control form-control-sm"></div>
+            <div class="col-5"><label class="form-label small fw-bold">ความสัมพันธ์ · Relationship</label>
+              <select id="rf-relationship" class="form-select form-select-sm">
+                <option value="ผู้ป่วยเอง">ผู้ป่วยเอง · Patient</option>
+                <option value="ผู้ปกครอง">ผู้ปกครอง · Parent/Guardian</option>
+                <option value="ญาติ">ญาติ · Relative</option>
+                <option value="อื่นๆ">อื่นๆ · Other</option>
+              </select></div>
+          </div>
+          <label class="form-label small fw-bold">ลายเซ็นผู้ปฏิเสธ · Signature of person refusing *</label>
+          <div class="border rounded mb-2 position-relative bg-white" style="touch-action:none;">
+            <canvas id="rf-sig" style="width:100%; height:120px; display:block;"></canvas>
+            <button type="button" class="btn btn-sm btn-light border position-absolute top-0 end-0 m-1 py-0 px-2" onclick="fa_rfSig && fa_rfSig.clear()">ล้าง</button>
+          </div>
+          <div class="mb-2"><label class="form-label small fw-bold">ชื่อพยาน · Witness name *</label><input type="text" id="rf-witness-name" class="form-control form-control-sm"></div>
+          <label class="form-label small fw-bold">ลายเซ็นพยาน · Witness signature *</label>
+          <div class="border rounded position-relative bg-white" style="touch-action:none;">
+            <canvas id="rf-witness-sig" style="width:100%; height:120px; display:block;"></canvas>
+            <button type="button" class="btn btn-sm btn-light border position-absolute top-0 end-0 m-1 py-0 px-2" onclick="fa_rfWitnessSig && fa_rfWitnessSig.clear()">ล้าง</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="fa_saveRefusal()"><i class="bi bi-pen me-1"></i>บันทึกใบปฏิเสธ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW REFUSAL MODAL ==================== -->
+  <div class="modal fade" id="faViewRefusalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-danger bg-opacity-10">
+          <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-x text-danger me-2"></i>ใบปฏิเสธการรักษา · Refusal Document</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="rf-view-content"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-danger rounded-pill px-3" id="rf-view-resign-btn"><i class="bi bi-pen me-1"></i>เซ็นฉบับใหม่</button>
+          <button type="button" class="btn btn-primary rounded-pill px-3" id="rf-view-print-btn"><i class="bi bi-printer me-1"></i>พิมพ์</button>
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ปิด</button>
         </div>
       </div>
     </div>
@@ -1417,6 +1475,11 @@
             var { data: registry, error: regErr } = await _supabase.from('fa_registry').select('*').eq('event_id', fa_currentViewedEventId);
             if (regErr) throw regErr;
 
+            // ใบปฏิเสธของ event นี้ (ไม่ fatal — ตารางอาจยังไม่ได้สร้างจนกว่าจะรัน sql/create_fa_refusals.sql)
+            fa_refusalMap = {};
+            var rfRes = await _supabase.from('fa_refusals').select('*').eq('event_id', fa_currentViewedEventId).eq('status', 'active');
+            if (!rfRes.error) (rfRes.data || []).forEach(function(x) { fa_refusalMap[x.reg_id] = x; });
+
             // Fetch patients for this event
             var { data: patients, error: patErr } = await _supabase.from('fa_patients').select('*').eq('event_id', fa_currentViewedEventId);
             if (patErr) throw patErr;
@@ -1570,16 +1633,20 @@
             if (isAdmin || isCreator) {
                 actionBtns += '<button class="btn btn-outline-warning btn-sm" onclick="reg_openForm(\'' + fa_currentViewedEventId + '\',\'' + r.id + '\')"><i class="bi bi-pencil"></i></button>';
             }
+            // ใบปฏิเสธการรักษา — มีฉบับ active = ปุ่มแดงทึบ, ยังไม่มี = ปุ่มขอบแดง
+            actionBtns += '<button class="btn ' + (fa_refusalMap[r.id] ? 'btn-danger' : 'btn-outline-danger') + ' btn-sm" title="ใบปฏิเสธการรักษา" onclick="fa_refusalEntry(\'' + r.id + '\')"><i class="bi bi-file-earmark-x"></i></button>';
             if (isAdmin) {
                 actionBtns += '<button class="btn btn-outline-danger btn-sm" onclick="reg_confirmDelete(\'' + r.id + '\')"><i class="bi bi-trash"></i></button>';
             }
             actionBtns += '</div>';
 
+            var refusalBadge = fa_refusalMap[r.id] ? '<span class="badge bg-danger mt-1">ปฏิเสธการรักษา</span>' : '';
+
             tr.innerHTML =
                 '<td class="text-center align-middle small">' + (index + 1) + '</td>' +
                 '<td class="align-middle small">' + timeStr + '</td>' +
                 '<td class="text-center align-middle">' + triageBadge + '</td>' +
-                '<td class="align-middle"><div class="fw-bold small">' + escapeHtml(r.name) + '</div>' + genderAge + '</td>' +
+                '<td class="align-middle"><div class="fw-bold small">' + escapeHtml(r.name) + '</div>' + genderAge + refusalBadge + '</td>' +
                 '<td class="align-middle fa-table-hide-mobile">' + etiologyBadge + '<div class="small mt-1">' + escapeHtml(ccText) + '</div></td>' +
                 '<td class="align-middle fa-table-hide-mobile small">' + escapeHtml(problemText) + '</td>' +
                 '<td class="align-middle fa-table-hide-mobile">' + resultHtml + '</td>' +
@@ -2122,10 +2189,262 @@
         if (section.classList.contains('d-none')) {
             section.classList.remove('d-none');
             icon.className = 'bi bi-chevron-up';
+            // เปิดครั้งแรกยังไม่มีรอบ → เพิ่มรอบแรกให้เลย
+            if (document.querySelectorAll('#reg-vitals-rounds .reg-vs-round').length === 0) reg_addVitalsRound();
         } else {
             section.classList.add('d-none');
             icon.className = 'bi bi-chevron-down';
         }
+    }
+
+    // --- V/S หลายรอบ (keep in sync กับ staff.html) ---
+    // แปลง vitals_json ทุกยุคเป็น array ของรอบ: รุ่นเก่า (object เดี่ยว) → 1 รอบ
+    function fa_vitalsRounds(vjson, fallbackTime) {
+        if (!vjson || typeof vjson !== 'object') return [];
+        if (Array.isArray(vjson.rounds)) return vjson.rounds;
+        var keys = ['bp', 'hr', 'rr', 'spo2', 'temp', 'gcs', 'glucose', 'pain'];
+        if (!keys.some(function(k) { return vjson[k]; })) return [];
+        var r = { time: fallbackTime || '' };
+        keys.forEach(function(k) { r[k] = vjson[k] || ''; });
+        return [r];
+    }
+
+    function reg_addVitalsRound(v) {
+        v = v || {};
+        var time = v.time;
+        if (time == null || time === '') {
+            var now = new Date();
+            time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        }
+        var div = document.createElement('div');
+        div.className = 'reg-vs-round border rounded p-2 mb-2 position-relative bg-light bg-opacity-50';
+        div.innerHTML =
+            '<button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="font-size:0.6rem;" title="ลบรอบนี้" onclick="this.closest(\'.reg-vs-round\').remove()"></button>' +
+            '<div class="row g-2">' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">เวลา</label><input type="time" class="form-control form-control-sm rv-time" value="' + escapeHtml(time) + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">BP</label><input type="text" class="form-control form-control-sm rv-bp" placeholder="120/80" value="' + escapeHtml(v.bp || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">HR</label><input type="number" class="form-control form-control-sm rv-hr" placeholder="bpm" value="' + escapeHtml(v.hr || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">RR</label><input type="number" class="form-control form-control-sm rv-rr" placeholder="/min" value="' + escapeHtml(v.rr || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">SpO2</label><input type="number" class="form-control form-control-sm rv-spo2" placeholder="%" value="' + escapeHtml(v.spo2 || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Temp</label><input type="text" class="form-control form-control-sm rv-temp" placeholder="&deg;C" value="' + escapeHtml(v.temp || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">GCS</label><input type="number" class="form-control form-control-sm rv-gcs" min="3" max="15" placeholder="3-15" value="' + escapeHtml(v.gcs || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">DTX</label><input type="number" class="form-control form-control-sm rv-glucose" placeholder="mg/dL" value="' + escapeHtml(v.glucose || '') + '"></div>' +
+              '<div class="col-6 col-md-3"><label class="form-label small text-muted mb-0">Pain</label><input type="number" class="form-control form-control-sm rv-pain" min="0" max="10" placeholder="0-10" value="' + escapeHtml(v.pain || '') + '"></div>' +
+            '</div>';
+        document.getElementById('reg-vitals-rounds').appendChild(div);
+    }
+
+    function reg_clearVitalsRounds() {
+        document.getElementById('reg-vitals-rounds').innerHTML = '';
+    }
+
+    // อ่านทุกรอบจาก DOM — รอบที่ไม่ได้กรอกอะไรเลย (นอกจากเวลา) ไม่บันทึก
+    function reg_collectVitalsRounds() {
+        var rounds = [];
+        document.querySelectorAll('#reg-vitals-rounds .reg-vs-round').forEach(function(row) {
+            var g = function(cls) { var el = row.querySelector('.' + cls); return el ? el.value.trim() : ''; };
+            var r = { time: g('rv-time'), bp: g('rv-bp'), hr: g('rv-hr'), rr: g('rv-rr'), spo2: g('rv-spo2'), temp: g('rv-temp'), gcs: g('rv-gcs'), glucose: g('rv-glucose'), pain: g('rv-pain') };
+            if (r.bp || r.hr || r.rr || r.spo2 || r.temp || r.gcs || r.glucose || r.pain) rounds.push(r);
+        });
+        return rounds;
+    }
+
+    // =============================================
+    // ใบปฏิเสธการรักษา/นำส่ง (fa_refusals) — 2 ภาษา
+    // ดู docs/SPEC_firstaid_vitals_rounds_refusal_2026-08-03.md
+    // ข้อความคำประกาศแก้ที่ FA_REFUSAL_TEXT จุดเดียว
+    // =============================================
+    var FA_REFUSAL_TEXT = {
+        th: 'ข้าพเจ้าขอยืนยันว่า เจ้าหน้าที่ได้อธิบายอาการ ความเสี่ยงที่อาจเกิดขึ้น และคำแนะนำในการรักษา/นำส่งโรงพยาบาลให้ข้าพเจ้าทราบอย่างชัดเจนแล้ว ข้าพเจ้าตัดสินใจปฏิเสธตามรายการด้านล่างด้วยความสมัครใจ และจะไม่เรียกร้องหรือดำเนินการใดๆ ต่อเจ้าหน้าที่ผู้ปฏิบัติงานและบริษัท อันเนื่องมาจากผลที่เกิดขึ้นจากการปฏิเสธครั้งนี้',
+        en: 'I hereby confirm that the medical staff has clearly explained my condition, the possible risks, and their recommendation for treatment and/or hospital transfer. I voluntarily refuse as indicated below, and I shall not hold the attending staff or the company liable for any consequences arising from this refusal.'
+    };
+
+    var fa_refusalMap = {};          // reg_id -> ฉบับ active
+    var fa_refusalModalObj = null, fa_viewRefusalModalObj = null;
+    var fa_rfSig = null, fa_rfWitnessSig = null;
+    var fa_rfViewCache = [];         // ทุกฉบับของ reg ที่กำลังเปิดดู
+
+    // signature pad แบบ canvas ล้วน (pointer events) — ไม่ใช้ lib ภายนอก
+    function fa_sigPad(canvasId) {
+        var canvas = document.getElementById(canvasId);
+        var ctx = null, drawn = false, drawing = false;
+        function resize() {
+            var ratio = window.devicePixelRatio || 1;
+            var w = canvas.clientWidth, h = canvas.clientHeight;
+            if (!w || !h) return;
+            var prev = drawn ? canvas.toDataURL() : null;
+            canvas.width = Math.round(w * ratio);
+            canvas.height = Math.round(h * ratio);
+            ctx = canvas.getContext('2d');
+            ctx.scale(ratio, ratio);
+            ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1e293b';
+            if (prev) { var img = new Image(); img.onload = function() { ctx.drawImage(img, 0, 0, w, h); }; img.src = prev; }
+        }
+        function pos(e) { var r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+        canvas.addEventListener('pointerdown', function(e) {
+            e.preventDefault();
+            if (!ctx) resize();
+            drawing = true; drawn = true;
+            var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 0.1, p.y + 0.1); ctx.stroke();
+            try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        canvas.addEventListener('pointermove', function(e) { if (!drawing) return; e.preventDefault(); var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+        canvas.addEventListener('pointerup', function() { drawing = false; });
+        canvas.addEventListener('pointercancel', function() { drawing = false; });
+        return {
+            resize: resize,
+            clear: function() { drawn = false; resize(); },
+            isEmpty: function() { return !drawn; },
+            dataUrl: function() { return drawn ? canvas.toDataURL('image/png') : ''; }
+        };
+    }
+
+    // ปุ่มใบปฏิเสธจากรายการ: มีฉบับ active → เปิดดู, ยังไม่มี → เปิดฟอร์มเซ็น
+    function fa_refusalEntry(regId) {
+        if (fa_refusalMap[regId]) fa_viewRefusal(regId);
+        else fa_openRefusalForm(regId);
+    }
+
+    function fa_openRefusalForm(regId) {
+        var rec = fa_currentRegistryRecords.find(function(r) { return r.id === regId; });
+        if (!rec) return;
+        if (fa_viewRefusalModalObj) fa_viewRefusalModalObj.hide();
+        document.getElementById('rf-reg-id').value = regId;
+        document.getElementById('rf-patient-info').innerHTML =
+            '<b>' + escapeHtml(rec.name || '-') + '</b> (' + escapeHtml(rec.gender || '-') + ', ' + escapeHtml(String(rec.age || '-')) + ' ปี) · Triage ' + escapeHtml(rec.triage || '-') +
+            (rec.cc ? ' · CC: ' + escapeHtml(rec.cc) : '') + (rec.phone ? ' · โทร ' + escapeHtml(rec.phone) : '');
+        document.getElementById('rf-statement').innerHTML =
+            '<div class="mb-2">' + escapeHtml(FA_REFUSAL_TEXT.th) + '</div><div class="fst-italic">' + escapeHtml(FA_REFUSAL_TEXT.en) + '</div>';
+        document.getElementById('rf-refuse-transfer').checked = false;
+        document.getElementById('rf-refuse-procedure').checked = false;
+        document.getElementById('rf-refuse-other').checked = false;
+        document.getElementById('rf-detail').value = '';
+        document.getElementById('rf-signed-by').value = rec.name || '';
+        document.getElementById('rf-relationship').value = 'ผู้ป่วยเอง';
+        document.getElementById('rf-witness-name').value = '';
+        if (!fa_refusalModalObj) {
+            fa_refusalModalObj = new bootstrap.Modal(document.getElementById('faRefusalModal'));
+            document.getElementById('faRefusalModal').addEventListener('shown.bs.modal', function() {
+                // canvas ต้องมีขนาดหลัง modal แสดงแล้วเท่านั้น
+                if (!fa_rfSig) fa_rfSig = fa_sigPad('rf-sig');
+                if (!fa_rfWitnessSig) fa_rfWitnessSig = fa_sigPad('rf-witness-sig');
+                fa_rfSig.clear();
+                fa_rfWitnessSig.clear();
+            });
+        }
+        fa_refusalModalObj.show();
+    }
+
+    async function fa_saveRefusal() {
+        var regId = document.getElementById('rf-reg-id').value;
+        var rec = fa_currentRegistryRecords.find(function(r) { return r.id === regId; });
+        var t = document.getElementById('rf-refuse-transfer').checked;
+        var p = document.getElementById('rf-refuse-procedure').checked;
+        var o = document.getElementById('rf-refuse-other').checked;
+        var signedBy = document.getElementById('rf-signed-by').value.trim();
+        var witnessName = document.getElementById('rf-witness-name').value.trim();
+        if (!t && !p && !o) { Swal.fire('กรุณาเลือกสิ่งที่ปฏิเสธ', 'อย่างน้อย 1 ข้อ', 'warning'); return; }
+        if (!signedBy) { Swal.fire('กรุณากรอกชื่อผู้เซ็น', '', 'warning'); return; }
+        if (!fa_rfSig || fa_rfSig.isEmpty()) { Swal.fire('กรุณาเซ็นลายเซ็นผู้ปฏิเสธ', '', 'warning'); return; }
+        if (!witnessName) { Swal.fire('กรุณากรอกชื่อพยาน', '', 'warning'); return; }
+        if (!fa_rfWitnessSig || fa_rfWitnessSig.isEmpty()) { Swal.fire('กรุณาเซ็นลายเซ็นพยาน', '', 'warning'); return; }
+
+        Swal.fire({ title: 'กำลังบันทึก...', didOpen: function() { Swal.showLoading(); } });
+        try {
+            var prev = fa_refusalMap[regId];
+            if (prev) {
+                await _supabase.from('fa_refusals').update({ status: 'superseded', superseded_at: new Date().toISOString() }).eq('id', prev.id);
+            }
+            var row = {
+                reg_id: regId,
+                event_id: fa_currentViewedEventId,
+                version: prev ? (Number(prev.version) || 1) + 1 : 1,
+                refuse_transfer: t, refuse_procedure: p, refuse_other: o,
+                refusal_detail: document.getElementById('rf-detail').value.trim(),
+                patient_snapshot: rec ? { name: rec.name, age: rec.age, gender: rec.gender, phone: rec.phone, triage: rec.triage, cc: rec.cc, treatment: rec.treatment } : {},
+                signed_by: signedBy,
+                relationship: document.getElementById('rf-relationship').value,
+                signature_image: fa_rfSig.dataUrl(),
+                witness_name: witnessName,
+                witness_signature_image: fa_rfWitnessSig.dataUrl(),
+                staff_name: getUserName() || '',
+                signed_at: new Date().toISOString(),
+                status: 'active'
+            };
+            var res = await _supabase.from('fa_refusals').insert(row).select().single();
+            if (res.error) throw res.error;
+            fa_refusalMap[regId] = res.data;
+            Swal.close();
+            fa_refusalModalObj.hide();
+            Swal.fire('สำเร็จ', 'บันทึกใบปฏิเสธเรียบร้อย', 'success');
+            fa_renderRegistryTable(fa_currentRegistryRecords);
+        } catch (err) {
+            Swal.fire('Error', 'บันทึกใบปฏิเสธไม่สำเร็จ: ' + (err.message || err) + '<br><small>ถ้าขึ้นว่าไม่พบตาราง ให้รัน sql/create_fa_refusals.sql ใน Supabase ก่อน</small>', 'error');
+        }
+    }
+
+    async function fa_viewRefusal(regId) {
+        var box;
+        if (!fa_viewRefusalModalObj) fa_viewRefusalModalObj = new bootstrap.Modal(document.getElementById('faViewRefusalModal'));
+        box = document.getElementById('rf-view-content');
+        box.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</div>';
+        document.getElementById('rf-view-resign-btn').onclick = function() { fa_openRefusalForm(regId); };
+        fa_viewRefusalModalObj.show();
+        var res = await _supabase.from('fa_refusals').select('*').eq('reg_id', regId).order('version', { ascending: false });
+        fa_rfViewCache = res.data || [];
+        if (!fa_rfViewCache.length) { box.innerHTML = '<div class="text-muted text-center py-4">ไม่พบใบปฏิเสธ</div>'; return; }
+        var active = fa_rfViewCache.find(function(x) { return x.status === 'active'; }) || fa_rfViewCache[0];
+        document.getElementById('rf-view-print-btn').onclick = function() { fa_printRefusal(active.id); };
+        var types = [];
+        if (active.refuse_transfer) types.push('การนำส่งโรงพยาบาล · Hospital transfer');
+        if (active.refuse_procedure) types.push('หัตถการ/การรักษาที่แนะนำ · Recommended procedure');
+        if (active.refuse_other) types.push('อื่นๆ · Other');
+        var snap = active.patient_snapshot || {};
+        var h = '<div class="card bg-light border-0 p-2 mb-2 small"><b>' + escapeHtml(snap.name || '-') + '</b> (' + escapeHtml(snap.gender || '-') + ', ' + escapeHtml(String(snap.age || '-')) + ' ปี)' + (snap.cc ? ' · CC: ' + escapeHtml(snap.cc) : '') + '</div>' +
+            '<div class="small border rounded p-2 mb-2 text-secondary">' + escapeHtml(FA_REFUSAL_TEXT.th) + '<div class="fst-italic mt-1">' + escapeHtml(FA_REFUSAL_TEXT.en) + '</div></div>' +
+            '<div class="small mb-1"><b>ปฏิเสธ:</b> ' + types.map(escapeHtml).join(', ') + (active.refusal_detail ? '<br><b>รายละเอียด:</b> ' + escapeHtml(active.refusal_detail) : '') + '</div>' +
+            '<div class="row g-2 text-center small mt-1">' +
+              '<div class="col-6"><div class="border rounded p-1">' + (active.signature_image ? '<img src="' + active.signature_image + '" style="max-height:70px;">' : '-') + '<div class="border-top mt-1 pt-1">' + escapeHtml(active.signed_by || '-') + ' (' + escapeHtml(active.relationship || '-') + ')<br>ผู้ปฏิเสธ · Signer</div></div></div>' +
+              '<div class="col-6"><div class="border rounded p-1">' + (active.witness_signature_image ? '<img src="' + active.witness_signature_image + '" style="max-height:70px;">' : '-') + '<div class="border-top mt-1 pt-1">' + escapeHtml(active.witness_name || '-') + '<br>พยาน · Witness</div></div></div>' +
+            '</div>' +
+            '<div class="small text-muted mt-2">เจ้าหน้าที่: ' + escapeHtml(active.staff_name || '-') + ' · เวลาเซ็น: ' + new Date(active.signed_at).toLocaleString('th-TH') + ' · ฉบับที่ ' + (active.version || 1) + '</div>';
+        if (fa_rfViewCache.length > 1) {
+            h += '<hr class="my-2"><div class="small fw-bold mb-1">ประวัติทุกฉบับ</div>' + fa_rfViewCache.map(function(x) {
+                return '<div class="d-flex justify-content-between align-items-center small border-bottom py-1"><span>ฉบับที่ ' + (x.version || 1) + ' · ' + new Date(x.signed_at).toLocaleString('th-TH') + ' · ' + (x.status === 'active' ? '<span class="badge bg-danger">ฉบับปัจจุบัน</span>' : '<span class="badge bg-secondary">ถูกแทนที่</span>') + '</span><button class="btn btn-outline-secondary btn-sm py-0" onclick="fa_printRefusal(\'' + x.id + '\')"><i class="bi bi-printer"></i></button></div>';
+            }).join('');
+        }
+        box.innerHTML = h;
+    }
+
+    function fa_printRefusal(id) {
+        var d = fa_rfViewCache.find(function(x) { return x.id === id; });
+        if (!d) return;
+        var snap = d.patient_snapshot || {};
+        var types = [];
+        if (d.refuse_transfer) types.push('☑ การนำส่งโรงพยาบาล · Hospital transfer');
+        if (d.refuse_procedure) types.push('☑ หัตถการ/การรักษาที่แนะนำ · Recommended procedure/treatment');
+        if (d.refuse_other) types.push('☑ อื่นๆ · Other');
+        var esc = escapeHtml;
+        var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>ใบปฏิเสธการรักษา - ' + esc(snap.name || '') + '</title>' +
+            '<style>body{font-family:"Sarabun","TH Sarabun New",Tahoma,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;color:#111;font-size:15px;line-height:1.55;}h1{font-size:19px;text-align:center;margin:4px 0;}h2{font-size:15px;text-align:center;font-weight:normal;font-style:italic;margin:0 0 14px;}table{width:100%;border-collapse:collapse;margin:10px 0;}td{border:1px solid #999;padding:5px 8px;}.stm{border:1px solid #999;padding:10px;margin:10px 0;}.en{font-style:italic;color:#333;margin-top:8px;}.sig{display:flex;gap:16px;margin-top:18px;}.sigbox{flex:1;border:1px solid #999;text-align:center;padding:8px;min-height:130px;}.sigbox img{max-height:80px;}.foot{margin-top:14px;font-size:13px;color:#444;}@media print{body{margin:8px auto;}}</style></head><body>' +
+            '<h1>ใบปฏิเสธการรักษา/การนำส่งโรงพยาบาล</h1><h2>Refusal of Treatment / Hospital Transfer</h2>' +
+            '<div style="text-align:center;font-size:13px;color:#555;">The Good — First Aid Service · ฉบับที่ ' + (d.version || 1) + '</div>' +
+            '<table><tr><td><b>ชื่อผู้ป่วย · Patient:</b> ' + esc(snap.name || '-') + '</td><td><b>เพศ/อายุ:</b> ' + esc(snap.gender || '-') + ' / ' + esc(String(snap.age || '-')) + ' ปี</td></tr>' +
+            '<tr><td><b>Triage:</b> ' + esc(snap.triage || '-') + '</td><td><b>โทร · Phone:</b> ' + esc(String(snap.phone || '-')) + '</td></tr>' +
+            (snap.cc ? '<tr><td colspan="2"><b>อาการสำคัญ · Chief complaint:</b> ' + esc(snap.cc) + '</td></tr>' : '') +
+            (snap.treatment ? '<tr><td colspan="2"><b>การรักษาที่ให้ · Treatment given:</b> ' + esc(snap.treatment) + '</td></tr>' : '') + '</table>' +
+            '<div class="stm">' + esc(FA_REFUSAL_TEXT.th) + '<div class="en">' + esc(FA_REFUSAL_TEXT.en) + '</div></div>' +
+            '<div><b>ขอปฏิเสธ · Refusing:</b><br>' + types.map(esc).join('<br>') + (d.refusal_detail ? '<br><b>รายละเอียด · Details:</b> ' + esc(d.refusal_detail) : '') + '</div>' +
+            '<div class="sig">' +
+              '<div class="sigbox">' + (d.signature_image ? '<img src="' + d.signature_image + '">' : '<div style="height:80px;"></div>') + '<div style="border-top:1px solid #999;margin-top:4px;padding-top:4px;">(' + esc(d.signed_by || '') + ')<br>ผู้ปฏิเสธ · Person refusing<br><small>ความสัมพันธ์ · Relationship: ' + esc(d.relationship || '-') + '</small></div></div>' +
+              '<div class="sigbox">' + (d.witness_signature_image ? '<img src="' + d.witness_signature_image + '">' : '<div style="height:80px;"></div>') + '<div style="border-top:1px solid #999;margin-top:4px;padding-top:4px;">(' + esc(d.witness_name || '') + ')<br>พยาน · Witness</div></div>' +
+            '</div>' +
+            '<div class="foot">เจ้าหน้าที่ผู้อธิบาย/บันทึก · Staff: ' + esc(d.staff_name || '-') + '<br>วันเวลาที่เซ็น · Signed at: ' + new Date(d.signed_at).toLocaleString('th-TH') + '</div>' +
+            '<script>window.onload=function(){window.print();}<\/script></body></html>';
+        var w = window.open('', '_blank');
+        if (!w) { Swal.fire('เปิดหน้าต่างพิมพ์ไม่ได้', 'เบราว์เซอร์บล็อก popup — อนุญาต popup ให้เว็บนี้ก่อน', 'warning'); return; }
+        w.document.write(html);
+        w.document.close();
     }
 
     // --- GPS ---
@@ -2164,6 +2483,7 @@
         reg_toggleAllergy();
         document.getElementById('reg-vitals-body').classList.add('d-none');
         document.getElementById('reg-vitals-toggle-icon').className = 'bi bi-chevron-down';
+        reg_clearVitalsRounds();
         document.getElementById('reg-cc-other-div').classList.add('d-none');
         document.getElementById('reg-problem-other-div').classList.add('d-none');
         reg_setTriage('A');
@@ -2234,21 +2554,13 @@
                     document.getElementById('reg-allergy-detail').value = rec.allergy.replace('มี', '').replace(/[()]/g, '').trim();
                 }
                 reg_toggleAllergy();
-                // Vitals
-                if (rec.vitals && Object.keys(rec.vitals).length > 0) {
-                    var v = rec.vitals;
-                    if (v.bp || v.hr || v.rr || v.spo2 || v.temp || v.gcs || v.glucose || v.pain) {
-                        document.getElementById('reg-vitals-body').classList.remove('d-none');
-                        document.getElementById('reg-vitals-toggle-icon').className = 'bi bi-chevron-up';
-                    }
-                    document.getElementById('reg-v-bp').value = v.bp || '';
-                    document.getElementById('reg-v-hr').value = v.hr || '';
-                    document.getElementById('reg-v-rr').value = v.rr || '';
-                    document.getElementById('reg-v-spo2').value = v.spo2 || '';
-                    document.getElementById('reg-v-temp').value = v.temp || '';
-                    document.getElementById('reg-v-gcs').value = v.gcs || '';
-                    document.getElementById('reg-v-glucose').value = v.glucose || '';
-                    document.getElementById('reg-v-pain').value = v.pain || '';
+                // Vitals — รองรับทั้งรุ่นเก่า (รอบเดียว) และรุ่นใหม่ (หลายรอบ)
+                var vsRounds = fa_vitalsRounds(rec.vitals, rec.timeIn);
+                reg_clearVitalsRounds();
+                if (vsRounds.length > 0) {
+                    document.getElementById('reg-vitals-body').classList.remove('d-none');
+                    document.getElementById('reg-vitals-toggle-icon').className = 'bi bi-chevron-up';
+                    vsRounds.forEach(function(r) { reg_addVitalsRound(r); });
                 }
                 // Result
                 if (rec.result) {
@@ -2325,16 +2637,7 @@
         }
 
         // Vitals
-        var vitals = {
-            bp: document.getElementById('reg-v-bp').value.trim(),
-            hr: document.getElementById('reg-v-hr').value.trim(),
-            rr: document.getElementById('reg-v-rr').value.trim(),
-            spo2: document.getElementById('reg-v-spo2').value.trim(),
-            temp: document.getElementById('reg-v-temp').value.trim(),
-            gcs: document.getElementById('reg-v-gcs').value.trim(),
-            glucose: document.getElementById('reg-v-glucose').value.trim(),
-            pain: document.getElementById('reg-v-pain').value.trim()
-        };
+        var vitals = { rounds: reg_collectVitalsRounds() };
 
         // Result
         var resultType = document.getElementById('reg-result-type').value;
@@ -2453,6 +2756,16 @@
             vitalsHtml = vItems.length > 0 ? vItems.join(' | ') : '<span class="text-muted fst-italic">ไม่ได้บันทึก</span>';
         } else {
             vitalsHtml = '<span class="text-muted fst-italic">ไม่ได้บันทึก</span>';
+        }
+        // รุ่นใหม่: V/S หลายรอบ → แสดงเป็นตารางแทนบรรทัดเดียวด้านบน
+        var vsAll = fa_vitalsRounds(rec.vitals, rec.timeIn);
+        if (vsAll.length > 0) {
+            vitalsHtml = '<div class="table-responsive"><table class="table table-sm table-bordered small mb-0"><thead class="table-light"><tr>' +
+                '<th>เวลา</th><th>BP</th><th>HR</th><th>RR</th><th>SpO2</th><th>Temp</th><th>GCS</th><th>DTX</th><th>Pain</th></tr></thead><tbody>' +
+                vsAll.map(function(vr) {
+                    var td = function(x, suffix) { return '<td>' + (x ? escapeHtml(String(x)) + (suffix || '') : '-') + '</td>'; };
+                    return '<tr>' + td(vr.time) + td(vr.bp) + td(vr.hr) + td(vr.rr) + td(vr.spo2, '%') + td(vr.temp, 'C') + td(vr.gcs) + td(vr.glucose) + td(vr.pain, '/10') + '</tr>';
+                }).join('') + '</tbody></table></div>';
         }
 
         var allergyHtml = (rec.allergy && rec.allergy.indexOf('มี') > -1) ? '<span class="text-danger fw-bold">\u26A0 ' + escapeHtml(rec.allergy) + '</span>' : '<span class="text-success fw-bold">ไม่มี</span>';
