@@ -1069,10 +1069,12 @@
         var eventConfig = fa_getEventConfigFromForm();
 
         try {
-            // Upload image if provided
+            // Upload image if provided — รูปพังไม่ให้ล้มทั้งงาน (บันทึกต่อ แล้วเตือน)
             var imageUrl = existingImg || '';
+            var imgWarn = null;
             if (imageFile) {
-                imageUrl = await uploadToCloudinary(imageFile, 'firstaid-events');
+                var up = await uploadToCloudinarySafe(imageFile, 'firstaid-events');
+                if (up.url) imageUrl = up.url; else imgWarn = up.error;
             }
 
             if (evId) {
@@ -1091,7 +1093,8 @@
                 if (error) throw error;
                 Swal.close();
                 if (fa_eventModal) fa_eventModal.hide();
-                Swal.fire('สำเร็จ', 'แก้ไขงานเรียบร้อย', 'success');
+                if (imgWarn) Swal.fire('บันทึกแล้ว แต่รูปอัปโหลดไม่สำเร็จ', 'แก้ไขงานเรียบร้อย แต่รูปภาพอัปโหลดไม่สำเร็จ (' + imgWarn + ') — เข้ามาแก้ไขเพิ่มรูปภายหลังได้', 'warning');
+                else Swal.fire('สำเร็จ', 'แก้ไขงานเรียบร้อย', 'success');
                 fa_fetchAllEvents();
             } else {
                 // Create new event
@@ -1119,7 +1122,8 @@
                 if (error) throw error;
                 Swal.close();
                 if (fa_eventModal) fa_eventModal.hide();
-                Swal.fire('สำเร็จ', 'สร้างงานเรียบร้อย', 'success');
+                if (imgWarn) Swal.fire('บันทึกแล้ว แต่รูปอัปโหลดไม่สำเร็จ', 'สร้างงานเรียบร้อย แต่รูปภาพอัปโหลดไม่สำเร็จ (' + imgWarn + ') — เข้ามาแก้ไขเพิ่มรูปภายหลังได้', 'warning');
+                else Swal.fire('สำเร็จ', 'สร้างงานเรียบร้อย', 'success');
                 fa_fetchAllEvents();
             }
         } catch(err) {
@@ -1776,8 +1780,10 @@
 
         try {
             var imageUrl = document.getElementById('fa-form-existing-image').value || '';
+            var imgWarn = null;
             if (imageFile) {
-                imageUrl = await uploadToCloudinary(imageFile, 'firstaid-patients');
+                var up = await uploadToCloudinarySafe(imageFile, 'firstaid-patients');
+                if (up.url) imageUrl = up.url; else imgWarn = up.error;
             }
 
             var patientId = document.getElementById('fa-form-patient-id').value;
@@ -1810,6 +1816,7 @@
 
             Swal.close();
             if (fa_patientModal) fa_patientModal.hide();
+            if (imgWarn) Swal.fire('บันทึกแล้ว แต่รูปอัปโหลดไม่สำเร็จ', 'ข้อมูลผู้ป่วยถูกบันทึกแล้ว แต่รูปภาพอัปโหลดไม่สำเร็จ (' + imgWarn + ') — เข้ามาแก้ไขเพิ่มรูปภายหลังได้', 'warning');
             fa_refreshPatientList();
         } catch(err) {
             Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + (err.message || err), 'error');
@@ -2345,8 +2352,10 @@
 
         try {
             var imageUrl = document.getElementById('reg-form-existing-image').value || '';
+            var imgWarn = null;
             if (imageFile) {
-                imageUrl = await uploadToCloudinary(imageFile, 'firstaid-registry');
+                var up = await uploadToCloudinarySafe(imageFile, 'firstaid-registry');
+                if (up.url) imageUrl = up.url; else imgWarn = up.error;
             }
 
             var regId = document.getElementById('reg-form-reg-id').value;
@@ -2387,6 +2396,7 @@
 
             Swal.close();
             if (fa_registryModal) fa_registryModal.hide();
+            if (imgWarn) Swal.fire('บันทึกแล้ว แต่รูปอัปโหลดไม่สำเร็จ', 'บันทึกข้อมูลแล้ว แต่รูปภาพอัปโหลดไม่สำเร็จ (' + imgWarn + ') — เข้ามาแก้ไขเพิ่มรูปภายหลังได้', 'warning');
             fa_refreshPatientList();
         } catch(err) {
             Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + (err.message || err), 'error');

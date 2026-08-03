@@ -880,7 +880,11 @@
       var imageFile = document.getElementById('reg-image').files[0];
       try {
         var imageUrl = document.getElementById('reg-form-existing-image').value || '';
-        if (imageFile) imageUrl = await uploadToCloudinary(imageFile, 'firstaid-registry');
+        var imgWarn = null;
+        if (imageFile) {
+          var up = await uploadToCloudinarySafe(imageFile, 'firstaid-registry');
+          if (up.url) imageUrl = up.url; else imgWarn = up.error;
+        }
 
         var regId = document.getElementById('reg-form-reg-id').value;
         var recordData = {
@@ -920,6 +924,7 @@
 
         Swal.close();
         if (fa_registryModal) fa_registryModal.hide();
+        if (imgWarn) Swal.fire('บันทึกแล้ว แต่รูปอัปโหลดไม่สำเร็จ', 'บันทึกข้อมูลแล้ว แต่รูปภาพอัปโหลดไม่สำเร็จ (' + imgWarn + ') — เข้ามาแก้ไขเพิ่มรูปภายหลังได้', 'warning');
         staff_refreshList();
       } catch(err) {
         Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + (err.message || err), 'error');

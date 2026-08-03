@@ -15,6 +15,16 @@ function _cloudinaryPreset() {
   return p;
 }
 
+// อัปโหลดแบบไม่โยน error: คืน { url, error } — ใช้ในจุดที่ "รูปพังต้องไม่ทำให้
+// งานทั้งใบพัง" (ข้อเสนอภาคสนาม 2026-07-26: ใส่รูปไม่ได้แล้วต้องคีย์ใหม่ทั้งหมด)
+async function uploadToCloudinarySafe(file, folder) {
+  try {
+    return { url: await uploadToCloudinary(file, folder), error: null };
+  } catch (e) {
+    return { url: '', error: (e && e.message) || String(e) };
+  }
+}
+
 async function uploadToCloudinary(file, folder) {
   const formData = new FormData();
   formData.append('file', file);

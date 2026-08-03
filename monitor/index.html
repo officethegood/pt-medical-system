@@ -1592,7 +1592,8 @@
                             '<td>' + esc(v.rr || '') + '</td>' +
                             '<td>' + esc(v.temp || '') + '</td>' +
                             '<td>' + esc(v.spo2 || '') + '</td>' +
-                            '<td>' + esc('E' + (v.gcs_e || '-') + 'V' + (v.gcs_v || '-') + 'M' + (v.gcs_m || '-')) + '</td>' +
+                            // gcs_v = 'VT' (on tube) มีตัว V มาแล้ว — ห้ามเติม V ซ้ำ (E4VVTM6)
+                            '<td>' + esc('E' + (v.gcs_e || '-') + (v.gcs_v === 'VT' ? 'VT' : 'V' + (v.gcs_v || '-')) + 'M' + (v.gcs_m || '-')) + '</td>' +
                             '<td>' + esc(v.pain || '') + '</td>' +
                             '<td class="note-col">' + esc(v.note || '') + '</td></tr>';
                     }

@@ -4457,7 +4457,9 @@
                     '<td>' + esc(getFieldValue(entry, '.v-rr')) + '</td>' +
                     '<td>' + esc(getFieldValue(entry, '.v-temp')) + '</td>' +
                     '<td>' + esc(getFieldValue(entry, '.v-spo2')) + '</td>' +
-                    '<td>' + esc('E' + getFieldValue(entry, '.v-gcs-e') + 'V' + getFieldValue(entry, '.v-gcs-v') + 'M' + getFieldValue(entry, '.v-gcs-m')) + '</td>' +
+                    // gcs_v เก็บค่า 'VT' (on tube) มาพร้อมตัว V อยู่แล้ว — ห้ามเติม V ซ้ำ
+                    // (บั๊กจริง 2026-07-26: ใบ print แสดง E4VVTM6 แทน E4VTM6)
+                    '<td>' + esc('E' + getFieldValue(entry, '.v-gcs-e') + (getFieldValue(entry, '.v-gcs-v') === 'VT' ? 'VT' : 'V' + getFieldValue(entry, '.v-gcs-v')) + 'M' + getFieldValue(entry, '.v-gcs-m')) + '</td>' +
                     '<td>' + esc(getFieldValue(entry, '.v-pain')) + '</td>' +
                     '<td class="note-col">' + esc(getFieldValue(entry, '.v-note')) + '</td>' +
                 '</tr>';
