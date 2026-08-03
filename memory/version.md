@@ -2,6 +2,9 @@
 > กติกา: bump `APP_VERSION` ใน `shared/config.js` ทุกอัปเดตสำคัญ + จดสรุปที่นี่ 1 entry
 > (รูปแบบ: เวอร์ชัน · วันที่ · commit · สรุปสั้น ๆ ว่าแก้อะไร/เพราะอะไร)
 
+## 5.13.1 · 2026-08-03
+- **ต้นตอจริงของ "อัปรูป First Aid ไม่ได้บนเครื่อง Apple":** service worker intercept POST ไป Cloudinary แล้ว WebKit ทำ FormData/ไฟล์ใน body หายตอนส่งต่อ → Cloudinary ได้ฟอร์มว่าง ("Upload preset must be specified") — ไม่ใช่ cache เก่าอย่างที่วินิจฉัยรอบแรก (Android/Chrome ไม่เป็นเพราะ forward body ถูกต้อง) · แก้: SW ไม่แตะ request ที่ไม่ใช่ GET อีกเลย (cache v22)
+
 ## 5.13.0 · 2026-08-03
 - First Aid: **V/S บันทึกได้หลายรอบ** (Registry หน้าหลัก + หน้า staff) — แต่ละรอบมีเวลา + ชุดเดิม 8 ช่อง, ปุ่มเพิ่ม/ลบรอบ, หน้ารายละเอียดแสดงเป็นตาราง · เก็บใน `vitals_json.rounds` (JSONB เดิม ไม่ต้องรัน SQL) ข้อมูลเก่ารอบเดียวอ่านต่อได้
 - First Aid: **ใบปฏิเสธการรักษา/นำส่ง 2 ภาษา (TH/EN)** — ตารางใหม่ `fa_refusals` (`sql/create_fa_refusals.sql` ต้องรันใน Dashboard), เซ็นบนจอ (ผู้ปฏิเสธ + พยาน), เก็บทุกฉบับไม่ทับ, badge แดงบนรายการ, ดู/พิมพ์ย้อนหลังได้ · spec: `docs/SPEC_firstaid_vitals_rounds_refusal_2026-08-03.md` (cache v21)

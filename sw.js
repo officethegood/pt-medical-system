@@ -1,5 +1,5 @@
 // PT Medical System — Service Worker
-var CACHE_NAME = 'pt-medical-v21';
+var CACHE_NAME = 'pt-medical-v22';
 var STATIC_ASSETS = [
   '/pt-medical-system/',
   '/pt-medical-system/index.html',
@@ -56,6 +56,13 @@ self.addEventListener('activate', function(event) {
 
 // Fetch: network-first for HTML + JS + API, cache-fallback for images/CSS
 self.addEventListener('fetch', function(event) {
+  // ห้าม intercept non-GET เด็ดขาด — iOS/WebKit มีบั๊กทำ body แบบ FormData/ไฟล์
+  // หายตอน SW ส่งต่อ request (fetch(event.request)) → Cloudinary ได้ฟอร์มว่าง
+  // "Upload preset must be specified" ทั้งที่ client ส่ง preset ครบ (เคสจริง
+  // 2026-08-03: อัปรูป First Aid พังเฉพาะเครื่อง Apple ทุกเครื่อง) —
+  // POST/PUT cache ไม่ได้อยู่แล้ว ปล่อยให้ browser ยิงตรงเอง
+  if (event.request.method !== 'GET') return;
+
   var url = event.request.url;
 
   // Network-first for Supabase API, Cloudinary, GPS APIs, GAS proxy.
