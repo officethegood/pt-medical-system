@@ -3308,6 +3308,20 @@
                 h += '<td style="text-align:center;">' + allergyMark + '</td>';
                 h += '<td>' + noteStr + '</td>';
                 h += '</tr>';
+
+                // แถวย่อย V/S ทุกรอบใต้ผู้ป่วยแต่ละคน (แสดงเฉพาะคนที่บันทึก V/S)
+                var vsRounds = fa_vitalsRounds(r.vitals, r.timeIn);
+                if (vsRounds.length > 0) {
+                    var vsTd = function(x, sfx) { return '<td style="border:0.5pt solid #bbb;padding:1px 4px;text-align:center;">' + (x ? esc(String(x)) + (sfx || '') : '-') + '</td>'; };
+                    var vsTh = function(t) { return '<th style="border:0.5pt solid #bbb;padding:1px 4px;background:#eef2f7;">' + t + '</th>'; };
+                    h += '<tr><td style="border-top:none;"></td><td colspan="9" style="padding:2px 4px 6px;">';
+                    h += '<table style="width:100%;border-collapse:collapse;font-size:7.5pt;background:#f8fafc;page-break-inside:avoid;">';
+                    h += '<tr>' + vsTh('V/S เวลา') + vsTh('BP') + vsTh('HR') + vsTh('RR') + vsTh('SpO2') + vsTh('Temp') + vsTh('GCS') + vsTh('DTX') + vsTh('Pain') + '</tr>';
+                    vsRounds.forEach(function(v) {
+                        h += '<tr>' + vsTd(v.time) + vsTd(v.bp) + vsTd(v.hr) + vsTd(v.rr) + vsTd(v.spo2, '%') + vsTd(v.temp) + vsTd(v.gcs) + vsTd(v.glucose) + vsTd(v.pain, '/10') + '</tr>';
+                    });
+                    h += '</table></td></tr>';
+                }
             });
             h += '</tbody></table>';
         }

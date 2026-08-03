@@ -2,6 +2,9 @@
 > กติกา: bump `APP_VERSION` ใน `shared/config.js` ทุกอัปเดตสำคัญ + จดสรุปที่นี่ 1 entry
 > (รูปแบบ: เวอร์ชัน · วันที่ · commit · สรุปสั้น ๆ ว่าแก้อะไร/เพราะอะไร)
 
+## 5.13.2 · 2026-08-03
+- First Aid: รายงาน event (พิมพ์รายงาน) แสดง V/S ทุกรอบเป็น**แถวย่อยใต้ผู้ป่วยแต่ละคน** (ตารางเล็ก เวลา/BP/HR/RR/SpO2/Temp/GCS/DTX/Pain — เฉพาะคนที่มีบันทึก) (cache v23)
+
 ## 5.13.1 · 2026-08-03
 - **ต้นตอจริงของ "อัปรูป First Aid ไม่ได้บนเครื่อง Apple":** service worker intercept POST ไป Cloudinary แล้ว WebKit ทำ FormData/ไฟล์ใน body หายตอนส่งต่อ → Cloudinary ได้ฟอร์มว่าง ("Upload preset must be specified") — ไม่ใช่ cache เก่าอย่างที่วินิจฉัยรอบแรก (Android/Chrome ไม่เป็นเพราะ forward body ถูกต้อง) · แก้: SW ไม่แตะ request ที่ไม่ใช่ GET อีกเลย (cache v22)
 
