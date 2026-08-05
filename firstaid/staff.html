@@ -827,7 +827,7 @@
             }
           }
         });
-        if (rec.allergy && rec.allergy.indexOf('มี') > -1) {
+        if (rec.allergy && rec.allergy.indexOf('มี') === 0) {
           document.getElementById('reg-allergy').value = 'มี';
           document.getElementById('reg-allergy-detail').value = rec.allergy.replace('มี','').replace(/[()]/g,'').trim();
         }

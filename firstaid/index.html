@@ -1774,7 +1774,7 @@
                 document.getElementById('fa-pGps').value = p.gps;
                 document.getElementById('fa-form-existing-image').value = p.image;
 
-                if (p.allergy && p.allergy.indexOf('มี') > -1) {
+                if (p.allergy && p.allergy.indexOf('มี') === 0) {
                     document.getElementById('fa-pAllergy').value = 'มี';
                     document.getElementById('fa-pAllergyDetail').value = p.allergy.replace('มี', '').replace(/[()]/g, '').trim();
                 }
@@ -1908,7 +1908,7 @@
 
         var gpsHtml = p.gps ? '<a target="_blank" class="text-primary" href="https://maps.google.com/?q=' + encodeURIComponent(p.gps) + '"><i class="bi bi-pin-map-fill"></i> ' + escapeHtml(p.gps) + '</a>' : '<span class="text-muted fst-italic">ไม่ระบุ</span>';
 
-        var allergyHtml = (p.allergy && p.allergy.indexOf('มี') > -1) ? '<span class="text-danger fw-bold fs-6">⚠ ' + escapeHtml(p.allergy) + '</span>' : '<span class="text-success fw-bold">ไม่มี</span>';
+        var allergyHtml = (p.allergy && p.allergy.indexOf('มี') === 0) ? '<span class="text-danger fw-bold fs-6">⚠ ' + escapeHtml(p.allergy) + '</span>' : '<span class="text-success fw-bold">ไม่มี</span>';
 
         var html =
             '<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">' +
@@ -2549,7 +2549,7 @@
                     }
                 });
                 // Allergy
-                if (rec.allergy && rec.allergy.indexOf('มี') > -1) {
+                if (rec.allergy && rec.allergy.indexOf('มี') === 0) {
                     document.getElementById('reg-allergy').value = 'มี';
                     document.getElementById('reg-allergy-detail').value = rec.allergy.replace('มี', '').replace(/[()]/g, '').trim();
                 }
@@ -2768,7 +2768,7 @@
                 }).join('') + '</tbody></table></div>';
         }
 
-        var allergyHtml = (rec.allergy && rec.allergy.indexOf('มี') > -1) ? '<span class="text-danger fw-bold">\u26A0 ' + escapeHtml(rec.allergy) + '</span>' : '<span class="text-success fw-bold">ไม่มี</span>';
+        var allergyHtml = (rec.allergy && rec.allergy.indexOf('มี') === 0) ? '<span class="text-danger fw-bold">\u26A0 ' + escapeHtml(rec.allergy) + '</span>' : '<span class="text-success fw-bold">ไม่มี</span>';
 
         var gpsHtml = rec.gps ? '<a target="_blank" class="text-primary" href="https://maps.google.com/?q=' + encodeURIComponent(rec.gps) + '"><i class="bi bi-pin-map-fill"></i> ' + escapeHtml(rec.gps) + '</a>' : '<span class="text-muted fst-italic">ไม่ระบุ</span>';
 
@@ -3286,7 +3286,7 @@
                 var resultText = fa_reportParseResult(r.result);
 
                 var allergyMark = 'ไม่มี';
-                if (r.allergy && r.allergy.indexOf('มี') > -1) {
+                if (r.allergy && r.allergy.indexOf('มี') === 0) {
                     allergyMark = '<span class="allergy-yes">' + esc(r.allergy) + '</span>';
                 }
 

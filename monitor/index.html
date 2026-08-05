@@ -1832,7 +1832,7 @@
 
                 var noteStr = '';
                 if (r.locationTx) noteStr += '[จุด: ' + esc(r.locationTx) + '] ';
-                if (r.allergy && r.allergy.indexOf('มี') > -1) noteStr += '<span class="allergy-yes">[แพ้: ' + esc(r.allergy) + ']</span> ';
+                if (r.allergy && r.allergy.indexOf('มี') === 0) noteStr += '<span class="allergy-yes">[แพ้: ' + esc(r.allergy) + ']</span> ';
                 if (r.note) noteStr += esc(r.note);
                 if (r.gps) noteStr += '<br><span class="note-extra">[GPS: ' + esc(r.gps) + ']</span>';
                 noteStr += '<br><span class="note-extra">[' + esc(r.recordedBy || '-') + ']</span>';
