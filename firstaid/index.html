@@ -808,8 +808,8 @@
                 }
                 return {
                     id: ev.event_id,
-                    name: ev.event_name,
-                    location: ev.location,
+                    name: ev.event_name || '',
+                    location: ev.location || '',
                     startDate: ev.event_date || '',
                     startTime: (ev.start_time || '').replace(/^'/, ''),
                     endDate: ev.end_date || '',

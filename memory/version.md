@@ -2,6 +2,9 @@
 > กติกา: bump `APP_VERSION` ใน `shared/config.js` ทุกอัปเดตสำคัญ + จดสรุปที่นี่ 1 entry
 > (รูปแบบ: เวอร์ชัน · วันที่ · commit · สรุปสั้น ๆ ว่าแก้อะไร/เพราะอะไร)
 
+## 5.13.4 · 2026-09-02
+- First Aid: ช่องค้นหา event ตายทั้งช่อง — DB มี event เก่า "(Recovered Event)" ที่ location=null พอพิมพ์คำค้น โค้ด `ev.location.toLowerCase()` โยน TypeError ทำ filter ทั้งฟังก์ชันพัง รายการค้างไม่กรอง (ตอน query ว่างไม่พังเพราะ short-circuit ที่ชื่อ) → กัน null ที่ mapping `|| ''` (cache v25)
+
 ## 5.13.3 · 2026-08-03
 - แก้บั๊กแพ้ยาทั้งชุด 7 จุด (firstaid/index 5 + staff 1 + monitor 1): เช็ค `allergy.indexOf('มี') > -1` จับ "ไม่มี" เป็นแพ้ยาด้วย (คำว่า ไม่มี มี "มี" อยู่ข้างใน) → เปลี่ยนเป็น `=== 0` (ต้องขึ้นต้นด้วย "มี") — พบโดยทีม Supwilai ในโค้ดตระกูลเดียวกัน (cache v24)
 
