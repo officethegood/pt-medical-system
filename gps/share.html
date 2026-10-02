@@ -411,8 +411,9 @@
         }
 
         _map = L.map('map', { zoomControl: true }).setView([15.87, 100.99], 6);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; CartoDB', maxZoom: 19
+        // OSM แทน Carto — Carto บังคับ API key แล้ว (tile ขึ้นลาย "API KEY REQUIRED" 2026-10-02)
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
         }).addTo(_map);
 
         await fetchStatus();

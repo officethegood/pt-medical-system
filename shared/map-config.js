@@ -26,8 +26,9 @@
 (function(global) {
   'use strict';
 
-  var DEFAULT_TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-  var DEFAULT_TILE_ATTR = '&copy; CartoDB';
+  // OSM แทน Carto — Carto บังคับ API key ตั้งแต่ ~ต.ค. 2026 (tile ขึ้นลาย "API KEY REQUIRED")
+  var DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  var DEFAULT_TILE_ATTR = '&copy; OpenStreetMap contributors';
   var DEFAULT_MAX_ZOOM = 19;
   var GOOGLE_MUTANT_URL = 'https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/dist/Leaflet.GoogleMutant.js';
   var SDK_TIMEOUT_MS = 15000;

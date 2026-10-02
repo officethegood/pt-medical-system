@@ -2,6 +2,9 @@
 > กติกา: bump `APP_VERSION` ใน `shared/config.js` ทุกอัปเดตสำคัญ + จดสรุปที่นี่ 1 entry
 > (รูปแบบ: เวอร์ชัน · วันที่ · commit · สรุปสั้น ๆ ว่าแก้อะไร/เพราะอะไร)
 
+## 5.13.5 · 2026-10-02
+- แผนที่หน้าแชร์ (gps/share, location/share) + fallback ใน map-config ขึ้นลาย "API KEY REQUIRED" — Carto เลิกให้ใช้ basemap ฟรีโดยไม่มี key → เปลี่ยน tile เป็น OpenStreetMap (ฟรี ไม่ต้องมี key) ทั้ง 4 จุด · หน้า GPS หลักไม่กระทบ (ใช้ Google อยู่แล้ว) (cache v26)
+
 ## 5.13.4 · 2026-09-02
 - First Aid: ช่องค้นหา event ตายทั้งช่อง — DB มี event เก่า "(Recovered Event)" ที่ location=null พอพิมพ์คำค้น โค้ด `ev.location.toLowerCase()` โยน TypeError ทำ filter ทั้งฟังก์ชันพัง รายการค้างไม่กรอง (ตอน query ว่างไม่พังเพราะ short-circuit ที่ชื่อ) → กัน null ที่ mapping `|| ''` (cache v25)
 
