@@ -1998,7 +1998,8 @@
         'Hydration Guidance — แนะนำการดื่มน้ำ',
         'GI Distress — ระบบทางเดินอาหาร',
         'Neurological — ระบบประสาท',
-        'Syncope/Collapse — หมดสติ/เป็นลม',
+        'Loss of Consciousness — หมดสติ',
+        'Syncope/Fainting — เป็นลม',
         'Intoxication — มึนเมา/สารเสพติด',
         'Anxiety/Panic Attack — วิตกกังวล/แพนิค',
         'Crowd Crush Injury — บาดเจ็บจากฝูงชนเบียด',
@@ -2118,6 +2119,15 @@
     }
 
     // --- Populate Problem List based on event config ---
+    // ใส่ option ให้ค่าที่ไม่มีในรายการปัจจุบัน (เคสเก่าที่ใช้ตัวเลือกที่เลิกแล้ว)
+    function reg_ensureOption(selId, val) {
+        var sel = document.getElementById(selId);
+        if (!sel || !val) return;
+        for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === val) return; }
+        var o = document.createElement('option'); o.value = val; o.textContent = val + ' (ตัวเลือกเดิม)';
+        sel.appendChild(o);
+    }
+
     function reg_populateProblemList() {
         var sel = document.getElementById('reg-problem');
         sel.innerHTML = '<option value="">-- เลือก Problem --</option>';
@@ -2527,6 +2537,7 @@
                 }
                 // Problem
                 if (rec.problem) {
+                    reg_ensureOption('reg-problem', rec.problem);  // ค่าที่เลิกใช้แล้ว (เช่น Syncope/Collapse) ต้องไม่หายตอนแก้ไข
                     document.getElementById('reg-problem').value = rec.problem;
                     reg_onProblemChange();
                     if (rec.problemOther) document.getElementById('reg-problem-other').value = rec.problemOther;

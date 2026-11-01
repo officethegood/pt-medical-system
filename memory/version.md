@@ -2,6 +2,9 @@
 > กติกา: bump `APP_VERSION` ใน `shared/config.js` ทุกอัปเดตสำคัญ + จดสรุปที่นี่ 1 entry
 > (รูปแบบ: เวอร์ชัน · วันที่ · commit · สรุปสั้น ๆ ว่าแก้อะไร/เพราะอะไร)
 
+## 5.13.6 · 2026-10-28
+- First Aid: แยก Problem "Syncope/Collapse — หมดสติ/เป็นลม" เป็น 2 ตัวเลือก **"Loss of Consciousness — หมดสติ"** กับ **"Syncope/Fainting — เป็นลม"** (หน้าแอดมิน + หน้า staff) · เคสเก่า 2 เคสที่ใช้ค่าเดิมยังแก้ไขได้โดยค่าไม่หาย (reg_ensureOption ใส่เป็น "ตัวเลือกเดิม") (cache v27)
+
 ## 5.13.5 · 2026-10-02
 - แผนที่หน้าแชร์ (gps/share, location/share) + fallback ใน map-config ขึ้นลาย "API KEY REQUIRED" — Carto เลิกให้ใช้ basemap ฟรีโดยไม่มี key → เปลี่ยน tile เป็น OpenStreetMap (ฟรี ไม่ต้องมี key) ทั้ง 4 จุด · หน้า GPS หลักไม่กระทบ (ใช้ Google อยู่แล้ว) (cache v26)
 

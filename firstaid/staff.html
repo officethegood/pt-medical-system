@@ -560,7 +560,7 @@
       'Trauma/Musculoskeletal — บาดเจ็บกล้ามเนื้อ/กระดูก','Skin/Soft tissue — ผิวหนัง/เนื้อเยื่ออ่อน',
       'Respiratory Distress — หายใจลำบาก','Emergency Cardiac Care — หัวใจฉุกเฉิน','Cardiac Arrest — หัวใจหยุดเต้น',
       'Allergy/Anaphylaxis — แพ้/แอนาฟิแล็กซิส','Hydration Guidance — แนะนำการดื่มน้ำ','GI Distress — ระบบทางเดินอาหาร',
-      'Neurological — ระบบประสาท','Syncope/Collapse — หมดสติ/เป็นลม','Intoxication — มึนเมา/สารเสพติด',
+      'Neurological — ระบบประสาท','Loss of Consciousness — หมดสติ','Syncope/Fainting — เป็นลม','Intoxication — มึนเมา/สารเสพติด',
       'Anxiety/Panic Attack — วิตกกังวล/แพนิค','Crowd Crush Injury — บาดเจ็บจากฝูงชนเบียด','Seizure — ชัก',
       'Assault Injury — บาดเจ็บจากทำร้ายร่างกาย','Wound/Laceration — แผล/ฉีกขาด',
       'Hypo/Hyperglycemia — น้ำตาลในเลือดผิดปกติ','Fever/Infection — ไข้/ติดเชื้อ','Other (ระบุ)'
@@ -625,6 +625,14 @@
       if (val && val.indexOf('Other') > -1) document.getElementById('reg-problem-other-div').classList.remove('d-none');
       else { document.getElementById('reg-problem-other-div').classList.add('d-none'); document.getElementById('reg-problem-other').value = ''; }
     }
+    function reg_ensureOption(selId, val) {
+      var sel = document.getElementById(selId);
+      if (!sel || !val) return;
+      for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === val) return; }
+      var o = document.createElement('option'); o.value = val; o.textContent = val + ' (ตัวเลือกเดิม)';
+      sel.appendChild(o);
+    }
+
     function reg_populateProblemList() {
       var sel = document.getElementById('reg-problem');
       sel.innerHTML = '<option value="">-- เลือก Problem --</option>';
@@ -805,6 +813,7 @@
           if (rec.ccOther) document.getElementById('reg-cc-other').value = rec.ccOther;
         }
         if (rec.problem) {
+          reg_ensureOption('reg-problem', rec.problem);  // ค่าที่เลิกใช้แล้วต้องไม่หายตอนแก้ไข
           document.getElementById('reg-problem').value = rec.problem; reg_onProblemChange();
           if (rec.problemOther) document.getElementById('reg-problem-other').value = rec.problemOther;
         }

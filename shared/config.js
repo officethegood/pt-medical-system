@@ -1,7 +1,7 @@
 // PT Medical System — Configuration (TheGood deployment)
 // APP_VERSION: bump on every significant update + add entry in memory/version.md
-window.APP_VERSION = '5.13.5';
-window.APP_VERSION_DATE = '2026-10-02';
+window.APP_VERSION = '5.13.6';
+window.APP_VERSION_DATE = '2026-10-28';
 
 const CONFIG = {
   // ===== REQUIRED (cannot be moved to admin — bootstrap/auth) =====
